@@ -1,59 +1,61 @@
-// ###################### util.js ######################
-
-export function hexStringToUint8Array(hexString){
-  if (hexString.length % 2 !== 0){
-    throw "Invalid hexString";
+export function hexStringToUint8Array(hexString) {
+  if (hexString.length % 2 !== 0) {
+    throw 'Invalid hexString';
   }
-  var arrayBuffer = new Uint8Array(hexString.length / 2);
+  const arrayBuffer = new Uint8Array(hexString.length / 2);
 
-  for (var i = 0; i < hexString.length; i += 2) {
-    var byteValue = parseInt(hexString.substr(i, 2), 16);
-    if (isNaN(byteValue)){
-      throw "Invalid hexString";
+  for (let i = 0; i < hexString.length; i += 2) {
+    const byteValue = parseInt(hexString.substr(i, 2), 16);
+    if (isNaN(byteValue)) {
+      throw 'Invalid hexString';
     }
-    arrayBuffer[i/2] = byteValue;
+    arrayBuffer[i / 2] = byteValue;
   }
 
   return arrayBuffer;
 }
 
-export function bytesToHexString(bytes){
-  if (!bytes){
+export function bytesToHexString(givenBytes) {
+  if (!givenBytes) {
     return null;
   }
 
-  bytes = new Uint8Array(bytes);
-  var hexBytes = [];
+  const bytes = new Uint8Array(givenBytes);
+  const hexBytes = [];
 
-  for (var i = 0; i < bytes.length; ++i) {
-    var byteString = bytes[i].toString(16);
-    if (byteString.length < 2){
-      byteString = "0" + byteString;
+  for (let i = 0; i < bytes.length; ++i) {
+    let byteString = bytes[i].toString(16);
+    if (byteString.length < 2) {
+      byteString = `0${byteString}`;
     }
     hexBytes.push(byteString);
   }
-  return hexBytes.join("");
+  return hexBytes.join('');
 }
 
-export function asciiToUint8Array(str){
-  var chars = [];
-  for (var i = 0; i < str.length; ++i){
+export function asciiToUint8Array(str) {
+  const chars = [];
+  for (let i = 0; i < str.length; ++i) {
     chars.push(str.charCodeAt(i));
   }
   return new Uint8Array(chars);
 }
 
-export function bytesToASCIIString(bytes){
+export function bytesToASCIIString(bytes) {
   return String.fromCharCode.apply(null, new Uint8Array(bytes));
 }
 
-export function generateRandomString(length){
-  var charset = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789 !"#$%&\'()*+,-./:;<=>?@[\\]_{}';
-  var randomValues = new Uint8Array(length);
+export function generateRandomString(length) {
+  const charset = (
+    'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789 !"#$%&\'()*+,-./:;<=>?@[\\]_{}'
+  );
+  const randomValues = new Uint8Array(length);
   crypto.getRandomValues(randomValues);
-  var string = '';
-  for(var i = 0; i < length; i++){
-    string += charset[randomValues[i]%charset.length];
+
+  let string = '';
+  for (let i = 0; i < length; i++) {
+    string += charset[randomValues[i] % charset.length];
   }
+
   return string;
 }
