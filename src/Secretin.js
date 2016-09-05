@@ -1,16 +1,16 @@
-import API from './APIAlone';
+import APIStandalone from './API/Standalone';
 import User from './User';
 
 
 // ###################### secretin.js ######################
 
-const Secretin = function () {
+const Secretin = function (API = APIStandalone) {
   this.api = new API();
   this.currentUser = {};
 };
 
 Secretin.prototype.changeDB = function (db) {
-  this.api = new API(db);
+  this.api = new this.api.constructor(db);
 };
 
 Secretin.prototype.newUser = function (username, password) {

@@ -244,3 +244,5 @@ API.prototype.changePassword = function (user, privateKey, pass) {
     });
   });
 };
+
+export default API;
