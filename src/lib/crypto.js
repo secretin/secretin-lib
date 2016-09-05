@@ -1,18 +1,12 @@
-if(typeof(crypto) === 'undefined'){
-    crypto = msCrypto;
-}
-if(typeof(crypto.subtle) === 'undefined'){
-    crypto.subtle = crypto.webkitSubtle;
-}
 // ###################### crypto.js ######################
 
-function SHA256(str){
+export function getSHA256(str){
   var algorithm = 'SHA-256';
   var data = asciiToUint8Array(str);
   return crypto.subtle.digest(algorithm, data);
 }
 
-function genRSAOAEP(){
+export function genRSAOAEP(){
   var algorithm = {
     name: 'RSA-OAEP',
     modulusLength: 4096,
@@ -30,7 +24,7 @@ function genRSAOAEP(){
 }
 
 
-function encryptAESGCM256(secret, key){
+export function encryptAESGCM256(secret, key){
   var result = {};
   var algorithm = {};
   if(typeof key === 'undefined'){
@@ -77,7 +71,7 @@ function encryptAESGCM256(secret, key){
   }
 }
 
-function decryptAESGCM256(secretObject, key){
+export function decryptAESGCM256(secretObject, key){
   var algorithm = {
     name: 'AES-GCM',
     iv: hexStringToUint8Array(secretObject.iv),
@@ -87,7 +81,7 @@ function decryptAESGCM256(secretObject, key){
   return crypto.subtle.decrypt(algorithm, key, data);
 }
 
-function encryptRSAOAEP(secret, publicKey){
+export function encryptRSAOAEP(secret, publicKey){
   var algorithm = {
     name: 'RSA-OAEP',
     hash: {name: 'SHA-256'}
@@ -96,7 +90,7 @@ function encryptRSAOAEP(secret, publicKey){
   return crypto.subtle.encrypt(algorithm, publicKey, data);
 }
 
-function decryptRSAOAEP(secret, privateKey){
+export function decryptRSAOAEP(secret, privateKey){
   var algorithm = {
     name: 'RSA-OAEP',
     hash: {name: 'SHA-256'}
@@ -105,7 +99,7 @@ function decryptRSAOAEP(secret, privateKey){
   return crypto.subtle.decrypt(algorithm, privateKey, data);
 }
 
-function wrapRSAOAEP(key, wrappingPublicKey){
+export function wrapRSAOAEP(key, wrappingPublicKey){
   var format = 'raw';
   var wrapAlgorithm = {
     name: 'RSA-OAEP',
@@ -114,7 +108,7 @@ function wrapRSAOAEP(key, wrappingPublicKey){
   return crypto.subtle.wrapKey(format, key, wrappingPublicKey, wrapAlgorithm);
 }
 
-function unwrapRSAOAEP(wrappedKeyHex, unwrappingPrivateKey){
+export function unwrapRSAOAEP(wrappedKeyHex, unwrappingPrivateKey){
   var format = 'raw';
   var wrappedKey = hexStringToUint8Array(wrappedKeyHex);
   var unwrapAlgorithm = {
@@ -133,12 +127,12 @@ function unwrapRSAOAEP(wrappedKeyHex, unwrappingPrivateKey){
   );
 }
 
-function exportPublicKey(publicKey){
+export function exportPublicKey(publicKey){
   var format = 'jwk';
   return crypto.subtle.exportKey(format, publicKey);
 }
 
-function importPublicKey(jwkPublicKey){
+export function importPublicKey(jwkPublicKey){
   var format = 'jwk';
   var algorithm = {
     name: "RSA-OAEP",
@@ -151,7 +145,7 @@ function importPublicKey(jwkPublicKey){
   return crypto.subtle.importKey(format, jwkPublicKey, algorithm, extractable, keyUsages);
 }
 
-function derivePassword(password, parameters){
+export function derivePassword(password, parameters){
   var result = {};
 
   var passwordBuf = asciiToUint8Array(password);
@@ -211,7 +205,7 @@ function derivePassword(password, parameters){
   });
 }
 
-function exportPrivateKey(key, privateKey){
+export function exportPrivateKey(key, privateKey){
   var result = {};
   var format = 'jwk';
   var iv = new Uint8Array(16);
@@ -229,7 +223,7 @@ function exportPrivateKey(key, privateKey){
   });
 }
 
-function importPrivateKey(key, privateKeyObject){
+export function importPrivateKey(key, privateKeyObject){
   var format = 'jwk';
   var wrappedPrivateKey = hexStringToUint8Array(privateKeyObject.privateKey);
   var unwrapAlgorithm = {

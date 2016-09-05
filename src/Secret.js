@@ -185,3 +185,5 @@ Secret.prototype.toJSON = function(){
 
 };
 
+
+export default Secret;

@@ -1,3 +1,6 @@
+import API from './APIAlone';
+import User from './User';
+
 
 // ###################### secretin.js ######################
 
@@ -502,3 +505,4 @@ Secretin.prototype.getAllMetadatas = function(){
   })
 }
 
+export default Secretin;

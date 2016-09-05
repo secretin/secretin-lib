@@ -1,7 +1,6 @@
-
 // ###################### util.js ######################
 
-function hexStringToUint8Array(hexString){
+export function hexStringToUint8Array(hexString){
   if (hexString.length % 2 !== 0){
     throw "Invalid hexString";
   }
@@ -18,7 +17,7 @@ function hexStringToUint8Array(hexString){
   return arrayBuffer;
 }
 
-function bytesToHexString(bytes){
+export function bytesToHexString(bytes){
   if (!bytes){
     return null;
   }
@@ -36,7 +35,7 @@ function bytesToHexString(bytes){
   return hexBytes.join("");
 }
 
-function asciiToUint8Array(str){
+export function asciiToUint8Array(str){
   var chars = [];
   for (var i = 0; i < str.length; ++i){
     chars.push(str.charCodeAt(i));
@@ -44,11 +43,11 @@ function asciiToUint8Array(str){
   return new Uint8Array(chars);
 }
 
-function bytesToASCIIString(bytes){
+export function bytesToASCIIString(bytes){
   return String.fromCharCode.apply(null, new Uint8Array(bytes));
 }
 
-function generateRandomString(length){
+export function generateRandomString(length){
   var charset = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789 !"#$%&\'()*+,-./:;<=>?@[\\]_{}';
   var randomValues = new Uint8Array(length);
   crypto.getRandomValues(randomValues);
