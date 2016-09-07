@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "npm run lint && rollup -c config/rollup.config.js",
+    "watch": "rollup -c config/rollup.config.js --watch",
     "lint": "eslint .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -27,6 +28,7 @@
     "eslint-plugin-import": "^1.14.0",
     "rollup": "^0.34.13",
     "rollup-plugin-babel": "^2.6.1",
-    "rollup-plugin-json": "^2.0.1"
+    "rollup-plugin-json": "^2.0.1",
+    "rollup-watch": "^2.5.0"
   }
 }
