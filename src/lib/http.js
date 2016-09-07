@@ -19,7 +19,7 @@ function reqData(path, datas, type) {
   });
 }
 
-export function GET(path) {
+export function doGET(path) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('GET', encodeURI(path));
@@ -35,14 +35,14 @@ export function GET(path) {
   });
 }
 
-export function POST(path, datas) {
+export function doPOST(path, datas) {
   return reqData(path, datas, 'POST');
 }
 
-export function PUT(path, datas) {
+export function doPUT(path, datas) {
   return reqData(path, datas, 'PUT');
 }
 
-export function DELETE(path, datas) {
+export function doDELETE(path, datas) {
   return reqData(path, datas, 'DELETE');
 }

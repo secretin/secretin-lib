@@ -1,248 +1,248 @@
+import {
+  getSHA256,
+} from '../lib/crypto';
 
-// ###################### API.js ######################
+import {
+  doGET,
+  doPOST,
+  doPUT,
+  doDELETE,
+} from '../lib/http';
 
-const API = function (link) {
-  const _this = this;
-  if (link) {
-    _this.db = link;
+import {
+  bytesToHexString,
+} from '../lib/util';
+
+
+class API {
+  constructor(link) {
+    if (link) {
+      this.db = link;
+    } else {
+      this.db = window.location.origin;
+    }
   }
-  else {
-    _this.db = window.location.origin;
+
+  userExists(username, isHashed) {
+    return this.retrieveUser(username, 'undefined', isHashed)
+      .then(() => true, () => false);
   }
-};
 
-API.prototype.userExists = function (username, isHashed) {
-  const _this = this;
-  return _this.retrieveUser(username, 'undefined', isHashed).then(function (user) {
-    return true;
-  }).catch(function (err) {
-    return false;
-  });
-};
-
-API.prototype.addUser = function (username, privateKey, publicKey, pass) {
-  const _this = this;
-  return SHA256(username).then(function (hashedUsername) {
-    return POST(_this.db + '/user/' + bytesToHexString(hashedUsername), {
-      pass,
-      privateKey,
-      publicKey,
-      keys: {},
-    });
-  });
-};
-
-API.prototype.addSecret = function (user, secretObject) {
-  const _this = this;
-  return user.getToken(_this).then(function (token) {
-    return POST(_this.db + '/user/' + secretObject.hashedUsername + '/' + secretObject.hashedTitle, {
-      secret: secretObject.secret,
-      iv: secretObject.iv,
-      metadatas: secretObject.metadatas,
-      iv_meta: secretObject.iv_meta,
-      key: secretObject.wrappedKey,
-      token: bytesToHexString(token),
-    });
-  });
-};
-
-API.prototype.deleteSecret = function (user, hashedTitle) {
-  const _this = this;
-  let hashedUsername;
-  return SHA256(user.username).then(function (rHashedUsername) {
-    hashedUsername = bytesToHexString(rHashedUsername);
-    return user.getToken(_this);
-  }).then(function (token) {
-    return DELETE(_this.db + '/user/' + hashedUsername + '/' + hashedTitle, {
-      token: bytesToHexString(token),
-    });
-  }).then(function (datas) {
-    return datas;
-  });
-};
-
-
-API.prototype.getNewChallenge = function (user) {
-  const _this = this;
-  return SHA256(user.username).then(function (hashedUsername) {
-    return GET(_this.db + '/challenge/' + bytesToHexString(hashedUsername));
-  });
-};
-
-API.prototype.editSecret = function (user, secretObject, hashedTitle) {
-  const _this = this;
-  let hashedUsername;
-  return SHA256(user.username).then(function (rHashedUsername) {
-    hashedUsername = bytesToHexString(rHashedUsername);
-    return user.getToken(_this);
-  }).then(function (token) {
-    return POST(_this.db + '/edit/' + hashedUsername + '/' + hashedTitle, {
-      iv: secretObject.iv,
-      secret: secretObject.secret,
-      iv_meta: secretObject.iv_meta,
-      metadatas: secretObject.metadatas,
-      token: bytesToHexString(token),
-    });
-  });
-};
-
-API.prototype.newKey = function (user, hashedTitle, secret, wrappedKeys) {
-  const _this = this;
-  let hashedUsername;
-  return SHA256(user.username).then(function (rHashedUsername) {
-    hashedUsername = bytesToHexString(rHashedUsername);
-    return user.getToken(_this);
-  }).then(function (token) {
-    return POST(_this.db + '/newKey/' + hashedUsername + '/' + hashedTitle, {
-      wrappedKeys,
-      secret,
-      token: bytesToHexString(token),
-    });
-  });
-};
-
-API.prototype.unshareSecret = function (user, friendNames, hashedTitle) {
-  const _this = this;
-  let hashedUsername;
-  const hashedFriendUserames = [];
-  return SHA256(user.username).then(function (rHashedUsername) {
-    hashedUsername = bytesToHexString(rHashedUsername);
-    const hashedFriendUseramePromises = [];
-    friendNames.forEach(function (username) {
-      hashedFriendUseramePromises.push(SHA256(username));
-    });
-    return Promise.all(hashedFriendUseramePromises);
-  }).then(function (rHashedFriendUserames) {
-    rHashedFriendUserames.forEach(function (hashedFriendUserame) {
-      hashedFriendUserames.push(bytesToHexString(hashedFriendUserame));
-    });
-    return user.getToken(_this);
-  }).then(function (token) {
-    return POST(_this.db + '/unshare/' + hashedUsername + '/' + hashedTitle, {
-      friendNames: hashedFriendUserames,
-      token: bytesToHexString(token),
-    });
-  });
-};
-
-API.prototype.shareSecret = function (user, sharedSecretObjects) {
-  const _this = this;
-  let hashedUsername;
-  return SHA256(user.username).then(function (rHashedUsername) {
-    hashedUsername = bytesToHexString(rHashedUsername);
-    return user.getToken(_this);
-  }).then(function (token) {
-    return POST(_this.db + '/share/' + hashedUsername, {
-      secretObjects: sharedSecretObjects,
-      token: bytesToHexString(token),
-    });
-  });
-};
-
-API.prototype.retrieveUser = function (username, hash, isHashed) {
-  const _this = this;
-  if (isHashed) {
-    return GET(_this.db + '/user/' + username + '/' + hash);
+  addUser(username, privateKey, publicKey, pass) {
+    return getSHA256(username)
+      .then((hashedUsername) =>
+        doPOST(`${this.db}/user/${bytesToHexString(hashedUsername)}`, {
+          pass,
+          privateKey,
+          publicKey,
+          keys: {},
+        })
+      );
   }
-  else {
-    return SHA256(username).then(function (hashedUsername) {
-      return GET(_this.db + '/user/' + bytesToHexString(hashedUsername) + '/' + hash);
-    });
+
+  addSecret(user, secretObject) {
+    return user.getToken(this)
+      .then((token) =>
+        doPOST(`${this.db}/user/${secretObject.hashedUsername}/${secretObject.hashedTitle}`, {
+          secret: secretObject.secret,
+          iv: secretObject.iv,
+          metadatas: secretObject.metadatas,
+          iv_meta: secretObject.iv_meta,
+          key: secretObject.wrappedKey,
+          token: bytesToHexString(token),
+        })
+      );
   }
-};
 
-API.prototype.getDerivationParameters = function (username, isHashed) {
-  const _this = this;
-  return _this.retrieveUser(username, 'undefined', isHashed).then(function (user) {
-    return { salt: user.pass.salt, iterations: user.pass.iterations };
-  });
-};
+  deleteSecret(user, hashedTitle) {
+    let hashedUsername;
+    return getSHA256(user.username)
+      .then((rHashedUsername) => {
+        hashedUsername = bytesToHexString(rHashedUsername);
+        return user.getToken(this);
+      }).then((token) =>
+        doDELETE(`${this.db}/user/${hashedUsername}/${hashedTitle}`, {
+          token: bytesToHexString(token),
+        })
+      );
+  }
 
-API.prototype.getWrappedPrivateKey = function (username, hash, isHashed) {
-  const _this = this;
-  return _this.retrieveUser(username, hash, isHashed).then(function (user) {
-    return user.privateKey;
-  });
-};
 
-API.prototype.getPublicKey = function (username, isHashed) {
-  const _this = this;
-  return _this.retrieveUser(username, 'undefined', isHashed).then(function (user) {
-    return user.publicKey;
-  });
-};
+  getNewChallenge(user) {
+    return getSHA256(user.username)
+      .then((hashedUsername) =>
+        doGET(`${this.db}/challenge/${bytesToHexString(hashedUsername)}`));
+  }
 
-API.prototype.getKeysWithToken = function (user) {
-  const _this = this;
-  let hashedUsername;
-  return SHA256(user.username).then(function (rHashedUsername) {
-    hashedUsername = bytesToHexString(rHashedUsername);
-    return user.getToken(_this);
-  }).then(function (token) {
-    return GET(_this.db + '/user/' + hashedUsername + '?token=' + bytesToHexString(token));
-  }).then(function (userContent) {
-    return userContent.keys;
-  });
-};
+  editSecret(user, secretObject, hashedTitle) {
+    let hashedUsername;
+    return getSHA256(user.username)
+      .then((rHashedUsername) => {
+        hashedUsername = bytesToHexString(rHashedUsername);
+        return user.getToken(this);
+      })
+      .then((token) =>
+        doPOST(`${this.db}/edit/${hashedUsername}/${hashedTitle}`, {
+          iv: secretObject.iv,
+          secret: secretObject.secret,
+          iv_meta: secretObject.iv_meta,
+          metadatas: secretObject.metadatas,
+          token: bytesToHexString(token),
+        })
+      );
+  }
 
-API.prototype.getKeys = function (username, hash, isHashed) {
-  const _this = this;
-  return _this.retrieveUser(username, hash, isHashed).then(function (user) {
-    return user.keys;
-  });
-};
+  newKey(user, hashedTitle, secret, wrappedKeys) {
+    let hashedUsername;
+    return getSHA256(user.username)
+      .then((rHashedUsername) => {
+        hashedUsername = bytesToHexString(rHashedUsername);
+        return user.getToken(this);
+      })
+      .then((token) =>
+        doPOST(`${this.db}/newKey/${hashedUsername}/${hashedTitle}`, {
+          wrappedKeys,
+          secret,
+          token: bytesToHexString(token),
+        })
+      );
+  }
 
-API.prototype.getUser = function (username, hash, isHashed) {
-  const _this = this;
-  return _this.retrieveUser(username, hash, isHashed).then(function (user) {
-    return user;
-  });
-};
+  unshareSecret(user, friendNames, hashedTitle) {
+    let hashedUsername;
+    const hashedFriendUserames = [];
+    return getSHA256(user.username)
+      .then((rHashedUsername) => {
+        hashedUsername = bytesToHexString(rHashedUsername);
+        const hashedFriendUseramePromises = [];
+        friendNames.forEach((username) => {
+          hashedFriendUseramePromises.push(getSHA256(username));
+        });
+        return Promise.all(hashedFriendUseramePromises);
+      })
+      .then((rHashedFriendUserames) => {
+        rHashedFriendUserames.forEach((hashedFriendUserame) => {
+          hashedFriendUserames.push(bytesToHexString(hashedFriendUserame));
+        });
+        return user.getToken(this);
+      }).then((token) =>
+        doPOST(`${this.db}/unshare/${hashedUsername}/${hashedTitle}`, {
+          friendNames: hashedFriendUserames,
+          token: bytesToHexString(token),
+        })
+      );
+  }
 
-API.prototype.getSecret = function (hashedTitle, user) {
-  const _this = this;
-  let hashedUsername;
-  return SHA256(user.username).then(function (rHashedUsername) {
-    hashedUsername = bytesToHexString(rHashedUsername);
-    return user.getToken(_this);
-  }).then(function (token) {
-    return GET(_this.db + '/secret/' + hashedTitle + '?name=' + hashedUsername + '&token=' + bytesToHexString(token));
-  });
-};
+  shareSecret(user, sharedSecretObjects) {
+    let hashedUsername;
+    return getSHA256(user.username)
+      .then((rHashedUsername) => {
+        hashedUsername = bytesToHexString(rHashedUsername);
+        return user.getToken(this);
+      }).then((token) =>
+        doPOST(`${this.db}/share/${hashedUsername}`, {
+          secretObjects: sharedSecretObjects,
+          token: bytesToHexString(token),
+        })
+      );
+  }
 
-API.prototype.getAllMetadatas = function (user) {
-  const _this = this;
-  let hashedUsername;
-  return SHA256(user.username).then(function (rHashedUsername) {
-    hashedUsername = bytesToHexString(rHashedUsername);
-    return user.getToken(_this);
-  }).then(function (token) {
-    return GET(_this.db + '/allMetadatas/' + hashedUsername + '?token=' + bytesToHexString(token));
-  }).then(function (datas) {
-    return datas;
-  });
-};
+  retrieveUser(username, hash, hashed) {
+    let isHashed = Promise.resolve();
+    let hashedUsername = username;
+    if (!hashed) {
+      isHashed = isHashed
+        .then(() => getSHA256(username))
+        .then((rHashedUsername) => {
+          hashedUsername = bytesToHexString(rHashedUsername);
+          return;
+        });
+    }
+    return isHashed
+      .then(() =>
+        doGET(`${this.db}/user/${hashedUsername}/${hash}`)
+      );
+  }
 
-API.prototype.getDb = function (username, hash, isHashed) {
-  const _this = this;
-  return SHA256(username).then(function (hashedUsername) {
-    return GET(_this.db + '/database/' + bytesToHexString(hashedUsername) + '/' + hash);
-  });
-};
+  getDerivationParameters(username, isHashed) {
+    return this.retrieveUser(username, 'undefined', isHashed)
+      .then((user) => ({ salt: user.pass.salt, iterations: user.pass.iterations }));
+  }
 
-API.prototype.changePassword = function (user, privateKey, pass) {
-  const _this = this;
-  let hashedUsername;
-  return SHA256(user.username).then(function (rHashedUsername) {
-    hashedUsername = bytesToHexString(rHashedUsername);
-    return user.getToken(_this);
-  }).then(function (token) {
-    return PUT(_this.db + '/user/' + hashedUsername, {
-      pass,
-      privateKey,
-      token: bytesToHexString(token),
-    });
-  });
-};
+  getWrappedPrivateKey(username, hash, isHashed) {
+    return this.retrieveUser(username, hash, isHashed)
+      .then((user) => user.privateKey);
+  }
+
+  getPublicKey(username, isHashed) {
+    return this.retrieveUser(username, 'undefined', isHashed)
+      .then((user) => user.publicKey);
+  }
+
+  getKeys(username, hash, isHashed) {
+    return this.retrieveUser(username, hash, isHashed)
+      .then((user) => user.keys);
+  }
+
+  getUser(username, hash, isHashed) {
+    return this.retrieveUser(username, hash, isHashed);
+  }
+
+  getKeysWithToken(user) {
+    let hashedUsername;
+    return getSHA256(user.username)
+      .then((rHashedUsername) => {
+        hashedUsername = bytesToHexString(rHashedUsername);
+        return user.getToken(this);
+      }).then((token) =>
+        doGET(`${this.db}/user/${hashedUsername}?token=${bytesToHexString(token)}`))
+      .then((userContent) => userContent.keys);
+  }
+
+  getSecret(hashedTitle, user) {
+    let hashedUsername;
+    return getSHA256(user.username)
+      .then((rHashedUsername) => {
+        hashedUsername = bytesToHexString(rHashedUsername);
+        return user.getToken(this);
+      }).then((token) => {
+        let uri = `${this.db}/secret/`;
+        uri += `${hashedTitle}?name=${hashedUsername}&token=`;
+        uri += `${bytesToHexString(token)}`;
+        doGET(uri);
+      });
+  }
+
+  getAllMetadatas(user) {
+    let hashedUsername;
+    return getSHA256(user.username)
+      .then((rHashedUsername) => {
+        hashedUsername = bytesToHexString(rHashedUsername);
+        return user.getToken(this);
+      }).then((token) =>
+        doGET(`${this.db}/allMetadatas/${hashedUsername}?token=${bytesToHexString(token)}`));
+  }
+
+  getDb(username, hash) {
+    return getSHA256(username)
+      .then((hashedUsername) =>
+        doGET(`${this.db}/database/${bytesToHexString(hashedUsername)}/${hash}`));
+  }
+
+  changePassword(user, privateKey, pass) {
+    let hashedUsername;
+    return getSHA256(user.username)
+      .then((rHashedUsername) => {
+        hashedUsername = bytesToHexString(rHashedUsername);
+        return user.getToken(this);
+      }).then((token) =>
+        doPUT(`${this.db}/user/${hashedUsername}`, {
+          pass,
+          privateKey,
+          token: bytesToHexString(token),
+        })
+      );
+  }
+}
 
 export default API;
