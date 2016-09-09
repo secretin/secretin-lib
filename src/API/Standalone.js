@@ -11,7 +11,7 @@ import {
 
 class API {
   constructor(db) {
-    if (typeof link === 'object') {
+    if (typeof db === 'object') {
       this.db = db;
     } else {
       this.db = { users: {}, secrets: {} };
@@ -37,10 +37,12 @@ class API {
         });
       })
       .then((hashedHash) => {
-        const newPass = pass;
-        newPass.hash = bytesToHexString(hashedHash);
         this.db.users[bytesToHexString(hashedUsername)] = {
-          newPass,
+          pass: {
+            salt: pass.salt,
+            hash: bytesToHexString(hashedHash),
+            iterations: pass.iterations,
+          },
           privateKey,
           publicKey,
           keys: {},
@@ -176,86 +178,113 @@ class API {
       });
   }
 
-  unshareSecret(user, friendName, hashedTitle) {
+  unshareSecret(user, friendNames, hashedTitle) {
     let hashedUsername;
-    let hashedFriendUsername;
+    const hashedFriendUsernames = [];
     return getSHA256(user.username)
       .then((rHashedUsername) => {
         hashedUsername = bytesToHexString(rHashedUsername);
-        return getSHA256(friendName);
-      }).then((rHashedFriendUsername) => {
-        hashedFriendUsername = bytesToHexString(rHashedFriendUsername);
+        const hashedFriendUseramePromises = [];
+        friendNames.forEach((username) => {
+          hashedFriendUseramePromises.push(getSHA256(username));
+        });
+        return Promise.all(hashedFriendUseramePromises);
+      })
+      .then((rHashedFriendUserames) => {
+        rHashedFriendUserames.forEach((hashedFriendUserame) => {
+          hashedFriendUsernames.push(bytesToHexString(hashedFriendUserame));
+        });
         return user.getToken(this);
       }).then(() => {
-        if (hashedUsername !== hashedFriendUsername) {
-          if (typeof this.db.users[hashedUsername] !== 'undefined') {
-            if (typeof this.db.secrets[hashedTitle] !== 'undefined') {
-              if (typeof this.db.users[hashedUsername].keys[hashedTitle].rights !== 'undefined'
-                  && this.db.users[hashedUsername].keys[hashedTitle].rights > 1) {
-                const dbUser = this.db.users[hashedFriendUsername];
-                if (typeof dbUser !== 'undefined') {
-                  if (typeof dbUser.keys[hashedTitle] !== 'undefined') {
-                    delete dbUser.keys[hashedTitle];
-                    const id = this.db.secrets[hashedTitle].users.indexOf(hashedFriendUsername);
-                    this.db.secrets[hashedTitle].users.splice(id, 1);
-                    return;
+        if (typeof this.db.users[hashedUsername] !== 'undefined') {
+          if (typeof this.db.secrets[hashedTitle] !== 'undefined') {
+            if (typeof this.db.users[hashedUsername].keys[hashedTitle].rights !== 'undefined'
+                && this.db.users[hashedUsername].keys[hashedTitle].rights > 1) {
+              let yourself = 0;
+              let nb = 0;
+              hashedFriendUsernames.forEach((hashedFriendUsername) => {
+                if (hashedUsername !== hashedFriendUsername) {
+                  const dbUser = this.db.users[hashedFriendUsername];
+                  if (typeof dbUser !== 'undefined') {
+                    if (typeof dbUser.keys[hashedTitle] !== 'undefined') {
+                      delete dbUser.keys[hashedTitle];
+                      const id = this.db.secrets[hashedTitle].users.indexOf(hashedFriendUsername);
+                      this.db.secrets[hashedTitle].users.splice(id, 1);
+                      nb += 1;
+                    } else {
+                      throw (`You didn't share this secret with ${hashedFriendUsername}`);
+                    }
+                  } else {
+                    throw (`${hashedFriendUsername} not found`);
                   }
-                  throw ('You didn\'t share this secret with this friend');
                 } else {
-                  throw ('Friend not found');
+                  yourself = 1;
+                  if (hashedFriendUsernames.length === 1) {
+                    throw ('You can\'t unshare with youself');
+                  }
                 }
-              } else {
-                throw ('You can\'t unshare this secret');
+              });
+              if (nb === hashedFriendUsernames.length - yourself) {
+                return;
               }
+              throw ('Something goes wrong.');
             } else {
-              throw ('Secret not found');
+              throw ('You can\'t unshare this secret');
             }
           } else {
-            throw ('User not found');
+            throw ('Secret not found');
           }
         } else {
-          throw ('You can\'t unshare with youself');
+          throw ('User not found');
         }
       });
   }
 
-  shareSecret(user, sharedSecretObject) {
+  shareSecret(user, sharedSecretObjects) {
     let hashedUsername;
     return getSHA256(user.username)
       .then((rHashedUsername) => {
         hashedUsername = bytesToHexString(rHashedUsername);
         return user.getToken(this);
       }).then(() => {
-        if (sharedSecretObject.friendName !== hashedUsername) {
-          const dbUser = this.db.users[hashedUsername];
-          if (typeof dbUser !== 'undefined') {
-            if (typeof this.db.secrets[sharedSecretObject.hashedTitle] !== 'undefined') {
-              if (typeof dbUser.keys[sharedSecretObject.hashedTitle].rights !== 'undefined'
-                  && dbUser.keys[sharedSecretObject.hashedTitle].rights > 1) {
-                const dbFriend = this.db.users[sharedSecretObject.friendName];
-                if (typeof dbFriend !== 'undefined') {
-                  dbFriend.keys[sharedSecretObject.hashedTitle] = {
-                    key: sharedSecretObject.wrappedKey,
-                    rights: sharedSecretObject.rights,
-                  };
-                  const users = this.db.secrets[sharedSecretObject.hashedTitle].users;
-                  if (users.indexOf(sharedSecretObject.friendName) < 0) {
-                    users.push(sharedSecretObject.friendName);
+        const dbUser = this.db.users[hashedUsername];
+        if (typeof dbUser !== 'undefined') {
+          let nb = 0;
+          sharedSecretObjects.forEach((sharedSecretObject) => {
+            if (sharedSecretObject.friendName !== hashedUsername) {
+              if (typeof this.db.secrets[sharedSecretObject.hashedTitle] !== 'undefined') {
+                if (typeof dbUser.keys[sharedSecretObject.hashedTitle].rights !== 'undefined'
+                    && dbUser.keys[sharedSecretObject.hashedTitle].rights > 1) {
+                  const dbFriend = this.db.users[sharedSecretObject.friendName];
+                  if (typeof dbFriend !== 'undefined') {
+                    dbFriend.keys[sharedSecretObject.hashedTitle] = {
+                      key: sharedSecretObject.wrappedKey,
+                      rights: sharedSecretObject.rights,
+                    };
+                    const users = this.db.secrets[sharedSecretObject.hashedTitle].users;
+                    if (users.indexOf(sharedSecretObject.friendName) < 0) {
+                      users.push(sharedSecretObject.friendName);
+                    }
+                    nb += 1;
+                  } else {
+                    throw (`Friend ${sharedSecretObject.friendName} not found`);
                   }
-                  return;
+                } else {
+                  throw (`You can't share secret ${sharedSecretObject.hashedTitle}`);
                 }
-                throw ('Friend not found');
               } else {
-                throw ('You can\'t share this secret');
+                throw (`Secret ${sharedSecretObject.hashedTitle} not found`);
               }
             } else {
-              throw ('Secret not found');
+              throw ('You can\'t share with youself');
             }
-          } else {
-            throw ('User not found');
+          });
+          if (nb === sharedSecretObjects.length) {
+            return;
           }
+          throw ('Something goes wrong.');
         } else {
-          throw ('You can\'t share with youself');
+          throw ('User not found');
         }
       });
   }
@@ -309,19 +338,9 @@ class API {
       .then((user) => ({ salt: user.pass.salt, iterations: user.pass.iterations }));
   }
 
-  getWrappedPrivateKey(username, hash, isHashed) {
-    return this.retrieveUser(username, hash, isHashed)
-      .then((user) => user.privateKey);
-  }
-
   getPublicKey(username, isHashed) {
     return this.retrieveUser(username, 'undefined', isHashed)
       .then((user) => user.publicKey);
-  }
-
-  getKeys(username, hash, isHashed) {
-    return this.retrieveUser(username, hash, isHashed)
-      .then((user) => user.keys);
   }
 
   getUser(username, hash, isHashed) {

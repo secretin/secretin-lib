@@ -110,7 +110,7 @@ class API {
 
   unshareSecret(user, friendNames, hashedTitle) {
     let hashedUsername;
-    const hashedFriendUserames = [];
+    const hashedFriendUsernames = [];
     return getSHA256(user.username)
       .then((rHashedUsername) => {
         hashedUsername = bytesToHexString(rHashedUsername);
@@ -122,12 +122,12 @@ class API {
       })
       .then((rHashedFriendUserames) => {
         rHashedFriendUserames.forEach((hashedFriendUserame) => {
-          hashedFriendUserames.push(bytesToHexString(hashedFriendUserame));
+          hashedFriendUsernames.push(bytesToHexString(hashedFriendUserame));
         });
         return user.getToken(this);
       }).then((token) =>
         doPOST(`${this.db}/unshare/${hashedUsername}/${hashedTitle}`, {
-          friendNames: hashedFriendUserames,
+          friendNames: hashedFriendUsernames,
           token: bytesToHexString(token),
         })
       );
@@ -169,19 +169,9 @@ class API {
       .then((user) => ({ salt: user.pass.salt, iterations: user.pass.iterations }));
   }
 
-  getWrappedPrivateKey(username, hash, isHashed) {
-    return this.retrieveUser(username, hash, isHashed)
-      .then((user) => user.privateKey);
-  }
-
   getPublicKey(username, isHashed) {
     return this.retrieveUser(username, 'undefined', isHashed)
       .then((user) => user.publicKey);
-  }
-
-  getKeys(username, hash, isHashed) {
-    return this.retrieveUser(username, hash, isHashed)
-      .then((user) => user.keys);
   }
 
   getUser(username, hash, isHashed) {
@@ -223,10 +213,15 @@ class API {
         doGET(`${this.db}/allMetadatas/${hashedUsername}?token=${bytesToHexString(token)}`));
   }
 
-  getDb(username, hash) {
-    return getSHA256(username)
-      .then((hashedUsername) =>
-        doGET(`${this.db}/database/${bytesToHexString(hashedUsername)}/${hash}`));
+  getDb(user) {
+    let hashedUsername;
+    return getSHA256(user.username)
+      .then((rHashedUsername) => {
+        hashedUsername = bytesToHexString(rHashedUsername);
+        return user.getToken(this);
+      })
+      .then((token) =>
+        doGET(`${this.db}/database/${hashedUsername}?token=${bytesToHexString(token)}`));
   }
 
   changePassword(user, privateKey, pass) {

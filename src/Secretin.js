@@ -38,7 +38,6 @@ class Secretin {
         pass.salt = bytesToHexString(dKey.salt);
         pass.hash = bytesToHexString(dKey.hash);
         pass.iterations = dKey.iterations;
-        this.currentUser.hash = pass.hash;
         return this.currentUser.exportPrivateKey(dKey.key);
       })
       .then((privateKey) => {
@@ -58,20 +57,17 @@ class Secretin {
 
   getKeys(username, password) {
     let key;
-    let hash;
     let remoteUser;
     return this.api.getDerivationParameters(username)
       .then((parameters) => derivePassword(password, parameters))
       .then((dKey) => {
         key = dKey.key;
-        hash = bytesToHexString(dKey.hash);
-        return this.api.getUser(username, hash);
+        return this.api.getUser(username, bytesToHexString(dKey.hash));
       })
       .then((user) => {
         this.currentUser = new User(username);
         remoteUser = user;
         this.currentUser.keys = remoteUser.keys;
-        this.currentUser.hash = hash;
         return this.currentUser.importPublicKey(remoteUser.publicKey);
       })
       .then(() => this.currentUser.importPrivateKey(key, remoteUser.privateKey));

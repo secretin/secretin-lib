@@ -22,7 +22,6 @@ import {
 class User {
   constructor(username) {
     this.username = username;
-    this.hash = null;
     this.publicKey = null;
     this.privateKey = null;
     this.keys = {};
@@ -35,7 +34,6 @@ class User {
 
   disconnect() {
     delete this.username;
-    delete this.hash;
     delete this.publicKey;
     delete this.privateKey;
     delete this.metadatas;
