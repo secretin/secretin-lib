@@ -209,7 +209,7 @@ class API {
         let uri = `${this.db}/secret/`;
         uri += `${hashedTitle}?name=${hashedUsername}&token=`;
         uri += `${bytesToHexString(token)}`;
-        doGET(uri);
+        return doGET(uri);
       });
   }
 

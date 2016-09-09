@@ -22,6 +22,7 @@ class Secretin {
   newUser(username, password) {
     const result = {};
     const pass = {};
+    this.currentUser = new User(username);
     return this.api.userExists(username)
       .then((exists) =>
         new Promise((resolve, reject) => {
@@ -344,9 +345,10 @@ class Secretin {
       .then((encryptedSecret) =>
         this.currentUser.decryptSecret(encryptedSecret, this.currentUser.keys[hashedFolder].key))
       .then((secrets) =>
-        Object.keys(JSON.parse(secrets)).reduce((promise, hashedTitle) =>
-          promise.then(() =>
-            this.unshareSecret(hashedTitle, friendName)), Promise.resolve()
+        Object.keys(JSON.parse(secrets)).reduce(
+          (promise, hashedTitle) =>
+            promise.then(() => this.unshareSecret(hashedTitle, friendName))
+          , Promise.resolve()
         )
       );
   }
@@ -484,9 +486,13 @@ class Secretin {
       .then((encryptedSecret) =>
         this.currentUser.decryptSecret(encryptedSecret, this.currentUser.keys[hashedFolder].key))
       .then((secrets) =>
-        Object.keys(JSON.parse(secrets)).reduce((promise, hashedTitle) =>
-          promise.then(() => this.deleteSecret(hashedTitle))
-        ), Promise.resolve());
+        Object.keys(JSON.parse(secrets)).reduce(
+          (promise, hashedTitle) =>
+            promise.then(() =>
+              this.deleteSecret(hashedTitle))
+          , Promise.resolve()
+        )
+      );
   }
 
   getAllMetadatas() {
