@@ -81,22 +81,32 @@ class Secretin {
       });
   }
 
-  addSecret(metadatas, content) {
+  addFolder(title) {
+    return this.addSecret(title, {}, true);
+  }
+
+  addSecret(clearTitle, content, isFolder) {
     let hashedTitle;
-    const newMetadatas = metadatas;
-    newMetadatas.users = {};
-    newMetadatas.folders = {};
+    const metadatas = {
+      users: {},
+      folders: {},
+      title: clearTitle,
+    };
+    if (isFolder) {
+      metadatas.type = 'folder';
+    }
+
     return new Promise((resolve, reject) => {
       if (typeof this.currentUser.currentFolder !== 'undefined') {
-        newMetadatas.users[this.currentUser.username] = {
+        metadatas.users[this.currentUser.username] = {
           rights: this.currentUser.keys[this.currentUser.currentFolder].rights,
         };
       } else {
-        newMetadatas.users[this.currentUser.username] = { rights: 2 };
+        metadatas.users[this.currentUser.username] = { rights: 2 };
       }
 
       if (typeof this.currentUser.username === 'string') {
-        this.currentUser.createSecret(newMetadatas, content)
+        this.currentUser.createSecret(metadatas, content)
           .then((secretObject) => {
             hashedTitle = secretObject.hashedTitle;
             return this.api.addSecret(this.currentUser, secretObject);
