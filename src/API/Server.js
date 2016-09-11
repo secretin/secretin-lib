@@ -178,15 +178,14 @@ class API {
     return this.retrieveUser(username, hash, isHashed);
   }
 
-  getKeysWithToken(user) {
+  getUserWithToken(user) {
     let hashedUsername;
     return getSHA256(user.username)
       .then((rHashedUsername) => {
         hashedUsername = bytesToHexString(rHashedUsername);
         return user.getToken(this);
       }).then((token) =>
-        doGET(`${this.db}/user/${hashedUsername}?token=${bytesToHexString(token)}`))
-      .then((userContent) => userContent.keys);
+        doGET(`${this.db}/user/${hashedUsername}?token=${bytesToHexString(token)}`));
   }
 
   getSecret(hashedTitle, user) {

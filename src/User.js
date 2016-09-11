@@ -136,14 +136,11 @@ class User {
         result.iv = secretObject.iv;
         result.metadatas = secretObject.metadatas;
         result.iv_meta = secretObject.iv_meta;
+        result.hashedUsername = secretObject.hashedUsername;
         return this.wrapKey(secretObject.key, this.publicKey);
       })
       .then((wrappedKey) => {
         result.wrappedKey = wrappedKey;
-        return getSHA256(this.username);
-      })
-      .then((hashedUsername) => {
-        result.hashedUsername = bytesToHexString(hashedUsername);
         return getSHA256(saltedTitle);
       })
       .then((hashedTitle) => {
@@ -164,6 +161,10 @@ class User {
       .then((secretObject) => {
         result.metadatas = bytesToHexString(secretObject.secret);
         result.iv_meta = bytesToHexString(secretObject.iv);
+        return getSHA256(this.username);
+      })
+      .then((hashedUsername) => {
+        result.hashedUsername = bytesToHexString(hashedUsername);
         return result;
       });
   }
@@ -179,9 +180,8 @@ class User {
   }
 
   wrapKey(key, publicKey) {
-    return wrapRSAOAEP(key, publicKey).then(
-      (wrappedKey) => bytesToHexString(wrappedKey)
-    );
+    return wrapRSAOAEP(key, publicKey)
+      .then((wrappedKey) => bytesToHexString(wrappedKey));
   }
 
   decryptAllMetadatas(allMetadatas) {

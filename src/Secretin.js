@@ -55,7 +55,7 @@ class Secretin {
       });
   }
 
-  getKeys(username, password) {
+  loginUser(username, password) {
     let key;
     let remoteUser;
     return this.api.getDerivationParameters(username)
@@ -70,14 +70,16 @@ class Secretin {
         this.currentUser.keys = remoteUser.keys;
         return this.currentUser.importPublicKey(remoteUser.publicKey);
       })
-      .then(() => this.currentUser.importPrivateKey(key, remoteUser.privateKey));
+      .then(() => this.currentUser.importPrivateKey(key, remoteUser.privateKey))
+      .then(() => this.currentUser.decryptAllMetadatas(remoteUser.metadatas))
+      .then(() => this.currentUser);
   }
 
-  refreshKeys() {
-    return this.api.getKeysWithToken(this.currentUser)
-      .then((keys) => {
-        this.currentUser.keys = keys;
-        return keys;
+  refreshUser() {
+    return this.api.getUserWithToken(this.currentUser)
+      .then((user) => {
+        this.currentUser.keys = user.keys;
+        return this.currentUser.decryptAllMetadatas(user.metadatas);
       });
   }
 
@@ -109,10 +111,14 @@ class Secretin {
         this.currentUser.createSecret(metadatas, content)
           .then((secretObject) => {
             hashedTitle = secretObject.hashedTitle;
+            this.currentUser.keys[secretObject.hashedTitle] = {
+              key: secretObject.wrappedKey,
+              rights: metadatas.users[this.currentUser.username].rights,
+            };
+
+            this.currentUser.metadatas[secretObject.hashedTitle] = metadatas;
             return this.api.addSecret(this.currentUser, secretObject);
           })
-          .then(() => this.refreshKeys())
-          .then(() => this.getAllMetadatas())
           .then(() => {
             if (typeof this.currentUser.currentFolder !== 'undefined') {
               resolve(this.addSecretToFolder(hashedTitle, this.currentUser.currentFolder));
@@ -373,6 +379,7 @@ class Secretin {
   renewKey(hashedTitle) {
     let encryptedSecret;
     const secret = {};
+    let hashedCurrentUsername;
     return this.api.getSecret(hashedTitle, this.currentUser)
       .then((eSecret) => {
         encryptedSecret = eSecret;
@@ -391,15 +398,29 @@ class Secretin {
         secret.iv = secretObject.iv;
         secret.metadatas = secretObject.metadatas;
         secret.iv_meta = secretObject.iv_meta;
+        hashedCurrentUsername = secretObject.hashedUsername;
         const wrappedKeysPromises = [];
         encryptedSecret.users.forEach((hashedUsername) => {
-          wrappedKeysPromises.push(this.wrapKeyForFriend(hashedUsername, secretObject.key));
+          if (hashedCurrentUsername === hashedUsername) {
+            wrappedKeysPromises.push(
+              this.currentUser.wrapKey(secretObject.key, this.currentUser.publicKey)
+                .then((wrappedKey) => ({ user: hashedCurrentUsername, key: wrappedKey }))
+            );
+          } else {
+            wrappedKeysPromises.push(this.wrapKeyForFriend(hashedUsername, secretObject.key));
+          }
         });
 
         return Promise.all(wrappedKeysPromises);
       })
-      .then((wrappedKeys) =>
-        this.api.newKey(this.currentUser, hashedTitle, secret, wrappedKeys));
+      .then((wrappedKeys) => {
+        wrappedKeys.forEach((wrappedKey) => {
+          if (wrappedKey.user === hashedCurrentUsername) {
+            this.currentUser.keys[hashedTitle].key = wrappedKey;
+          }
+        });
+        return this.api.newKey(this.currentUser, hashedTitle, secret, wrappedKeys);
+      });
   }
 
   removeSecretFromFolder(hashedTitle, hashedFolder) {
@@ -457,12 +478,11 @@ class Secretin {
         .then(() => this.deleteFolderSecrets(hashedTitle));
     }
 
-    return isFolder.then(() => {
-      delete secretMetadatas.users[this.currentUser.username];
-      return this.resetMetadatas(hashedTitle);
-    })
+    return isFolder
     .then(() => this.api.deleteSecret(this.currentUser, hashedTitle))
     .then(() => {
+      delete this.currentUser.metadatas[hashedTitle];
+      delete this.currentUser.keys[hashedTitle];
       const editFolderPromises = [];
       Object.keys(secretMetadatas.folders).forEach((hashedFolder) => {
         editFolderPromises.push(
@@ -499,11 +519,6 @@ class Secretin {
           , Promise.resolve()
         )
       );
-  }
-
-  getAllMetadatas() {
-    return this.api.getAllMetadatas(this.currentUser)
-      .then((allMetadatas) => this.currentUser.decryptAllMetadatas(allMetadatas));
   }
 }
 
