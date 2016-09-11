@@ -1,21 +1,21 @@
-describe("New user", function() {
-  beforeEach(function() {
-      window.secretin = new Secretin();
+describe('New user', () => {
+  const username = 'username';
+  const password = 'password';
+
+  beforeEach(() => {
+    this.secretin = new Secretin();
   });
-  it("Should have username", function(done) {
-    var username = 'username';
-    var password = 'password';
-    secretin.newUser(username, password).then(function(){
-      expect(secretin.currentUser.username).toBe('username');
+
+  it('Should have username', (done) => {
+    this.secretin.newUser(username, password).then(() => {
+      expect(this.secretin.currentUser.username).toBe('username');
       done();
     });
   });
 
-  it("Should have no metadatas", function(done) {
-    var username = 'username';
-    var password = 'password';
-    secretin.newUser(username, password).then(function(){
-      expect(secretin.currentUser.metadatas).toEqual({});
+  it('Should have no metadatas', (done) => {
+    this.secretin.newUser(username, password).then(() => {
+      expect(this.secretin.currentUser.metadatas).toEqual({});
       done();
     });
   });

@@ -3,12 +3,17 @@
   "extends": "airbnb-base",
   "env": {
     "browser": true,
-    "node": false
+    "node": false,
+    "jasmine": true
   },
   "globals": {
-    "crypto": true
+    "crypto": true,
+    "Secretin": true
   },
   "rules": {
     "no-throw-literal": 0
-  }
+  },
+  "plugins": [
+    "jasmine"
+  ]
 }
