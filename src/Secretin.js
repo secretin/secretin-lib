@@ -416,7 +416,7 @@ class Secretin {
       .then((wrappedKeys) => {
         wrappedKeys.forEach((wrappedKey) => {
           if (wrappedKey.user === hashedCurrentUsername) {
-            this.currentUser.keys[hashedTitle].key = wrappedKey;
+            this.currentUser.keys[hashedTitle].key = wrappedKey.key;
           }
         });
         return this.api.newKey(this.currentUser, hashedTitle, secret, wrappedKeys);
