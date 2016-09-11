@@ -315,6 +315,16 @@ class API {
       })
       .then((hashedHash) => {
         if (bytesToHexString(hashedHash) === user.pass.hash) {
+          const metadatas = {};
+          const hashedTitles = Object.keys(user.keys);
+          hashedTitles.forEach((hashedTitle) => {
+            const secret = this.db.secrets[hashedTitle];
+            metadatas[hashedTitle] = {
+              iv: secret.iv_meta,
+              secret: secret.metadatas,
+            };
+          });
+          user.metadatas = metadatas;
           return user;
         }
         const fakePrivateKey = new Uint8Array(3232);
@@ -328,6 +338,7 @@ class API {
           iv: bytesToHexString(fakeIV),
         };
         user.keys = {};
+        user.metadatas = {};
         user.pass.hash = fakeHash;
         return user;
       });
@@ -347,7 +358,7 @@ class API {
     return this.retrieveUser(username, hash, isHashed);
   }
 
-  getKeysWithToken(user) {
+  getUserWithToken(user) {
     let hashedUsername;
     return getSHA256(user.username)
       .then((rHashedUsername) => {
@@ -358,7 +369,18 @@ class API {
           if (typeof this.db.users[hashedUsername] === 'undefined') {
             reject('User not found');
           } else {
-            resolve(this.db.users[hashedUsername].keys);
+            const userObject = JSON.parse(JSON.stringify(this.db.users[hashedUsername]));
+            const metadatas = {};
+            const hashedTitles = Object.keys(user.keys);
+            hashedTitles.forEach((hashedTitle) => {
+              const secret = this.db.secrets[hashedTitle];
+              metadatas[hashedTitle] = {
+                iv: secret.iv_meta,
+                secret: secret.metadatas,
+              };
+            });
+            userObject.metadatas = metadatas;
+            resolve(userObject);
           }
         })
       );

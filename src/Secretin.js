@@ -16,6 +16,10 @@ class Secretin {
   }
 
   changeDB(db) {
+    if (typeof this.currentUser.username !== 'undefined') {
+      this.currentUser.disconnect();
+    }
+    this.currentUser = {};
     this.api = new this.api.constructor(db);
   }
 
@@ -52,7 +56,8 @@ class Secretin {
           result.publicKey,
           pass
         );
-      });
+      })
+      .then(() => this.currentUser);
   }
 
   loginUser(username, password) {
@@ -93,10 +98,12 @@ class Secretin {
       users: {},
       folders: {},
       title: clearTitle,
+      type: 'secret',
     };
     if (isFolder) {
       metadatas.type = 'folder';
     }
+
 
     return new Promise((resolve, reject) => {
       if (typeof this.currentUser.currentFolder !== 'undefined') {
@@ -238,8 +245,7 @@ class Secretin {
     let isFolder = Promise.resolve();
     const sharedSecretObjectPromises = [];
     const secretMetadatas = this.currentUser.metadatas[hashedTitle];
-    if (typeof secretMetadatas.type !== 'undefined'
-        && secretMetadatas.type === 'folder') {
+    if (secretMetadatas.type === 'folder') {
       isFolder = isFolder
         .then(() => this.api.getSecret(hashedTitle, this.currentUser))
         .then((encryptedSecret) =>
@@ -288,8 +294,7 @@ class Secretin {
         let hashedFolder = false;
         Object.keys(this.currentUser.metadatas).forEach((hash) => {
           const secretMetadatas = this.currentUser.metadatas[hash];
-          if (typeof secretMetadatas.type !== 'undefined'
-              && secretMetadatas.type === 'folder'
+          if (secretMetadatas.type === 'folder'
               && secretMetadatas.title === friendName) {
             hashedFolder = hash;
           }
@@ -331,8 +336,7 @@ class Secretin {
   unshareSecret(hashedTitle, friendName) {
     let isFolder = Promise.resolve();
     const secretMetadatas = this.currentUser.metadatas[hashedTitle];
-    if (typeof secretMetadatas.type !== 'undefined'
-      && secretMetadatas.type === 'folder') {
+    if (secretMetadatas.type === 'folder') {
       isFolder = isFolder
         .then(() => this.unshareFolderSecrets(hashedTitle, friendName));
     }
@@ -472,8 +476,7 @@ class Secretin {
   deleteSecret(hashedTitle) {
     let isFolder = Promise.resolve();
     const secretMetadatas = this.currentUser.metadatas[hashedTitle];
-    if (typeof secretMetadatas.type !== 'undefined'
-        && secretMetadatas.type === 'folder') {
+    if (secretMetadatas.type === 'folder') {
       isFolder = isFolder
         .then(() => this.deleteFolderSecrets(hashedTitle));
     }

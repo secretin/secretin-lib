@@ -1,17 +1,19 @@
 describe('User', () => {
-  beforeEach((done) => {
+  const username = 'user1';
+  const password = 'password';
+
+  beforeEach(() => {
     this.secretin = new Secretin();
-    const username = 'user1';
-    const password = 'password';
-    this.secretin.newUser(username, password).then(() => {
-      done();
-    });
+    return this.secretin.newUser(username, password);
   });
 
-  it('Can create secret', (done) => {
-    this.secretin.addSecret('secret1', 'This is secret').then(() => {
-      const hashedSecret = Object.keys(this.secretin.currentUser.metadatas)[0];
-      expect(this.secretin.currentUser.metadatas[hashedSecret]).toEqual({
+  it('Can create secret', () =>
+    this.secretin.addSecret('secret1', 'This is secret')
+      .then(() => {
+        const hashedSecret = Object.keys(this.secretin.currentUser.metadatas)[0];
+        return this.secretin.currentUser.metadatas[hashedSecret];
+      })
+      .should.eventually.deep.equal({
         users: {
           user1: {
             rights: 2,
@@ -19,15 +21,17 @@ describe('User', () => {
         },
         folders: {},
         title: 'secret1',
-      });
-      done();
-    });
-  });
+        type: 'secret',
+      })
+  );
 
-  it('Can create folder', (done) => {
-    this.secretin.addFolder('folder1').then(() => {
-      const hashedSecret = Object.keys(this.secretin.currentUser.metadatas)[0];
-      expect(this.secretin.currentUser.metadatas[hashedSecret]).toEqual({
+  it('Can create folder', () =>
+    this.secretin.addFolder('folder1', 'This is secret')
+      .then(() => {
+        const hashedSecret = Object.keys(this.secretin.currentUser.metadatas)[0];
+        return this.secretin.currentUser.metadatas[hashedSecret];
+      })
+      .should.eventually.deep.equal({
         users: {
           user1: {
             rights: 2,
@@ -36,8 +40,6 @@ describe('User', () => {
         folders: {},
         title: 'folder1',
         type: 'folder',
-      });
-      done();
-    });
-  });
+      })
+    );
 });

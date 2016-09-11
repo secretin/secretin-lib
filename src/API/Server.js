@@ -202,16 +202,6 @@ class API {
       });
   }
 
-  getAllMetadatas(user) {
-    let hashedUsername;
-    return getSHA256(user.username)
-      .then((rHashedUsername) => {
-        hashedUsername = bytesToHexString(rHashedUsername);
-        return user.getToken(this);
-      }).then((token) =>
-        doGET(`${this.db}/allMetadatas/${hashedUsername}?token=${bytesToHexString(token)}`));
-  }
-
   getDb(user) {
     let hashedUsername;
     return getSHA256(user.username)

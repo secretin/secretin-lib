@@ -6,17 +6,34 @@ describe('New user', () => {
     this.secretin = new Secretin();
   });
 
-  it('Should have username', (done) => {
-    this.secretin.newUser(username, password).then(() => {
-      expect(this.secretin.currentUser.username).toBe('username');
-      done();
-    });
-  });
+  it('Should have username', () =>
+    this.secretin.newUser(username, password)
+      .then((currentUser) => currentUser.username)
+      .should.eventually.equal(username)
+  );
 
-  it('Should have no metadatas', (done) => {
-    this.secretin.newUser(username, password).then(() => {
-      expect(this.secretin.currentUser.metadatas).toEqual({});
-      done();
-    });
-  });
+  it('Should have no metadatas', () =>
+    this.secretin.newUser(username, password)
+      .then((currentUser) => currentUser.metadatas)
+      .should.eventually.deep.equal({})
+  );
+
+  it('Can login', () =>
+    this.secretin.newUser(username, password)
+      .then((currentUser) => {
+        currentUser.disconnect();
+        return this.secretin.loginUser(username, password);
+      })
+      .then((currentUser) => currentUser.username)
+      .should.eventually.equal(username)
+  );
+
+  it('Can\'t login with invalid password', () =>
+    this.secretin.newUser(username, password)
+      .then((currentUser) => {
+        currentUser.disconnect();
+        return this.secretin.loginUser(username, 'wrongPassword');
+      })
+      .should.be.rejectedWith('Invalid Password')
+  );
 });
