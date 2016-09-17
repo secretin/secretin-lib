@@ -1,3 +1,6 @@
+// eslint-disable-next-line
+Date.prototype.toISOString = () => '2016-01-01T00:00:00.000Z';
+
 describe('Logged user', () => {
   const username = 'user1';
   const password = 'password';
@@ -12,43 +15,52 @@ describe('Logged user', () => {
 
   it('Can retrieve metadatas', () => {
     this.secretin.currentUser.metadatas.should.deep.equal({
-      '6e4c4c3bb1db78ae7aaeb9a478f52fe072001219e4fe5739b4e78f0e921bc1aa': {
+      f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772: {
         folders: {},
-        id: '6e4c4c3bb1db78ae7aaeb9a478f52fe072001219e4fe5739b4e78f0e921bc1aa',
+        id: 'f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772',
+        lastModifiedAt: '2016-09-17T23:41:23.071Z',
+        lastModifiedBy: 'user1',
         title: 'secret',
         type: 'secret',
         users: {
           user1: {
+            username: 'user1',
             rights: 2,
           },
         },
       },
-      af3205b139eece726bffdf893a13680936e23b6562f166de63ae87277faaed4e: {
+      '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7': {
         folders: {},
-        id: 'af3205b139eece726bffdf893a13680936e23b6562f166de63ae87277faaed4e',
+        id: '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7',
+        lastModifiedAt: '2016-09-17T23:41:33.936Z',
+        lastModifiedBy: 'user1',
         title: 'folder',
         type: 'folder',
         users: {
           user1: {
+            username: 'user1',
             rights: 2,
           },
         },
       },
-      b28ff23056e101129f355472d7ed4d191d51bb5e59ad4f904ba992062726f8ac: {
+      fe40e52d903d821e696d366aa9c9e383de2c1486b90166f458eb99788660f545: {
         users: {
           user1: {
+            username: 'user1',
             rights: 2,
             folder: 'folder',
           },
         },
+        lastModifiedAt: '2016-09-17T23:41:33.897Z',
+        lastModifiedBy: 'user1',
         folders: {
-          af3205b139eece726bffdf893a13680936e23b6562f166de63ae87277faaed4e: {
+          '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7': {
             name: 'folder',
           },
         },
         title: 'secret in folder',
         type: 'secret',
-        id: 'b28ff23056e101129f355472d7ed4d191d51bb5e59ad4f904ba992062726f8ac',
+        id: 'fe40e52d903d821e696d366aa9c9e383de2c1486b90166f458eb99788660f545',
       },
     });
   });
@@ -70,8 +82,11 @@ describe('Logged user', () => {
         return this.secretin.currentUser.metadatas[hashedTitle];
       })
       .should.eventually.deep.equal({
+        lastModifiedAt: '2016-01-01T00:00:00.000Z',
+        lastModifiedBy: 'user1',
         users: {
           user1: {
+            username: 'user1',
             rights: 2,
           },
         },
@@ -99,8 +114,11 @@ describe('Logged user', () => {
         return this.secretin.currentUser.metadatas[hashedTitle];
       })
       .should.eventually.deep.equal({
+        lastModifiedAt: '2016-01-01T00:00:00.000Z',
+        lastModifiedBy: 'user1',
         users: {
           user1: {
+            username: 'user1',
             rights: 2,
           },
         },
@@ -144,7 +162,7 @@ describe('Logged user', () => {
   });
 
   it('Can get secret', () => {
-    const secretHashedTitle = '6e4c4c3bb1db78ae7aaeb9a478f52fe072001219e4fe5739b4e78f0e921bc1aa';
+    const secretHashedTitle = 'f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772';
     return this.secretin.getSecret(secretHashedTitle)
       .should.eventually.deep.equal({
         fields: [{
@@ -155,7 +173,7 @@ describe('Logged user', () => {
   });
 
   it('Can edit secret', () => {
-    const secretHashedTitle = '6e4c4c3bb1db78ae7aaeb9a478f52fe072001219e4fe5739b4e78f0e921bc1aa';
+    const secretHashedTitle = 'f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772';
     const secretContent = 'YOLO';
     return this.secretin.editSecret(secretHashedTitle, secretContent)
       .then(() => this.secretin.getSecret(secretHashedTitle))
@@ -163,112 +181,130 @@ describe('Logged user', () => {
   });
 
   it('Can add secret to folder', () => {
-    const secretHashedTitle = '6e4c4c3bb1db78ae7aaeb9a478f52fe072001219e4fe5739b4e78f0e921bc1aa';
-    const folderHashedTitle = 'af3205b139eece726bffdf893a13680936e23b6562f166de63ae87277faaed4e';
+    const secretHashedTitle = 'f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772';
+    const folderHashedTitle = '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7';
     return this.secretin.addSecretToFolder(secretHashedTitle, folderHashedTitle)
       .then(() => this.secretin.currentUser.metadatas[secretHashedTitle])
       .should.eventually.deep.equal({
+        lastModifiedAt: '2016-01-01T00:00:00.000Z',
+        lastModifiedBy: 'user1',
         users: {
           user1: {
+            username: 'user1',
             rights: 2,
             folder: 'folder',
           },
         },
         folders: {
-          af3205b139eece726bffdf893a13680936e23b6562f166de63ae87277faaed4e: {
+          '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7': {
             name: 'folder',
           },
         },
         title: 'secret',
         type: 'secret',
-        id: '6e4c4c3bb1db78ae7aaeb9a478f52fe072001219e4fe5739b4e78f0e921bc1aa',
+        id: 'f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772',
       })
       .then(() => this.secretin.getSecret(folderHashedTitle))
       .should.eventually.deep.equal({
-        b28ff23056e101129f355472d7ed4d191d51bb5e59ad4f904ba992062726f8ac: 1,
-        '6e4c4c3bb1db78ae7aaeb9a478f52fe072001219e4fe5739b4e78f0e921bc1aa': 1,
+        fe40e52d903d821e696d366aa9c9e383de2c1486b90166f458eb99788660f545: 1,
+        f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772: 1,
       });
   });
 
   it('Can remove secret from folder', () => {
-    const secretHashedTitle = 'b28ff23056e101129f355472d7ed4d191d51bb5e59ad4f904ba992062726f8ac';
-    const folderHashedTitle = 'af3205b139eece726bffdf893a13680936e23b6562f166de63ae87277faaed4e';
+    const secretHashedTitle = 'fe40e52d903d821e696d366aa9c9e383de2c1486b90166f458eb99788660f545';
+    const folderHashedTitle = '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7';
     return this.secretin.removeSecretFromFolder(secretHashedTitle, folderHashedTitle)
       .then(() => this.secretin.currentUser.metadatas[secretHashedTitle])
       .should.eventually.deep.equal({
+        lastModifiedAt: '2016-01-01T00:00:00.000Z',
+        lastModifiedBy: 'user1',
         users: {
           user1: {
+            username: 'user1',
             rights: 2,
           },
         },
         folders: {},
         title: 'secret in folder',
         type: 'secret',
-        id: 'b28ff23056e101129f355472d7ed4d191d51bb5e59ad4f904ba992062726f8ac',
+        id: 'fe40e52d903d821e696d366aa9c9e383de2c1486b90166f458eb99788660f545',
       })
       .then(() => this.secretin.getSecret(folderHashedTitle))
       .should.eventually.deep.equal({});
   });
 
   it('Can delete secret', () => {
-    const secretHashedTitle = '6e4c4c3bb1db78ae7aaeb9a478f52fe072001219e4fe5739b4e78f0e921bc1aa';
+    const secretHashedTitle = 'f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772';
     return this.secretin.deleteSecret(secretHashedTitle)
       .then(() => this.secretin.currentUser.metadatas)
       .should.eventually.deep.equal({
-        af3205b139eece726bffdf893a13680936e23b6562f166de63ae87277faaed4e: {
+        '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7': {
           folders: {},
-          id: 'af3205b139eece726bffdf893a13680936e23b6562f166de63ae87277faaed4e',
+          id: '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7',
+          lastModifiedAt: '2016-09-17T23:41:33.936Z',
+          lastModifiedBy: 'user1',
           title: 'folder',
           type: 'folder',
           users: {
             user1: {
+              username: 'user1',
               rights: 2,
             },
           },
         },
-        b28ff23056e101129f355472d7ed4d191d51bb5e59ad4f904ba992062726f8ac: {
+        fe40e52d903d821e696d366aa9c9e383de2c1486b90166f458eb99788660f545: {
           users: {
             user1: {
+              username: 'user1',
               rights: 2,
               folder: 'folder',
             },
           },
+          lastModifiedAt: '2016-09-17T23:41:33.897Z',
+          lastModifiedBy: 'user1',
           folders: {
-            af3205b139eece726bffdf893a13680936e23b6562f166de63ae87277faaed4e: {
+            '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7': {
               name: 'folder',
             },
           },
           title: 'secret in folder',
           type: 'secret',
-          id: 'b28ff23056e101129f355472d7ed4d191d51bb5e59ad4f904ba992062726f8ac',
+          id: 'fe40e52d903d821e696d366aa9c9e383de2c1486b90166f458eb99788660f545',
         },
       });
   });
 
   it('Can delete secret in a folder', () => {
-    const secretHashedTitle = 'b28ff23056e101129f355472d7ed4d191d51bb5e59ad4f904ba992062726f8ac';
-    const folderHashedTitle = 'af3205b139eece726bffdf893a13680936e23b6562f166de63ae87277faaed4e';
+    const secretHashedTitle = 'fe40e52d903d821e696d366aa9c9e383de2c1486b90166f458eb99788660f545';
+    const folderHashedTitle = '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7';
     return this.secretin.deleteSecret(secretHashedTitle)
       .then(() => this.secretin.currentUser.metadatas)
       .should.eventually.deep.equal({
-        '6e4c4c3bb1db78ae7aaeb9a478f52fe072001219e4fe5739b4e78f0e921bc1aa': {
+        f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772: {
           folders: {},
-          id: '6e4c4c3bb1db78ae7aaeb9a478f52fe072001219e4fe5739b4e78f0e921bc1aa',
+          id: 'f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772',
+          lastModifiedAt: '2016-09-17T23:41:23.071Z',
+          lastModifiedBy: 'user1',
           title: 'secret',
           type: 'secret',
           users: {
             user1: {
+              username: 'user1',
               rights: 2,
             },
           },
         },
-        af3205b139eece726bffdf893a13680936e23b6562f166de63ae87277faaed4e: {
+        '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7': {
           folders: {},
-          id: 'af3205b139eece726bffdf893a13680936e23b6562f166de63ae87277faaed4e',
+          id: '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7',
+          lastModifiedAt: '2016-01-01T00:00:00.000Z',
+          lastModifiedBy: 'user1',
           title: 'folder',
           type: 'folder',
           users: {
             user1: {
+              username: 'user1',
               rights: 2,
             },
           },

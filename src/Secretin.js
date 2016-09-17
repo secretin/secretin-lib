@@ -94,7 +94,10 @@ class Secretin {
 
   addSecret(clearTitle, content, isFolder) {
     let hashedTitle;
+    const now = new Date();
     const metadatas = {
+      lastModifiedAt: now.toISOString(),
+      lastModifiedBy: this.currentUser.username,
       users: {},
       folders: {},
       title: clearTitle,
@@ -108,10 +111,14 @@ class Secretin {
     return new Promise((resolve, reject) => {
       if (typeof this.currentUser.currentFolder !== 'undefined') {
         metadatas.users[this.currentUser.username] = {
+          username: this.currentUser.username,
           rights: this.currentUser.keys[this.currentUser.currentFolder].rights,
         };
       } else {
-        metadatas.users[this.currentUser.username] = { rights: 2 };
+        metadatas.users[this.currentUser.username] = {
+          username: this.currentUser.username,
+          rights: 2,
+        };
       }
 
       if (typeof this.currentUser.username === 'string') {
@@ -209,6 +216,7 @@ class Secretin {
         Object.keys(metadatasUsers).forEach((hashedTitle) => {
           metadatasUsers[hashedTitle].forEach((infos) => {
             const metaUser = {
+              username: infos.friendName,
               rights: folderMetadatas.users[infos.friendName].rights,
             };
             if (typeof (infos.folder) === 'undefined') {
@@ -280,6 +288,10 @@ class Secretin {
   }
 
   resetMetadatas(hashedTitle) {
+    const secretMetadatas = this.currentUser.metadatas[hashedTitle];
+    const now = new Date();
+    secretMetadatas.lastModifiedAt = now;
+    secretMetadatas.lastModifiedBy = this.currentUser.username;
     return this.getSecret(hashedTitle)
       .then((secret) => this.editSecret(hashedTitle, secret));
   }
@@ -319,7 +331,10 @@ class Secretin {
         const resetMetaPromises = [];
         sharedSecretObjects.forEach((sharedSecretObject) => {
           const secretMetadatas = this.currentUser.metadatas[sharedSecretObject.hashedTitle];
-          secretMetadatas.users[friend.username] = { rights };
+          secretMetadatas.users[friend.username] = {
+            username: friend.username,
+            rights,
+          };
           if (typeof sharedSecretObject.inFolder !== 'undefined') {
             secretMetadatas.users[friend.username].folder = sharedSecretObject.inFolder;
           }
@@ -442,6 +457,7 @@ class Secretin {
         delete secretMetadatas.folders[hashedFolder];
         return this.renewKey(hashedTitle);
       })
+      .then(() => this.resetMetadatas(hashedTitle))
       .then(() => this.api.getSecret(hashedFolder, this.currentUser))
       .then((encryptedSecret) =>
         this.currentUser.decryptSecret(hashedFolder, encryptedSecret))

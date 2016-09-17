@@ -115,6 +115,9 @@ class User {
 
   editSecret(hashedTitle, secret) {
     const metadatas = this.metadatas[hashedTitle];
+    const now = new Date();
+    metadatas.lastModifiedAt = now.toISOString();
+    metadatas.lastModifiedBy = this.username;
     const wrappedKey = this.keys[hashedTitle].key;
     const result = {};
     return this.unwrapKey(wrappedKey)
