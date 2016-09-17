@@ -122,7 +122,6 @@ class Secretin {
               key: secretObject.wrappedKey,
               rights: metadatas.users[this.currentUser.username].rights,
             };
-            metadatas.id = hashedTitle;
             this.currentUser.metadatas[secretObject.hashedTitle] = metadatas;
             return this.api.addSecret(this.currentUser, secretObject);
           })

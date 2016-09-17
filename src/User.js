@@ -130,7 +130,13 @@ class User {
     const now = Date.now();
     const saltedTitle = `${now}|${metadatas.title}`;
     const result = {};
-    return this.encryptSecret(metadatas, secret)
+    const newMetadas = metadatas;
+    return getSHA256(saltedTitle)
+      .then((hashedTitle) => {
+        result.hashedTitle = bytesToHexString(hashedTitle);
+        newMetadas.id = result.hashedTitle;
+        return this.encryptSecret(newMetadas, secret);
+      })
       .then((secretObject) => {
         result.secret = secretObject.secret;
         result.iv = secretObject.iv;
@@ -141,10 +147,6 @@ class User {
       })
       .then((wrappedKey) => {
         result.wrappedKey = wrappedKey;
-        return getSHA256(saltedTitle);
-      })
-      .then((hashedTitle) => {
-        result.hashedTitle = bytesToHexString(hashedTitle);
         return result;
       });
   }
