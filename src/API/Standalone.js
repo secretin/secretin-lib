@@ -202,6 +202,7 @@ class API {
                 && this.db.users[hashedUsername].keys[hashedTitle].rights > 1) {
               let yourself = 0;
               let nb = 0;
+              let response = 'OK';
               hashedFriendUsernames.forEach((hashedFriendUsername) => {
                 if (hashedUsername !== hashedFriendUsername) {
                   const dbUser = this.db.users[hashedFriendUsername];
@@ -220,12 +221,12 @@ class API {
                 } else {
                   yourself = 1;
                   if (hashedFriendUsernames.length === 1) {
-                    throw ('You can\'t unshare with youself');
+                    response = 'You can\'t unshare with yourself';
                   }
                 }
               });
               if (nb === hashedFriendUsernames.length - yourself) {
-                return;
+                return response;
               }
               throw ('Something goes wrong.');
             } else {

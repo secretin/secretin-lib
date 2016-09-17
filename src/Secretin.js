@@ -150,8 +150,8 @@ class Secretin {
       .then((privateKey) => this.api.changePassword(this.currentUser, privateKey, pass));
   }
 
-  editSecret(hashedTitle, metadatas, content) {
-    return this.currentUser.editSecret(metadatas, content, this.currentUser.keys[hashedTitle].key)
+  editSecret(hashedTitle, content) {
+    return this.currentUser.editSecret(hashedTitle, content)
       .then((secretObject) => this.api.editSecret(this.currentUser, secretObject, hashedTitle));
   }
 
@@ -232,11 +232,11 @@ class Secretin {
       })
       .then(() => this.api.getSecret(hashedFolder, this.currentUser))
       .then((encryptedSecret) =>
-        this.currentUser.decryptSecret(encryptedSecret, this.currentUser.keys[hashedFolder].key))
+        this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
       .then((secret) => {
         const folder = JSON.parse(secret);
         folder[hashedSecretTitle] = 1;
-        return this.editSecret(hashedFolder, folderMetadatas, folder);
+        return this.editSecret(hashedFolder, folder);
       });
   }
 
@@ -248,7 +248,7 @@ class Secretin {
       isFolder = isFolder
         .then(() => this.api.getSecret(hashedTitle, this.currentUser))
         .then((encryptedSecret) =>
-          this.currentUser.decryptSecret(encryptedSecret, this.currentUser.keys[hashedTitle].key))
+          this.currentUser.decryptSecret(hashedTitle, encryptedSecret))
         .then((secrets) => {
           Object.keys(JSON.parse(secrets)).forEach((hash) => {
             sharedSecretObjectPromises.push(this.getSharedSecretObjects(
@@ -280,14 +280,11 @@ class Secretin {
   }
 
   resetMetadatas(hashedTitle) {
-    return this.api.getSecret(hashedTitle, this.currentUser)
-      .then((encryptedSecret) =>
-        this.currentUser.decryptSecret(encryptedSecret, this.currentUser.keys[hashedTitle].key))
-      .then((secret) =>
-        this.editSecret(hashedTitle, this.currentUser.metadatas[hashedTitle], JSON.parse(secret)));
+    return this.getSecret(hashedTitle)
+      .then((secret) => this.editSecret(hashedTitle, secret));
   }
 
-  shareSecret(hashedTitle, friendName, rights, type) {
+  shareSecret(hashedTitle, friendName, type, rights) {
     if (type === 'folder') {
       return new Promise((resolve, reject) => {
         let hashedFolder = false;
@@ -358,7 +355,7 @@ class Secretin {
   unshareFolderSecrets(hashedFolder, friendName) {
     return this.api.getSecret(hashedFolder, this.currentUser)
       .then((encryptedSecret) =>
-        this.currentUser.decryptSecret(encryptedSecret, this.currentUser.keys[hashedFolder].key))
+        this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
       .then((secrets) =>
         Object.keys(JSON.parse(secrets)).reduce(
           (promise, hashedTitle) =>
@@ -386,10 +383,7 @@ class Secretin {
     return this.api.getSecret(hashedTitle, this.currentUser)
       .then((eSecret) => {
         encryptedSecret = eSecret;
-        return this.currentUser.decryptSecret(
-          encryptedSecret,
-          this.currentUser.keys[hashedTitle].key
-        );
+        return this.currentUser.decryptSecret(hashedTitle, encryptedSecret);
       })
       .then((rawSecret) =>
         this.currentUser.encryptSecret(
@@ -450,26 +444,19 @@ class Secretin {
       })
       .then(() => this.api.getSecret(hashedFolder, this.currentUser))
       .then((encryptedSecret) =>
-        this.currentUser.decryptSecret(encryptedSecret, this.currentUser.keys[hashedFolder].key))
+        this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
       .then((secret) => {
         const folder = JSON.parse(secret);
         delete folder[hashedTitle];
-        return this.editSecret(hashedFolder, folderMetadatas, folder);
+        return this.editSecret(hashedFolder, folder);
       });
   }
 
   getSecret(hashedTitle) {
     return this.api.getSecret(hashedTitle, this.currentUser)
-      .then((rEncryptedSecret) => {
-        const encryptedSecret = {
-          secret: rEncryptedSecret.secret,
-          iv: rEncryptedSecret.iv,
-        };
-        return this.currentUser.decryptSecret(
-          encryptedSecret,
-          this.currentUser.keys[hashedTitle].key
-        );
-      });
+      .then((encryptedSecret) =>
+        this.currentUser.decryptSecret(hashedTitle, encryptedSecret))
+      .then((secret) => JSON.parse(secret));
   }
 
   deleteSecret(hashedTitle) {
@@ -490,18 +477,11 @@ class Secretin {
         editFolderPromises.push(
           this.api.getSecret(hashedFolder, this.currentUser)
             .then((encryptedSecret) =>
-              this.currentUser.decryptSecret(
-                encryptedSecret,
-                this.currentUser.keys[hashedFolder].key
-              ))
+              this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
             .then((secret) => {
               const folder = JSON.parse(secret);
               delete folder[hashedTitle];
-              this.editSecret(
-                hashedFolder,
-                this.currentUser.metadatas[hashedFolder],
-                folder
-              );
+              return this.editSecret(hashedFolder, folder);
             })
         );
       });
@@ -512,7 +492,7 @@ class Secretin {
   deleteFolderSecrets(hashedFolder) {
     return this.api.getSecret(hashedFolder, this.currentUser)
       .then((encryptedSecret) =>
-        this.currentUser.decryptSecret(encryptedSecret, this.currentUser.keys[hashedFolder].key))
+        this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
       .then((secrets) =>
         Object.keys(JSON.parse(secrets)).reduce(
           (promise, hashedTitle) =>

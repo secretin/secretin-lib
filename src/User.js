@@ -113,7 +113,9 @@ class User {
     });
   }
 
-  editSecret(metadatas, secret, wrappedKey) {
+  editSecret(hashedTitle, secret) {
+    const metadatas = this.metadatas[hashedTitle];
+    const wrappedKey = this.keys[hashedTitle].key;
     const result = {};
     return this.unwrapKey(wrappedKey)
       .then((key) => this.encryptSecret(metadatas, secret, key))
@@ -171,7 +173,8 @@ class User {
       });
   }
 
-  decryptSecret(secret, wrappedKey) {
+  decryptSecret(hashedTitle, secret) {
+    const wrappedKey = this.keys[hashedTitle].key;
     return this.unwrapKey(wrappedKey)
       .then((key) => decryptAESGCM256(secret, key))
       .then((decryptedSecret) => bytesToASCIIString(decryptedSecret));
@@ -193,7 +196,7 @@ class User {
     this.metadatas = {};
     hashedTitles.forEach((hashedTitle) => {
       decryptMetadatasPromises.push(
-        this.decryptSecret(allMetadatas[hashedTitle], this.keys[hashedTitle].key)
+        this.decryptSecret(hashedTitle, allMetadatas[hashedTitle])
           .then((metadatas) => {
             this.metadatas[hashedTitle] = JSON.parse(metadatas);
           })
