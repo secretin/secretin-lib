@@ -10,8 +10,8 @@ import APIStandalone from './API/Standalone';
 import User from './User';
 
 class Secretin {
-  constructor(API = APIStandalone) {
-    this.api = new API();
+  constructor(API = APIStandalone, db) {
+    this.api = new API(db);
     this.currentUser = {};
   }
 
