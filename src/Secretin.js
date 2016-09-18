@@ -136,7 +136,7 @@ class Secretin {
             if (typeof this.currentUser.currentFolder !== 'undefined') {
               resolve(this.addSecretToFolder(hashedTitle, this.currentUser.currentFolder));
             } else {
-              resolve();
+              resolve(hashedTitle);
             }
           });
       } else {
@@ -245,7 +245,8 @@ class Secretin {
         const folder = JSON.parse(secret);
         folder[hashedSecretTitle] = 1;
         return this.editSecret(hashedFolder, folder);
-      });
+      })
+      .then(() => hashedSecretTitle);
   }
 
   getSharedSecretObjects(hashedTitle, friend, rights, fullSharedSecretObjects, folderName) {
