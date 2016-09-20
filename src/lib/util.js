@@ -59,3 +59,53 @@ export function generateRandomString(length) {
 
   return string;
 }
+
+export function generateSeed() {
+  const buf = new Uint8Array(32);
+  crypto.getRandomValues(buf);
+
+  let shift = 3;
+  let carry = 0;
+  let symbol;
+  let byte;
+  let i;
+  let output = '';
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+  for (i = 0; i < buf.length; i++) {
+    byte = buf[i];
+
+    symbol = carry | (byte >> shift);
+    output += alphabet[symbol & 0x1f];
+
+    if (shift > 5) {
+      shift -= 5;
+      symbol = byte >> shift;
+      output += alphabet[symbol & 0x1f];
+    }
+
+    shift = 5 - shift;
+    carry = byte << shift;
+    shift = 8 - shift;
+  }
+
+  if (shift !== 3) {
+    output += alphabet[carry & 0x1f];
+    shift = 3;
+    carry = 0;
+  }
+
+  return output;
+}
+
+export function localStorageAvailable() {
+  try {
+    const storage = window.localStorage;
+    const x = '__storage_test__';
+    storage.setItem(x, x);
+    storage.removeItem(x);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}

@@ -4,6 +4,7 @@ import {
 
 import {
   bytesToHexString,
+  localStorageAvailable,
 } from './lib/util';
 
 import APIStandalone from './API/Standalone';
@@ -24,8 +25,8 @@ class Secretin {
   }
 
   newUser(username, password) {
-    const result = {};
-    const pass = {};
+    let privateKey;
+    let pass;
     this.currentUser = new User(username);
     return this.api.userExists(username)
       .then((exists) =>
@@ -37,37 +38,38 @@ class Secretin {
           }
         })
       )
-      .then(() => derivePassword(password))
-      .then((dKey) => {
-        pass.salt = bytesToHexString(dKey.salt);
-        pass.hash = bytesToHexString(dKey.hash);
-        pass.iterations = dKey.iterations;
-        return this.currentUser.exportPrivateKey(dKey.key);
-      })
-      .then((privateKey) => {
-        result.privateKey = privateKey;
+      .then(() => this.currentUser.exportPrivateKey(password))
+      .then((objectPrivateKey) => {
+        privateKey = objectPrivateKey.privateKey;
+        pass = objectPrivateKey.pass;
+        pass.totp = false;
+        pass.shortpass = false;
         return this.currentUser.exportPublicKey();
       })
-      .then((publicKey) => {
-        result.publicKey = publicKey;
-        return this.api.addUser(
+      .then((publicKey) =>
+        this.api.addUser(
           this.currentUser.username,
-          result.privateKey,
-          result.publicKey,
+          privateKey,
+          publicKey,
           pass
-        );
-      })
+        )
+      )
       .then(() => this.currentUser);
   }
 
-  loginUser(username, password) {
+  loginUser(username, password, otp) {
     let key;
     let remoteUser;
     return this.api.getDerivationParameters(username)
-      .then((parameters) => derivePassword(password, parameters))
+      .then((parameters) => {
+        if (parameters.totp && (typeof otp === 'undefined' || otp === '')) {
+          throw ('Need TOTP token');
+        }
+        return derivePassword(password, parameters);
+      })
       .then((dKey) => {
         key = dKey.key;
-        return this.api.getUser(username, bytesToHexString(dKey.hash));
+        return this.api.getUser(username, bytesToHexString(dKey.hash), otp);
       })
       .then((user) => {
         this.currentUser = new User(username);
@@ -146,15 +148,14 @@ class Secretin {
   }
 
   changePassword(password) {
-    const pass = {};
-    return derivePassword(password)
-      .then((dKey) => {
-        pass.salt = bytesToHexString(dKey.salt);
-        pass.hash = bytesToHexString(dKey.hash);
-        pass.iterations = dKey.iterations;
-        return this.currentUser.exportPrivateKey(dKey.key);
-      })
-      .then((privateKey) => this.api.changePassword(this.currentUser, privateKey, pass));
+    return this.currentUser.exportPrivateKey(password)
+      .then((objectPrivateKey) =>
+        this.api.changePassword(
+          this.currentUser,
+          objectPrivateKey.privateKey,
+          objectPrivateKey.pass
+        )
+      );
   }
 
   editSecret(hashedTitle, content) {
@@ -518,6 +519,46 @@ class Secretin {
           , Promise.resolve()
         )
       );
+  }
+
+  activateTotp(seed) {
+    return this.api.activateTotp(seed, this.currentUser);
+  }
+
+  activateShortpass(shortpass) {
+    if (localStorageAvailable()) {
+      return this.currentUser.activateShortpass(shortpass)
+        .then((toSend) => this.api.activateShortpass(toSend, this.currentUser));
+    }
+    throw ('LocalStorage unavailable');
+  }
+
+  shortLogin(shortpass) {
+    const username = localStorage.getItem('username');
+    let shortpassKey;
+    let parameters;
+    this.currentUser = new User(username);
+    return this.api.getUser(username)
+      .then((user) => {
+        if (user.pass.shortpass === false) {
+          throw ('Shortpass is not activated');
+        }
+
+        parameters = user.shortpass;
+        return this.currentUser.importPublicKey(user.publicKey);
+      })
+      .then(() => derivePassword(shortpass, parameters))
+      .then((dKey) => {
+        shortpassKey = dKey.key;
+        return this.api.getProtectKey(username, bytesToHexString(dKey.hash));
+      })
+      .then((protectKey) => this.currentUser.shortLogin(shortpassKey, protectKey))
+      .then(() => this.refreshUser())
+      .then(() => this.currentUser);
+  }
+
+  canITryShortpass() {
+    return (localStorageAvailable() && localStorage.getItem('username') !== null);
   }
 }
 

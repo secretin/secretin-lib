@@ -347,7 +347,11 @@ class API {
 
   getDerivationParameters(username, isHashed) {
     return this.retrieveUser(username, 'undefined', isHashed)
-      .then((user) => ({ salt: user.pass.salt, iterations: user.pass.iterations }));
+      .then((user) => ({
+        totp: user.pass.totp,
+        salt: user.pass.salt,
+        iterations: user.pass.iterations,
+      }));
   }
 
   getPublicKey(username, isHashed) {
@@ -355,8 +359,8 @@ class API {
       .then((user) => user.publicKey);
   }
 
-  getUser(username, hash, isHashed) {
-    return this.retrieveUser(username, hash, isHashed);
+  getUser(username, hash) {
+    return this.retrieveUser(username, hash, false);
   }
 
   getUserWithToken(user) {

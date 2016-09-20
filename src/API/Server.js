@@ -166,7 +166,12 @@ class API {
 
   getDerivationParameters(username, isHashed) {
     return this.retrieveUser(username, 'undefined', isHashed)
-      .then((user) => ({ salt: user.pass.salt, iterations: user.pass.iterations }));
+      .then((user) => ({
+        totp: user.pass.totp,
+        shortpass: user.pass.shortpass,
+        salt: user.pass.salt,
+        iterations: user.pass.iterations,
+      }));
   }
 
   getPublicKey(username, isHashed) {
@@ -174,8 +179,10 @@ class API {
       .then((user) => user.publicKey);
   }
 
-  getUser(username, hash, isHashed) {
-    return this.retrieveUser(username, hash, isHashed);
+  getUser(username, hash, otp) {
+    return getSHA256(username)
+      .then((hashedUsername) =>
+        doGET(`${this.db}/user/${bytesToHexString(hashedUsername)}/${hash}?otp=${otp}`));
   }
 
   getUserWithToken(user) {
@@ -202,6 +209,12 @@ class API {
       });
   }
 
+  getProtectKey(username, hash) {
+    return getSHA256(username)
+      .then((hashedUsername) =>
+        doGET(`${this.db}/protectKey/${bytesToHexString(hashedUsername)}/${hash}`));
+  }
+
   getDb(user) {
     let hashedUsername;
     return getSHA256(user.username)
@@ -226,6 +239,37 @@ class API {
           token: bytesToHexString(token),
         })
       );
+  }
+
+  testTotp(seed, token) {
+    return doGET(`${this.db}/totp/${seed}/${token}`);
+  }
+
+  activateTotp(seed, user) {
+    let hashedUsername;
+    return getSHA256(user.username)
+      .then((rHashedUsername) => {
+        hashedUsername = bytesToHexString(rHashedUsername);
+        return user.getToken(this);
+      }).then((token) =>
+        doPUT(`${this.db}/activateTotp/${hashedUsername}`, {
+          seed,
+          token: bytesToHexString(token),
+        })
+      );
+  }
+
+  activateShortpass(shortpass, user) {
+    let hashedUsername;
+    return getSHA256(user.username)
+      .then((rHashedUsername) => {
+        hashedUsername = bytesToHexString(rHashedUsername);
+        return user.getToken(this);
+      }).then((token) =>
+        doPUT(`${this.db}/activateShortpass/${hashedUsername}`, {
+          shortpass,
+          token: bytesToHexString(token),
+        }));
   }
 }
 

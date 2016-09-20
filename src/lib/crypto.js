@@ -1,6 +1,7 @@
 import {
   asciiToUint8Array,
   hexStringToUint8Array,
+  bytesToHexString,
 } from './util';
 
 
@@ -27,6 +28,17 @@ export function genRSAOAEP() {
   return crypto.subtle.generateKey(algorithm, extractable, keyUsages);
 }
 
+export function generateWrappingKey() {
+  const algorithm = {
+    name: 'AES-CBC',
+    length: 256,
+  };
+
+  const extractable = true;
+  const keyUsages = ['wrapKey', 'unwrapKey'];
+
+  return crypto.subtle.generateKey(algorithm, extractable, keyUsages);
+}
 
 export function encryptAESGCM256(secret, key) {
   const result = {};
@@ -216,7 +228,7 @@ export function derivePassword(password, parameters) {
     });
 }
 
-export function exportPrivateKey(key, privateKey) {
+export function exportKey(wrappingKey, key) {
   const result = {};
   const format = 'jwk';
   const iv = new Uint8Array(16);
@@ -226,9 +238,9 @@ export function exportPrivateKey(key, privateKey) {
     iv,
   };
   result.iv = iv;
-  return crypto.subtle.wrapKey(format, privateKey, key, wrapAlgorithm)
-    .then((wrappedPrivateKey) => {
-      result.privateKey = wrappedPrivateKey;
+  return crypto.subtle.wrapKey(format, key, wrappingKey, wrapAlgorithm)
+    .then((wrappedKey) => {
+      result.key = wrappedKey;
       return result;
     });
 }
@@ -250,7 +262,25 @@ export function importPrivateKey(key, privateKeyObject) {
   return crypto.subtle.unwrapKey(
     format, wrappedPrivateKey, key, unwrapAlgorithm, unwrappedKeyAlgorithm, extractable, keyUsages
   )
-    .then((privateKey) => privateKey)
+    .catch(
+      (e) => { console.log(e); throw 'Invalid Password'; }
+    );
+}
+
+export function importKey(key, keyObject) {
+  const format = 'jwk';
+  const wrappedKey = hexStringToUint8Array(keyObject.key);
+  const unwrapAlgorithm = {
+    name: 'AES-CBC',
+    iv: hexStringToUint8Array(keyObject.iv),
+  };
+  const unwrappedKeyAlgorithm = unwrapAlgorithm;
+  const extractable = true;
+  const keyUsages = ['wrapKey', 'unwrapKey'];
+
+  return crypto.subtle.unwrapKey(
+    format, wrappedKey, key, unwrapAlgorithm, unwrappedKeyAlgorithm, extractable, keyUsages
+  )
     .catch(
       () => { throw 'Invalid Password'; }
     );

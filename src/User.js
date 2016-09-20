@@ -1,6 +1,7 @@
 import {
   getSHA256,
-  exportPrivateKey,
+  exportKey,
+  importKey,
   genRSAOAEP,
   decryptRSAOAEP,
   encryptRSAOAEP,
@@ -11,6 +12,8 @@ import {
   decryptAESGCM256,
   wrapRSAOAEP,
   unwrapRSAOAEP,
+  generateWrappingKey,
+  derivePassword,
 } from './lib/crypto';
 
 import {
@@ -63,6 +66,7 @@ class User {
       .then((keyPair) => {
         this.publicKey = keyPair.publicKey;
         this.privateKey = keyPair.privateKey;
+        return;
       });
   }
 
@@ -72,26 +76,36 @@ class User {
 
   importPublicKey(jwkPublicKey) {
     return importPublicKey(jwkPublicKey)
-      .then(
-        (publicKey) => { this.publicKey = publicKey; }
-      );
+      .then((publicKey) => {
+        this.publicKey = publicKey;
+        return;
+      });
   }
 
-  exportPrivateKey(dKey) {
-    return exportPrivateKey(dKey, this.privateKey)
-      .then(
-        (privateKeyObject) => ({
-          privateKey: bytesToHexString(privateKeyObject.privateKey),
-          iv: bytesToHexString(privateKeyObject.iv),
-        })
-      );
+  exportPrivateKey(password) {
+    const pass = {};
+    return derivePassword(password)
+      .then((dKey) => {
+        pass.salt = bytesToHexString(dKey.salt);
+        pass.hash = bytesToHexString(dKey.hash);
+        pass.iterations = dKey.iterations;
+        return exportKey(dKey.key, this.privateKey);
+      })
+      .then((keyObject) => ({
+        privateKey: {
+          privateKey: bytesToHexString(keyObject.key),
+          iv: bytesToHexString(keyObject.iv),
+        },
+        pass,
+      }));
   }
 
   importPrivateKey(dKey, privateKeyObject) {
     return importPrivateKey(dKey, privateKeyObject)
-      .then(
-        (privateKey) => { this.privateKey = privateKey; }
-      );
+      .then((privateKey) => {
+        this.privateKey = privateKey;
+        return;
+      });
   }
 
   encryptTitle(title, publicKey) {
@@ -202,6 +216,7 @@ class User {
         this.decryptSecret(hashedTitle, allMetadatas[hashedTitle])
           .then((metadatas) => {
             this.metadatas[hashedTitle] = JSON.parse(metadatas);
+            return;
           })
       );
     });
@@ -209,30 +224,50 @@ class User {
     return Promise.all(decryptMetadatasPromises);
   }
 
-  // TODO: Should be removed after migration
-  decryptTitles() {
-    return new Promise((resolve) => {
-      const hashedTitles = Object.keys(this.keys);
-      let total = hashedTitles.length;
-      hashedTitles.forEach((hashedTitle) => {
-        this.titles = {};
-        if (typeof this.keys[hashedTitle].title !== 'undefined') {
-          decryptRSAOAEP(this.keys[hashedTitle].title, this.privateKey)
-            .then((title) => {
-              this.titles[hashedTitle] = bytesToASCIIString(title);
-              if (Object.keys(this.titles).length === total) {
-                resolve();
-              }
-            });
-        } else {
-          total -= 1;
-          if (total === 0) {
-            // eslint-disable-next-line
-            console.log('Every secrets migrated');
-          }
-        }
+  activateShortpass(shortpass) {
+    let protectKey;
+    const toSend = {};
+    return generateWrappingKey()
+      .then((key) => {
+        protectKey = key;
+        return exportKey(protectKey, this.privateKey);
+      })
+      .then((object) => {
+        localStorage.setItem('privateKey', bytesToHexString(object.key));
+        localStorage.setItem('privateKeyIv', bytesToHexString(object.iv));
+        return derivePassword(shortpass);
+      })
+      .then((derived) => {
+        toSend.salt = bytesToHexString(derived.salt);
+        toSend.iterations = derived.iterations;
+        toSend.hash = bytesToHexString(derived.hash);
+        return exportKey(derived.key, protectKey);
+      })
+      .then((keyObject) => {
+        toSend.protectKey = bytesToHexString(keyObject.key);
+        localStorage.setItem('iv', bytesToHexString(keyObject.iv));
+        localStorage.setItem('username', this.username);
+        return toSend;
       });
-    });
+  }
+
+  shortLogin(shortpass, wrappedProtectKey) {
+    const keyObject = {
+      key: wrappedProtectKey,
+      iv: localStorage.getItem('iv'),
+    };
+    return importKey(shortpass, keyObject)
+      .then((protectKey) => {
+        const privateKeyObject = {
+          privateKey: localStorage.getItem('privateKey'),
+          iv: localStorage.getItem('privateKeyIv'),
+        };
+        return importPrivateKey(protectKey, privateKeyObject);
+      })
+      .then((privateKey) => {
+        this.privateKey = privateKey;
+        return;
+      });
   }
 }
 
