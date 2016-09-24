@@ -209,10 +209,25 @@ class API {
       });
   }
 
-  getProtectKey(username, hash) {
+  getProtectKey(username, deviceName, hash) {
+    let hashedUsername;
     return getSHA256(username)
-      .then((hashedUsername) =>
-        doGET(`${this.db}/protectKey/${bytesToHexString(hashedUsername)}/${hash}`));
+      .then((rHashedUsername) => {
+        hashedUsername = bytesToHexString(rHashedUsername);
+        return getSHA256(deviceName);
+      })
+      .then((deviceId) =>
+        doGET(`${this.db}/protectKey/${hashedUsername}/${bytesToHexString(deviceId)}/${hash}`))
+      .then((result) => {
+        if (hash === 'undefined') {
+          return result;
+        }
+        return result.protectKey;
+      });
+  }
+
+  getProtectKeyParameters(username, deviceName) {
+    return this.getProtectKey(username, deviceName, 'undefined');
   }
 
   getDb(user) {

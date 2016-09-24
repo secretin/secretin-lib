@@ -4,7 +4,9 @@ import {
 
 import {
   bytesToHexString,
+  hexStringToUint8Array,
   localStorageAvailable,
+  xorSeed,
 } from './lib/util';
 
 import APIStandalone from './API/Standalone';
@@ -59,20 +61,26 @@ class Secretin {
 
   loginUser(username, password, otp) {
     let key;
+    let hash;
     let remoteUser;
+    let parameters;
     return this.api.getDerivationParameters(username)
-      .then((parameters) => {
+      .then((rParameters) => {
+        parameters = rParameters;
         if (parameters.totp && (typeof otp === 'undefined' || otp === '')) {
           throw ('Need TOTP token');
         }
         return derivePassword(password, parameters);
       })
       .then((dKey) => {
+        hash = bytesToHexString(dKey.hash);
         key = dKey.key;
-        return this.api.getUser(username, bytesToHexString(dKey.hash), otp);
+        return this.api.getUser(username, hash, otp);
       })
       .then((user) => {
         this.currentUser = new User(username);
+        this.currentUser.totp = parameters.totp;
+        this.currentUser.hash = hash;
         remoteUser = user;
         this.currentUser.keys = remoteUser.keys;
         return this.currentUser.importPublicKey(remoteUser.publicKey);
@@ -522,12 +530,13 @@ class Secretin {
   }
 
   activateTotp(seed) {
-    return this.api.activateTotp(seed, this.currentUser);
+    const protectedSeed = xorSeed(hexStringToUint8Array(this.currentUser.hash), seed.raw);
+    return this.api.activateTotp(bytesToHexString(protectedSeed), this.currentUser);
   }
 
-  activateShortpass(shortpass) {
+  activateShortpass(shortpass, deviceName) {
     if (localStorageAvailable()) {
-      return this.currentUser.activateShortpass(shortpass)
+      return this.currentUser.activateShortpass(shortpass, deviceName)
         .then((toSend) => this.api.activateShortpass(toSend, this.currentUser));
     }
     throw ('LocalStorage unavailable');
@@ -535,26 +544,31 @@ class Secretin {
 
   shortLogin(shortpass) {
     const username = localStorage.getItem('username');
+    const deviceName = localStorage.getItem('deviceName');
     let shortpassKey;
     let parameters;
     this.currentUser = new User(username);
-    return this.api.getUser(username)
-      .then((user) => {
-        if (user.pass.shortpass === false) {
-          throw ('Shortpass is not activated');
-        }
-
-        parameters = user.shortpass;
-        return this.currentUser.importPublicKey(user.publicKey);
+    return this.api.getProtectKeyParameters(username, deviceName)
+      .then((rParameters) => {
+        parameters = rParameters;
+        this.currentUser.totp = parameters.totp;
+        return this.currentUser.importPublicKey(parameters.publicKey);
       })
       .then(() => derivePassword(shortpass, parameters))
       .then((dKey) => {
         shortpassKey = dKey.key;
-        return this.api.getProtectKey(username, bytesToHexString(dKey.hash));
+        return this.api.getProtectKey(username, deviceName, bytesToHexString(dKey.hash));
       })
       .then((protectKey) => this.currentUser.shortLogin(shortpassKey, protectKey))
       .then(() => this.refreshUser())
-      .then(() => this.currentUser);
+      .then(() => this.currentUser, (e) => {
+        localStorage.removeItem('username');
+        localStorage.removeItem('deviceName');
+        localStorage.removeItem('privateKey');
+        localStorage.removeItem('privateKeyIv');
+        localStorage.removeItem('iv');
+        throw e;
+      });
   }
 
   canITryShortpass() {

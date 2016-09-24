@@ -28,6 +28,8 @@ class User {
     this.publicKey = null;
     this.privateKey = null;
     this.keys = {};
+    this.hash = '';
+    this.totp = false;
     this.metadatas = {};
     this.token = {
       value: '',
@@ -87,7 +89,8 @@ class User {
     return derivePassword(password)
       .then((dKey) => {
         pass.salt = bytesToHexString(dKey.salt);
-        pass.hash = bytesToHexString(dKey.hash);
+        this.hash = bytesToHexString(dKey.hash);
+        pass.hash = this.hash;
         pass.iterations = dKey.iterations;
         return exportKey(dKey.key, this.privateKey);
       })
@@ -224,7 +227,7 @@ class User {
     return Promise.all(decryptMetadatasPromises);
   }
 
-  activateShortpass(shortpass) {
+  activateShortpass(shortpass, deviceName) {
     let protectKey;
     const toSend = {};
     return generateWrappingKey()
@@ -247,6 +250,11 @@ class User {
         toSend.protectKey = bytesToHexString(keyObject.key);
         localStorage.setItem('iv', bytesToHexString(keyObject.iv));
         localStorage.setItem('username', this.username);
+        return getSHA256(deviceName);
+      })
+      .then((deviceId) => {
+        toSend.deviceId = bytesToHexString(deviceId);
+        localStorage.setItem('deviceName', deviceName);
         return toSend;
       });
   }

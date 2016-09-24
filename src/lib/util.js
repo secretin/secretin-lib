@@ -95,7 +95,7 @@ export function generateSeed() {
     carry = 0;
   }
 
-  return output;
+  return { b32: output, raw: buf };
 }
 
 export function localStorageAvailable() {
@@ -108,4 +108,16 @@ export function localStorageAvailable() {
   } catch (e) {
     return false;
   }
+}
+
+export function xorSeed(byteArray1, byteArray2) {
+  if (byteArray1.length === byteArray2.length && byteArray1.length === 32) {
+    const buf = new Uint8Array(32);
+    let i;
+    for (i = 0; i < 32; i++) {
+      buf[i] = byteArray1[i] ^ byteArray2[i];
+    }
+    return buf;
+  }
+  throw 'xorSeed wait for 32 bytes arrays';
 }

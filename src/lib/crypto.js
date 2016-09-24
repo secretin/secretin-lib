@@ -1,7 +1,6 @@
 import {
   asciiToUint8Array,
   hexStringToUint8Array,
-  bytesToHexString,
 } from './util';
 
 
@@ -263,7 +262,7 @@ export function importPrivateKey(key, privateKeyObject) {
     format, wrappedPrivateKey, key, unwrapAlgorithm, unwrappedKeyAlgorithm, extractable, keyUsages
   )
     .catch(
-      (e) => { console.log(e); throw 'Invalid Password'; }
+      () => { throw 'Invalid Password'; }
     );
 }
 
