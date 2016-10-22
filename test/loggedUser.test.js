@@ -1,6 +1,8 @@
 // eslint-disable-next-line
 Date.prototype.toISOString = () => '2016-01-01T00:00:00.000Z';
 
+// db => /fixtures/loggedUserDB.js
+
 describe('Logged user', () => {
   const username = 'user1';
   const password = 'password';
@@ -133,12 +135,14 @@ describe('Logged user', () => {
   it('Can disconnect', () => {
     this.secretin.currentUser.disconnect();
     this.secretin.currentUser.should.not.have.any.keys(
+      'totp',
       'username',
-      'keys',
-      'metadatas',
-      'token',
       'publicKey',
-      'privateKey'
+      'privateKey',
+      'keys',
+      'hash',
+      'metadatas',
+      'token'
     );
   });
 
@@ -150,12 +154,14 @@ describe('Logged user', () => {
         return this.secretin.loginUser(username, newPassword);
       })
       .should.eventually.have.all.keys(
+        'totp',
         'username',
-        'keys',
-        'metadatas',
-        'token',
         'publicKey',
-        'privateKey'
+        'privateKey',
+        'keys',
+        'hash',
+        'metadatas',
+        'token'
       )
       .then((currentUser) => currentUser.privateKey)
       .should.eventually.be.instanceOf(CryptoKey);

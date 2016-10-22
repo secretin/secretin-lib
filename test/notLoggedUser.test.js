@@ -9,6 +9,8 @@ describe('Not logged user', () => {
   it('Can create user', () =>
     this.secretin.newUser(username, password)
       .should.eventually.have.all.keys(
+        'totp',
+        'hash',
         'username',
         'keys',
         'metadatas',
@@ -27,12 +29,14 @@ describe('Not logged user', () => {
         return this.secretin.loginUser(username, password);
       })
       .should.eventually.have.all.keys(
+        'totp',
         'username',
-        'keys',
-        'metadatas',
-        'token',
         'publicKey',
-        'privateKey'
+        'privateKey',
+        'keys',
+        'hash',
+        'metadatas',
+        'token'
       )
       .then((currentUser) => currentUser.privateKey)
       .should.eventually.be.instanceOf(CryptoKey)

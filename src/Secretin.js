@@ -262,39 +262,43 @@ class Secretin {
     let isFolder = Promise.resolve();
     const sharedSecretObjectPromises = [];
     const secretMetadatas = this.currentUser.metadatas[hashedTitle];
-    if (secretMetadatas.type === 'folder') {
-      isFolder = isFolder
-        .then(() => this.api.getSecret(hashedTitle, this.currentUser))
-        .then((encryptedSecret) =>
-          this.currentUser.decryptSecret(hashedTitle, encryptedSecret))
-        .then((secrets) => {
-          Object.keys(JSON.parse(secrets)).forEach((hash) => {
-            sharedSecretObjectPromises.push(this.getSharedSecretObjects(
-              hash,
-              friend,
-              rights,
-              fullSharedSecretObjects,
-              secretMetadatas.title
-            ));
+    if (typeof (secretMetadatas) === 'undefined') {
+      throw 'You don\'t have this secret';
+    } else {
+      if (secretMetadatas.type === 'folder') {
+        isFolder = isFolder
+          .then(() => this.api.getSecret(hashedTitle, this.currentUser))
+          .then((encryptedSecret) =>
+            this.currentUser.decryptSecret(hashedTitle, encryptedSecret))
+          .then((secrets) => {
+            Object.keys(JSON.parse(secrets)).forEach((hash) => {
+              sharedSecretObjectPromises.push(this.getSharedSecretObjects(
+                hash,
+                friend,
+                rights,
+                fullSharedSecretObjects,
+                secretMetadatas.title
+              ));
+            });
+            return Promise.all(sharedSecretObjectPromises);
           });
-          return Promise.all(sharedSecretObjectPromises);
+      }
+
+      return isFolder
+        .then(() => this.currentUser.shareSecret(
+          friend,
+          this.currentUser.keys[hashedTitle].key,
+          hashedTitle
+        ))
+        .then((secretObject) => {
+          const newSecretObject = secretObject;
+          newSecretObject.rights = rights;
+          newSecretObject.inFolder = folderName;
+          newSecretObject.username = friend.username;
+          fullSharedSecretObjects.push(newSecretObject);
+          return fullSharedSecretObjects;
         });
     }
-
-    return isFolder
-      .then(() => this.currentUser.shareSecret(
-        friend,
-        this.currentUser.keys[hashedTitle].key,
-        hashedTitle
-      ))
-      .then((secretObject) => {
-        const newSecretObject = secretObject;
-        newSecretObject.rights = rights;
-        newSecretObject.inFolder = folderName;
-        newSecretObject.username = friend.username;
-        fullSharedSecretObjects.push(newSecretObject);
-        return fullSharedSecretObjects;
-      });
   }
 
   resetMetadatas(hashedTitle) {

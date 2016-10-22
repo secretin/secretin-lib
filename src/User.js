@@ -44,6 +44,8 @@ class User {
     delete this.metadatas;
     delete this.keys;
     delete this.token;
+    delete this.hash;
+    delete this.totp;
   }
 
   isTokenValid() {
@@ -132,20 +134,24 @@ class User {
 
   editSecret(hashedTitle, secret) {
     const metadatas = this.metadatas[hashedTitle];
-    const now = new Date();
-    metadatas.lastModifiedAt = now.toISOString();
-    metadatas.lastModifiedBy = this.username;
-    const wrappedKey = this.keys[hashedTitle].key;
-    const result = {};
-    return this.unwrapKey(wrappedKey)
-      .then((key) => this.encryptSecret(metadatas, secret, key))
-      .then((secretObject) => {
-        result.secret = secretObject.secret;
-        result.iv = secretObject.iv;
-        result.metadatas = secretObject.metadatas;
-        result.iv_meta = secretObject.iv_meta;
-        return result;
-      });
+    if (typeof (metadatas) === 'undefined') {
+      throw 'You don\'t have this secret';
+    } else {
+      const now = new Date();
+      metadatas.lastModifiedAt = now.toISOString();
+      metadatas.lastModifiedBy = this.username;
+      const wrappedKey = this.keys[hashedTitle].key;
+      const result = {};
+      return this.unwrapKey(wrappedKey)
+        .then((key) => this.encryptSecret(metadatas, secret, key))
+        .then((secretObject) => {
+          result.secret = secretObject.secret;
+          result.iv = secretObject.iv;
+          result.metadatas = secretObject.metadatas;
+          result.iv_meta = secretObject.iv_meta;
+          return result;
+        });
+    }
   }
 
   createSecret(metadatas, secret) {
@@ -194,10 +200,14 @@ class User {
   }
 
   decryptSecret(hashedTitle, secret) {
-    const wrappedKey = this.keys[hashedTitle].key;
-    return this.unwrapKey(wrappedKey)
-      .then((key) => decryptAESGCM256(secret, key))
-      .then((decryptedSecret) => bytesToASCIIString(decryptedSecret));
+    if (typeof (this.keys[hashedTitle]) === 'undefined') {
+      throw 'You don\'t have this secret';
+    } else {
+      const wrappedKey = this.keys[hashedTitle].key;
+      return this.unwrapKey(wrappedKey)
+        .then((key) => decryptAESGCM256(secret, key))
+        .then((decryptedSecret) => bytesToASCIIString(decryptedSecret));
+    }
   }
 
   unwrapKey(wrappedKey) {

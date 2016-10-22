@@ -277,7 +277,7 @@ class API {
                 throw (`Secret ${sharedSecretObject.hashedTitle} not found`);
               }
             } else {
-              throw ('You can\'t share with youself');
+              throw ('You can\'t share with yourself');
             }
           });
           if (nb === sharedSecretObjects.length) {
