@@ -230,7 +230,7 @@ class API {
               }
               throw ('Something goes wrong.');
             } else {
-              throw ('You can\'t unshare this secret');
+              throw (`You can't unshare secret ${hashedTitle}`);
             }
           } else {
             throw ('Secret not found');

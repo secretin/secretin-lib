@@ -361,24 +361,31 @@ class Secretin {
   unshareSecret(hashedTitle, friendName) {
     let isFolder = Promise.resolve();
     const secretMetadatas = this.currentUser.metadatas[hashedTitle];
-    if (secretMetadatas.type === 'folder') {
-      isFolder = isFolder
-        .then(() => this.unshareFolderSecrets(hashedTitle, friendName));
-    }
+    if (typeof (secretMetadatas) === 'undefined') {
+      throw 'You don\'t have this secret';
+    } else {
+      if (secretMetadatas.type === 'folder') {
+        isFolder = isFolder
+          .then(() => this.unshareFolderSecrets(hashedTitle, friendName));
+      }
 
-    return isFolder
-      .then(() => this.api.unshareSecret(this.currentUser, [friendName], hashedTitle))
-      .then(() => {
-        delete secretMetadatas.users[friendName];
-        return this.resetMetadatas(hashedTitle);
-      })
-      .then(() => this.renewKey(hashedTitle), (err) => {
-        if (err.status === 'Desync') {
-          delete this.currentUser.metadatas[err.datas.title].users[err.datas.friendName];
+      return isFolder
+        .then(() => this.api.unshareSecret(this.currentUser, [friendName], hashedTitle))
+        .then((result) => {
+          if (result !== 'OK') {
+            throw result;
+          }
+          delete secretMetadatas.users[friendName];
           return this.resetMetadatas(hashedTitle);
-        }
-        throw (err);
-      });
+        })
+        .then(() => this.renewKey(hashedTitle), (err) => {
+          if (err.status === 'Desync') {
+            delete this.currentUser.metadatas[err.datas.title].users[err.datas.friendName];
+            return this.resetMetadatas(hashedTitle);
+          }
+          throw (err);
+        });
+    }
   }
 
   unshareFolderSecrets(hashedFolder, friendName) {

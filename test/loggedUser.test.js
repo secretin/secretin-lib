@@ -237,7 +237,14 @@ describe('Logged user', () => {
         id: 'fe40e52d903d821e696d366aa9c9e383de2c1486b90166f458eb99788660f545',
       })
       .then(() => this.secretin.getSecret(folderHashedTitle))
-      .should.eventually.deep.equal({});
+      .should.eventually.deep.equal({})
+      .then(() => this.secretin.getSecret(secretHashedTitle))
+      .should.eventually.deep.equal({
+        fields: [{
+          label: 'c',
+          content: 'd',
+        }],
+      });
   });
 
   it('Can delete secret', () => {
