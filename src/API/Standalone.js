@@ -202,7 +202,7 @@ class API {
                 && this.db.users[hashedUsername].keys[hashedTitle].rights > 1) {
               let yourself = 0;
               let nb = 0;
-              let response = 'OK';
+              let response = 'Secret unshared';
               hashedFriendUsernames.forEach((hashedFriendUsername) => {
                 if (hashedUsername !== hashedFriendUsername) {
                   const dbUser = this.db.users[hashedFriendUsername];

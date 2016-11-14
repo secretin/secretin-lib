@@ -1,77 +1,112 @@
-// eslint-disable-next-line
-Date.prototype.toISOString = () => '2016-01-01T00:00:00.000Z';
-
-// db => /fixtures/loggedUserDB.js
-
 describe('Logged user', () => {
-  const username = 'user1';
+  const now = '2016-01-01T00:00:00.000Z';
+  // eslint-disable-next-line
+  Date.prototype.toISOString = () => now;
+
+  const secretContent = {
+    fields: [{
+      label: 'a',
+      content: 'b',
+    }],
+  };
+  const newSecretContent = {
+    fields: [{
+      label: 'c',
+      content: 'd',
+    }],
+  };
+
+  const secretTitle = 'secret';
+  let secretId = '';
+
+  const folderTitle = 'folder';
+  let folderId = '';
+
+  const secretInFolderTitle = 'secret in folder';
+  let secretInFolderId = '';
+
+  const username = 'user';
   const password = 'password';
+  const newPassword = 'newPassword';
+
+  // eslint-disable-next-line
+  before(() => resetAndGetDB()
+    .then(() => this.secretin.newUser(username, password))
+    .then(() => this.secretin.addSecret(secretTitle, secretContent))
+    .then((hashedTitle) => {
+      secretId = hashedTitle;
+      return this.secretin.addFolder(folderTitle);
+    })
+    .then((hashedTitle) => {
+      folderId = hashedTitle;
+      return this.secretin.addSecret(secretInFolderTitle, secretContent);
+    })
+    .then((hashedTitle) => {
+      secretInFolderId = hashedTitle;
+      return this.secretin.addSecretToFolder(secretInFolderId, folderId);
+    })
+  );
 
   beforeEach(() => {
-    this.secretin = new Secretin();
-    // eslint-disable-next-line
-    const newDB = JSON.parse(JSON.stringify(db));
-    this.secretin.changeDB(newDB);
+    this.secretin.currentUser.disconnect();
     return this.secretin.loginUser(username, password);
   });
 
   it('Can retrieve metadatas', () => {
     this.secretin.currentUser.metadatas.should.deep.equal({
-      f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772: {
+      [secretId]: {
         folders: {},
-        id: 'f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772',
-        lastModifiedAt: '2016-09-17T23:41:23.071Z',
-        lastModifiedBy: 'user1',
-        title: 'secret',
+        id: secretId,
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+        title: secretTitle,
         type: 'secret',
         users: {
-          user1: {
-            username: 'user1',
+          [username]: {
+            username,
             rights: 2,
           },
         },
       },
-      '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7': {
+      [folderId]: {
         folders: {},
-        id: '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7',
-        lastModifiedAt: '2016-09-17T23:41:33.936Z',
-        lastModifiedBy: 'user1',
-        title: 'folder',
+        id: folderId,
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+        title: folderTitle,
         type: 'folder',
         users: {
-          user1: {
-            username: 'user1',
+          [username]: {
+            username,
             rights: 2,
           },
         },
       },
-      fe40e52d903d821e696d366aa9c9e383de2c1486b90166f458eb99788660f545: {
+      [secretInFolderId]: {
         users: {
-          user1: {
-            username: 'user1',
+          [username]: {
+            username,
             rights: 2,
             folder: 'folder',
           },
         },
-        lastModifiedAt: '2016-09-17T23:41:33.897Z',
-        lastModifiedBy: 'user1',
+        lastModifiedAt: now,
+        lastModifiedBy: username,
         folders: {
-          '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7': {
-            name: 'folder',
+          [folderId]: {
+            name: folderTitle,
           },
         },
-        title: 'secret in folder',
+        title: secretInFolderTitle,
         type: 'secret',
-        id: 'fe40e52d903d821e696d366aa9c9e383de2c1486b90166f458eb99788660f545',
+        id: secretInFolderId,
       },
     });
   });
 
   it('Can create secret', () => {
-    const secretContent = 'This is secret';
-    const secretTitle = 'secret1';
     let hashedTitle;
-    return this.secretin.addSecret(secretTitle, secretContent)
+    return this.secretin.addSecret(secretTitle, newSecretContent)
       .then(() => {
         let id = -1;
         Object.keys(this.secretin.currentUser.metadatas).forEach((mHashedTitle, i) => {
@@ -85,10 +120,10 @@ describe('Logged user', () => {
       })
       .should.eventually.deep.equal({
         lastModifiedAt: '2016-01-01T00:00:00.000Z',
-        lastModifiedBy: 'user1',
+        lastModifiedBy: username,
         users: {
-          user1: {
-            username: 'user1',
+          [username]: {
+            username,
             rights: 2,
           },
         },
@@ -97,17 +132,18 @@ describe('Logged user', () => {
         type: 'secret',
       })
       .then(() => this.secretin.getSecret(hashedTitle))
-      .should.eventually.equal(secretContent);
+      .should.eventually.deep.equal(newSecretContent)
+      .then(() => this.secretin.deleteSecret(hashedTitle));
   });
 
   it('Can create folder', () => {
-    const folderTitle = 'folder1';
+    const newFolderTitle = 'folder1';
     let hashedTitle;
-    return this.secretin.addFolder(folderTitle)
+    return this.secretin.addFolder(newFolderTitle)
       .then(() => {
         let id = -1;
         Object.keys(this.secretin.currentUser.metadatas).forEach((mHashedTitle, i) => {
-          if (this.secretin.currentUser.metadatas[mHashedTitle].title === folderTitle) {
+          if (this.secretin.currentUser.metadatas[mHashedTitle].title === newFolderTitle) {
             id = i;
           }
         });
@@ -117,19 +153,20 @@ describe('Logged user', () => {
       })
       .should.eventually.deep.equal({
         lastModifiedAt: '2016-01-01T00:00:00.000Z',
-        lastModifiedBy: 'user1',
+        lastModifiedBy: username,
         users: {
-          user1: {
-            username: 'user1',
+          [username]: {
+            username,
             rights: 2,
           },
         },
         folders: {},
-        title: 'folder1',
+        title: newFolderTitle,
         type: 'folder',
       })
       .then(() => this.secretin.getSecret(hashedTitle))
-      .should.eventually.deep.equal({});
+      .should.eventually.deep.equal({})
+      .then(() => this.secretin.deleteSecret(hashedTitle));
   });
 
   it('Can disconnect', () => {
@@ -146,9 +183,7 @@ describe('Logged user', () => {
     );
   });
 
-  it('Can change its password', () => {
-    const newPassword = 'newPassword';
-    return this.secretin.changePassword(newPassword)
+  it('Can change its password', () => this.secretin.changePassword(newPassword)
       .then(() => {
         this.secretin.currentUser.disconnect();
         return this.secretin.loginUser(username, newPassword);
@@ -164,166 +199,136 @@ describe('Logged user', () => {
         'token'
       )
       .then((currentUser) => currentUser.privateKey)
-      .should.eventually.be.instanceOf(CryptoKey);
-  });
+      .should.eventually.be.instanceOf(CryptoKey)
+      .then(() => this.secretin.changePassword(password))
+  );
 
-  it('Can get secret', () => {
-    const secretHashedTitle = 'f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772';
-    return this.secretin.getSecret(secretHashedTitle)
+  it('Can get secret', () => this.secretin.getSecret(secretId)
+      .should.eventually.deep.equal(secretContent)
+  );
+
+  it('Can edit secret', () => this.secretin.editSecret(secretId, newSecretContent)
+      .then(() => this.secretin.getSecret(secretId))
+      .should.eventually.deep.equal(newSecretContent)
+      .then(() => this.secretin.editSecret(secretId, secretContent))
+  );
+
+  it('Can add secret to folder', () => this.secretin.addSecretToFolder(secretId, folderId)
+      .then(() => this.secretin.currentUser.metadatas[secretId])
+      .should.eventually.deep.equal({
+        lastModifiedAt: '2016-01-01T00:00:00.000Z',
+        lastModifiedBy: username,
+        users: {
+          [username]: {
+            username,
+            rights: 2,
+            folder: folderTitle,
+          },
+        },
+        folders: {
+          [folderId]: {
+            name: folderTitle,
+          },
+        },
+        title: secretTitle,
+        type: 'secret',
+        id: secretId,
+      })
+      .then(() => this.secretin.getSecret(folderId))
+      .should.eventually.deep.equal({
+        [secretId]: 1,
+        [secretInFolderId]: 1,
+      })
+      .then(() => this.secretin.removeSecretFromFolder(secretId, folderId))
+  );
+
+  it('Can remove secret from folder', () =>
+    this.secretin.removeSecretFromFolder(secretInFolderId, folderId)
+      .then(() => this.secretin.currentUser.metadatas[secretInFolderId])
+      .should.eventually.deep.equal({
+        lastModifiedAt: '2016-01-01T00:00:00.000Z',
+        lastModifiedBy: username,
+        users: {
+          [username]: {
+            username,
+            rights: 2,
+          },
+        },
+        folders: {},
+        title: secretInFolderTitle,
+        type: 'secret',
+        id: secretInFolderId,
+      })
+      .then(() => this.secretin.getSecret(folderId))
+      .should.eventually.deep.equal({})
+      .then(() => this.secretin.getSecret(secretInFolderId))
       .should.eventually.deep.equal({
         fields: [{
           label: 'a',
           content: 'b',
         }],
-      });
-  });
-
-  it('Can edit secret', () => {
-    const secretHashedTitle = 'f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772';
-    const secretContent = 'YOLO';
-    return this.secretin.editSecret(secretHashedTitle, secretContent)
-      .then(() => this.secretin.getSecret(secretHashedTitle))
-      .should.eventually.deep.equal(secretContent);
-  });
-
-  it('Can add secret to folder', () => {
-    const secretHashedTitle = 'f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772';
-    const folderHashedTitle = '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7';
-    return this.secretin.addSecretToFolder(secretHashedTitle, folderHashedTitle)
-      .then(() => this.secretin.currentUser.metadatas[secretHashedTitle])
-      .should.eventually.deep.equal({
-        lastModifiedAt: '2016-01-01T00:00:00.000Z',
-        lastModifiedBy: 'user1',
-        users: {
-          user1: {
-            username: 'user1',
-            rights: 2,
-            folder: 'folder',
-          },
-        },
-        folders: {
-          '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7': {
-            name: 'folder',
-          },
-        },
-        title: 'secret',
-        type: 'secret',
-        id: 'f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772',
       })
-      .then(() => this.secretin.getSecret(folderHashedTitle))
-      .should.eventually.deep.equal({
-        fe40e52d903d821e696d366aa9c9e383de2c1486b90166f458eb99788660f545: 1,
-        f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772: 1,
-      });
-  });
+      .then(() => this.secretin.addSecretToFolder(secretInFolderId, folderId))
+  );
 
-  it('Can remove secret from folder', () => {
-    const secretHashedTitle = 'fe40e52d903d821e696d366aa9c9e383de2c1486b90166f458eb99788660f545';
-    const folderHashedTitle = '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7';
-    return this.secretin.removeSecretFromFolder(secretHashedTitle, folderHashedTitle)
-      .then(() => this.secretin.currentUser.metadatas[secretHashedTitle])
-      .should.eventually.deep.equal({
-        lastModifiedAt: '2016-01-01T00:00:00.000Z',
-        lastModifiedBy: 'user1',
-        users: {
-          user1: {
-            username: 'user1',
-            rights: 2,
-          },
-        },
-        folders: {},
-        title: 'secret in folder',
-        type: 'secret',
-        id: 'fe40e52d903d821e696d366aa9c9e383de2c1486b90166f458eb99788660f545',
-      })
-      .then(() => this.secretin.getSecret(folderHashedTitle))
-      .should.eventually.deep.equal({})
-      .then(() => this.secretin.getSecret(secretHashedTitle))
-      .should.eventually.deep.equal({
-        fields: [{
-          label: 'c',
-          content: 'd',
-        }],
-      });
-  });
-
-  it('Can delete secret', () => {
-    const secretHashedTitle = 'f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772';
-    return this.secretin.deleteSecret(secretHashedTitle)
+  it('Can delete secret', () => this.secretin.deleteSecret(secretId)
       .then(() => this.secretin.currentUser.metadatas)
       .should.eventually.deep.equal({
-        '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7': {
+        [folderId]: {
           folders: {},
-          id: '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7',
-          lastModifiedAt: '2016-09-17T23:41:33.936Z',
-          lastModifiedBy: 'user1',
-          title: 'folder',
+          id: folderId,
+          lastModifiedAt: now,
+          lastModifiedBy: username,
+          title: folderTitle,
           type: 'folder',
           users: {
-            user1: {
-              username: 'user1',
+            [username]: {
+              username,
               rights: 2,
             },
           },
         },
-        fe40e52d903d821e696d366aa9c9e383de2c1486b90166f458eb99788660f545: {
+        [secretInFolderId]: {
           users: {
-            user1: {
-              username: 'user1',
+            [username]: {
+              username,
               rights: 2,
               folder: 'folder',
             },
           },
-          lastModifiedAt: '2016-09-17T23:41:33.897Z',
-          lastModifiedBy: 'user1',
+          lastModifiedAt: now,
+          lastModifiedBy: username,
           folders: {
-            '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7': {
-              name: 'folder',
+            [folderId]: {
+              name: folderTitle,
             },
           },
-          title: 'secret in folder',
+          title: secretInFolderTitle,
           type: 'secret',
-          id: 'fe40e52d903d821e696d366aa9c9e383de2c1486b90166f458eb99788660f545',
+          id: secretInFolderId,
         },
-      });
-  });
+      })
+  );
 
-  it('Can delete secret in a folder', () => {
-    const secretHashedTitle = 'fe40e52d903d821e696d366aa9c9e383de2c1486b90166f458eb99788660f545';
-    const folderHashedTitle = '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7';
-    return this.secretin.deleteSecret(secretHashedTitle)
+  it('Can delete secret in a folder', () => this.secretin.deleteSecret(secretInFolderId)
       .then(() => this.secretin.currentUser.metadatas)
       .should.eventually.deep.equal({
-        f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772: {
+        [folderId]: {
           folders: {},
-          id: 'f62c937bdaf1ae0efab60a275e0f9080c79511095569e06d431423e1ac971772',
-          lastModifiedAt: '2016-09-17T23:41:23.071Z',
-          lastModifiedBy: 'user1',
-          title: 'secret',
-          type: 'secret',
-          users: {
-            user1: {
-              username: 'user1',
-              rights: 2,
-            },
-          },
-        },
-        '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7': {
-          folders: {},
-          id: '0839fb4655ea32255f60e4e37fe07e207be65774d8a9255bc9344403faeaead7',
-          lastModifiedAt: '2016-01-01T00:00:00.000Z',
-          lastModifiedBy: 'user1',
-          title: 'folder',
+          id: folderId,
+          lastModifiedAt: now,
+          lastModifiedBy: username,
+          title: folderTitle,
           type: 'folder',
           users: {
-            user1: {
-              username: 'user1',
+            [username]: {
+              username,
               rights: 2,
             },
           },
         },
       })
-      .then(() => this.secretin.getSecret(folderHashedTitle))
-      .should.eventually.deep.equal({});
-  });
+      .then(() => this.secretin.getSecret(folderId))
+      .should.eventually.deep.equal({})
+  );
 });

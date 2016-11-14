@@ -372,7 +372,7 @@ class Secretin {
       return isFolder
         .then(() => this.api.unshareSecret(this.currentUser, [friendName], hashedTitle))
         .then((result) => {
-          if (result !== 'OK') {
+          if (result !== 'Secret unshared') {
             throw result;
           }
           delete secretMetadatas.users[friendName];

@@ -2,6 +2,17 @@
 // Generated on Sat Sep 10 2016 10:00:25 GMT+0200 (CEST)
 
 module.exports = function(config) {
+  const files = [
+    'dist/secretin.js',
+    'test/*.js',
+  ];
+
+  if (typeof process.env.APIType !== 'undefined') {
+    files.push(`test/hooks/${process.env.APIType}.js`);
+  } else {
+    files.push('test/hooks/standalone.js');
+  }
+
   config.set({
 
     // base path that will be used to resolve all patterns (eg. files, exclude)
@@ -15,17 +26,15 @@ module.exports = function(config) {
 
     client: {
       mocha: {
-        timeout: '10000'
-      }
+        timeout: '30000',
+      },
     },
+
+    browserNoActivityTimeout: '30000',
 
 
     // list of files / patterns to load in the browser
-    files: [
-      'dist/secretin.js',
-      'test/fixtures/*.js',
-      'test/*.js'
-    ],
+    files,
 
 
     // list of files to exclude

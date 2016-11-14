@@ -1,363 +1,348 @@
-// eslint-disable-next-line
-Date.prototype.toISOString = () => '2016-01-01T00:00:00.000Z';
-
 describe('Secret accesses', () => {
-  const secretHashedTitle = '0865ee7f1c509351be2b6c218dc7b323d79988b75b53fd115bb02ef7e4d64466';
-  // db3 => /fixtures/loggedUserDB.js
+  const now = '2016-01-01T00:00:00.000Z';
+  // eslint-disable-next-line
+  Date.prototype.toISOString = () => now;
+  const userRead = 'user1';
+  const passwordRead = 'password1';
+
+  const userReadWrite = 'user2';
+  const passwordReadWrite = 'password2';
+
+  const userReadWriteShare = 'user3';
+  const passwordReadWriteShare = 'password3';
+
+  const userNoAccess = 'user4';
+  const passwordNoAccess = 'password4';
+
+  const secretTitle = 'secret';
+  let secretId = '';
+  const secretContent = {
+    fields: [{
+      label: 'a',
+      content: 'b',
+    }],
+  };
+  const newSecretContent = {
+    fields: [{
+      label: 'c',
+      content: 'd',
+    }],
+  };
+
+
+  // eslint-disable-next-line
+  before(() => resetAndGetDB()
+    .then(() => this.secretin.newUser(userNoAccess, passwordNoAccess))
+    .then(() => this.secretin.newUser(userRead, passwordRead))
+    .then(() => this.secretin.newUser(userReadWrite, passwordReadWrite))
+    .then(() => this.secretin.newUser(userReadWriteShare, passwordReadWriteShare))
+    .then(() => this.secretin.addSecret(secretTitle, secretContent))
+    .then((hashedTitle) => {
+      secretId = hashedTitle;
+      return this.secretin.shareSecret(secretId, userRead, secretTitle, 0);
+    })
+    .then(() => this.secretin.shareSecret(secretId, userReadWrite, secretTitle, 1))
+  );
 
   beforeEach(() => {
-    this.secretin = new Secretin();
-    // eslint-disable-next-line
-    const newDB = JSON.parse(JSON.stringify(db3));
-    this.secretin.changeDB(newDB);
+    this.secretin.currentUser.disconnect();
   });
 
   describe('No access user', () => {
     it('Should not be able to read', () =>
-      this.secretin.loginUser('user4', 'user4')
-        .then(() => this.secretin.getSecret(secretHashedTitle))
+      this.secretin.loginUser(userNoAccess, passwordNoAccess)
+        .then(() => this.secretin.getSecret(secretId))
         .should.be.rejectedWith('You don\'t have this secret')
     );
 
     it('Should not be able to write', () =>
-      this.secretin.loginUser('user4', 'user4')
-        .then(() => this.secretin.editSecret(secretHashedTitle, 'YOLO'))
+      this.secretin.loginUser(userNoAccess, passwordNoAccess)
+        .then(() => this.secretin.editSecret(secretId, newSecretContent))
         .should.be.rejectedWith('You don\'t have this secret')
     );
 
     it('Should not be able to share', () =>
-      this.secretin.loginUser('user4', 'user4')
-        .then(() => this.secretin.shareSecret(secretHashedTitle, 'user1', 'secret', 0))
+      this.secretin.loginUser(userNoAccess, passwordNoAccess)
+        .then(() => this.secretin.shareSecret(secretId, userRead, secretTitle, 0))
         .should.be.rejectedWith('You don\'t have this secret')
     );
 
     it('Should not be able to unshare', () =>
-      this.secretin.loginUser('user4', 'user4')
-        .then(() => this.secretin.unshareSecret(secretHashedTitle, 'user1'))
+      this.secretin.loginUser(userNoAccess, passwordNoAccess)
+        .then(() => this.secretin.unshareSecret(secretId, userRead))
         .should.be.rejectedWith('You don\'t have this secret')
     );
   });
 
   describe('Read only user', () => {
     it('Should be able to read', () =>
-      this.secretin.loginUser('user1', 'user1')
-        .then(() => this.secretin.getSecret(secretHashedTitle))
+      this.secretin.loginUser(userRead, passwordRead)
+        .then(() => this.secretin.getSecret(secretId))
+        .should.eventually.deep.equal(secretContent)
+        .then(() => this.secretin.currentUser.metadatas[secretId])
         .should.eventually.deep.equal({
-          fields: [{
-            label: 'a',
-            content: 'b',
-          }],
-        })
-        .then(() => this.secretin.currentUser.metadatas[secretHashedTitle])
-        .should.eventually.deep.equal({
-          lastModifiedAt: '2016-10-21T21:59:56.478Z',
-          lastModifiedBy: 'user',
+          lastModifiedAt: now,
+          lastModifiedBy: userReadWriteShare,
           users: {
-            user: {
-              username: 'user',
-              rights: 2,
-            },
-            user1: {
-              username: 'user1',
+            [userRead]: {
+              username: userRead,
               rights: 0,
             },
-            user2: {
-              username: 'user2',
+            [userReadWrite]: {
+              username: userReadWrite,
               rights: 1,
             },
-            user3: {
-              username: 'user3',
+            [userReadWriteShare]: {
+              username: userReadWriteShare,
               rights: 2,
             },
           },
           folders: {},
-          title: 'secret',
+          title: secretTitle,
           type: 'secret',
-          id: secretHashedTitle,
+          id: secretId,
         })
     );
 
     it('Should not be able to write', () =>
-      this.secretin.loginUser('user1', 'user1')
-        .then(() => this.secretin.editSecret(secretHashedTitle, 'YOLO'))
+      this.secretin.loginUser(userRead, passwordRead)
+        .then(() => this.secretin.editSecret(secretId, newSecretContent))
         .should.be.rejectedWith('You can\'t edit this secret')
     );
 
     it('Should not be able to share', () =>
-      this.secretin.loginUser('user1', 'user1')
-        .then(() => this.secretin.shareSecret(secretHashedTitle, 'user4', 'secret', 0))
-        .should.be.rejectedWith(`You can't share secret ${secretHashedTitle}`)
+      this.secretin.loginUser(userRead, passwordRead)
+        .then(() => this.secretin.shareSecret(secretId, userNoAccess, secretTitle, 0))
+        .should.be.rejectedWith(`You can't share secret ${secretId}`)
     );
 
     it('Should not be able to unshare', () =>
-      this.secretin.loginUser('user1', 'user1')
-        .then(() => this.secretin.unshareSecret(secretHashedTitle, 'user2'))
-        .should.be.rejectedWith(`You can\'t unshare secret ${secretHashedTitle}`)
+      this.secretin.loginUser(userRead, passwordRead)
+        .then(() => this.secretin.unshareSecret(secretId, userReadWrite))
+        .should.be.rejectedWith(`You can\'t unshare secret ${secretId}`)
     );
   });
 
   describe('Read/Write only user', () => {
     it('Should be able to read', () =>
-      this.secretin.loginUser('user2', 'user2')
-        .then(() => this.secretin.getSecret(secretHashedTitle))
+      this.secretin.loginUser(userReadWrite, passwordReadWrite)
+        .then(() => this.secretin.getSecret(secretId))
+        .should.eventually.deep.equal(secretContent)
+        .then(() => this.secretin.currentUser.metadatas[secretId])
         .should.eventually.deep.equal({
-          fields: [{
-            label: 'a',
-            content: 'b',
-          }],
-        })
-        .then(() => this.secretin.currentUser.metadatas[secretHashedTitle])
-        .should.eventually.deep.equal({
-          lastModifiedAt: '2016-10-21T21:59:56.478Z',
-          lastModifiedBy: 'user',
+          lastModifiedAt: now,
+          lastModifiedBy: userReadWriteShare,
           users: {
-            user: {
-              username: 'user',
-              rights: 2,
-            },
-            user1: {
-              username: 'user1',
+            [userRead]: {
+              username: userRead,
               rights: 0,
             },
-            user2: {
-              username: 'user2',
+            [userReadWrite]: {
+              username: userReadWrite,
               rights: 1,
             },
-            user3: {
-              username: 'user3',
+            [userReadWriteShare]: {
+              username: userReadWriteShare,
               rights: 2,
             },
           },
           folders: {},
-          title: 'secret',
+          title: secretTitle,
           type: 'secret',
-          id: secretHashedTitle,
+          id: secretId,
         })
     );
 
-    it('Should be able to write', () => {
-      const secretContent = 'YOLO';
-      return this.secretin.loginUser('user2', 'user2')
-        .then(() => this.secretin.editSecret(secretHashedTitle, secretContent))
-        .then(() => this.secretin.getSecret(secretHashedTitle))
-        .should.eventually.deep.equal(secretContent)
-        .then(() => this.secretin.currentUser.metadatas[secretHashedTitle])
+    it('Should be able to write', () =>
+      this.secretin.loginUser(userReadWrite, passwordReadWrite)
+        .then(() => this.secretin.editSecret(secretId, newSecretContent))
+        .then(() => this.secretin.getSecret(secretId))
+        .should.eventually.deep.equal(newSecretContent)
+        .then(() => this.secretin.currentUser.metadatas[secretId])
         .should.eventually.deep.equal({
-          lastModifiedAt: '2016-01-01T00:00:00.000Z',
-          lastModifiedBy: 'user2',
+          lastModifiedAt: now,
+          lastModifiedBy: userReadWrite,
           users: {
-            user: {
-              username: 'user',
-              rights: 2,
-            },
-            user1: {
-              username: 'user1',
+            [userRead]: {
+              username: userRead,
               rights: 0,
             },
-            user2: {
-              username: 'user2',
+            [userReadWrite]: {
+              username: userReadWrite,
               rights: 1,
             },
-            user3: {
-              username: 'user3',
+            [userReadWriteShare]: {
+              username: userReadWriteShare,
               rights: 2,
             },
           },
           folders: {},
-          title: 'secret',
+          title: secretTitle,
           type: 'secret',
-          id: secretHashedTitle,
-        });
-    });
+          id: secretId,
+        })
+    );
 
     it('Should not be able to share', () =>
-      this.secretin.loginUser('user2', 'user2')
-        .then(() => this.secretin.shareSecret(secretHashedTitle, 'user4', 'secret', 0))
-        .should.be.rejectedWith(`You can't share secret ${secretHashedTitle}`)
+      this.secretin.loginUser(userReadWrite, passwordReadWrite)
+        .then(() => this.secretin.shareSecret(secretId, userNoAccess, secretTitle, 0))
+        .should.be.rejectedWith(`You can't share secret ${secretId}`)
     );
 
     it('Should not be able to unshare', () =>
-      this.secretin.loginUser('user2', 'user2')
-        .then(() => this.secretin.unshareSecret(secretHashedTitle, 'user1'))
-        .should.be.rejectedWith(`You can\'t unshare secret ${secretHashedTitle}`)
+      this.secretin.loginUser(userReadWrite, passwordReadWrite)
+        .then(() => this.secretin.unshareSecret(secretId, userRead))
+        .should.be.rejectedWith(`You can\'t unshare secret ${secretId}`)
     );
   });
 
   describe('Read/Write/Share only user', () => {
     it('Should be able to read', () =>
-      this.secretin.loginUser('user3', 'user3')
-        .then(() => this.secretin.getSecret(secretHashedTitle))
+      this.secretin.loginUser(userReadWriteShare, passwordReadWriteShare)
+        .then(() => this.secretin.getSecret(secretId))
+        .should.eventually.deep.equal(newSecretContent)
+        .then(() => this.secretin.currentUser.metadatas[secretId])
         .should.eventually.deep.equal({
-          fields: [{
-            label: 'a',
-            content: 'b',
-          }],
-        })
-        .then(() => this.secretin.currentUser.metadatas[secretHashedTitle])
-        .should.eventually.deep.equal({
-          lastModifiedAt: '2016-10-21T21:59:56.478Z',
-          lastModifiedBy: 'user',
+          lastModifiedAt: now,
+          lastModifiedBy: userReadWrite,
           users: {
-            user: {
-              username: 'user',
-              rights: 2,
-            },
-            user1: {
-              username: 'user1',
+            [userRead]: {
+              username: userRead,
               rights: 0,
             },
-            user2: {
-              username: 'user2',
+            [userReadWrite]: {
+              username: userReadWrite,
               rights: 1,
             },
-            user3: {
-              username: 'user3',
+            [userReadWriteShare]: {
+              username: userReadWriteShare,
               rights: 2,
             },
           },
           folders: {},
-          title: 'secret',
+          title: secretTitle,
           type: 'secret',
-          id: secretHashedTitle,
+          id: secretId,
         })
     );
 
-    it('Should be able to write', () => {
-      const secretContent = 'YOLO';
-      return this.secretin.loginUser('user3', 'user3')
-        .then(() => this.secretin.editSecret(secretHashedTitle, secretContent))
-        .then(() => this.secretin.getSecret(secretHashedTitle))
+    it('Should be able to write', () =>
+      this.secretin.loginUser(userReadWriteShare, passwordReadWriteShare)
+        .then(() => this.secretin.editSecret(secretId, secretContent))
+        .then(() => this.secretin.getSecret(secretId))
         .should.eventually.deep.equal(secretContent)
-        .then(() => this.secretin.currentUser.metadatas[secretHashedTitle])
+        .then(() => this.secretin.currentUser.metadatas[secretId])
         .should.eventually.deep.equal({
-          lastModifiedAt: '2016-01-01T00:00:00.000Z',
-          lastModifiedBy: 'user3',
+          lastModifiedAt: now,
+          lastModifiedBy: userReadWriteShare,
           users: {
-            user: {
-              username: 'user',
-              rights: 2,
-            },
-            user1: {
-              username: 'user1',
+            [userRead]: {
+              username: userRead,
               rights: 0,
             },
-            user2: {
-              username: 'user2',
+            [userReadWrite]: {
+              username: userReadWrite,
               rights: 1,
             },
-            user3: {
-              username: 'user3',
+            [userReadWriteShare]: {
+              username: userReadWriteShare,
               rights: 2,
             },
           },
           folders: {},
-          title: 'secret',
+          title: secretTitle,
           type: 'secret',
-          id: secretHashedTitle,
-        });
-    });
+          id: secretId,
+        })
+    );
 
     it('Should be able to share', () =>
-      this.secretin.loginUser('user3', 'user3')
-        .then(() => this.secretin.shareSecret(secretHashedTitle, 'user4', 'secret', 0))
+      this.secretin.loginUser(userReadWriteShare, passwordReadWriteShare)
+        .then(() => this.secretin.shareSecret(secretId, userNoAccess, passwordNoAccess, 0))
         .then(() => {
           this.secretin.currentUser.disconnect();
-          return this.secretin.loginUser('user4', 'user4');
+          return this.secretin.loginUser(userNoAccess, passwordNoAccess);
         })
-        .then(() => this.secretin.getSecret(secretHashedTitle))
+        .then(() => this.secretin.getSecret(secretId))
+        .should.eventually.deep.equal(secretContent)
+        .then(() => this.secretin.currentUser.metadatas[secretId])
         .should.eventually.deep.equal({
-          fields: [{
-            label: 'a',
-            content: 'b',
-          }],
-        })
-        .then(() => this.secretin.currentUser.metadatas[secretHashedTitle])
-        .should.eventually.deep.equal({
-          lastModifiedAt: '2016-01-01T00:00:00.000Z',
-          lastModifiedBy: 'user3',
+          lastModifiedAt: now,
+          lastModifiedBy: userReadWriteShare,
           users: {
-            user: {
-              username: 'user',
-              rights: 2,
-            },
-            user1: {
-              username: 'user1',
+            [userRead]: {
+              username: userRead,
               rights: 0,
             },
-            user2: {
-              username: 'user2',
+            [userReadWrite]: {
+              username: userReadWrite,
               rights: 1,
             },
-            user3: {
-              username: 'user3',
+            [userReadWriteShare]: {
+              username: userReadWriteShare,
               rights: 2,
             },
-            user4: {
-              username: 'user4',
+            [userNoAccess]: {
+              username: userNoAccess,
               rights: 0,
             },
           },
           folders: {},
-          title: 'secret',
+          title: secretTitle,
           type: 'secret',
-          id: secretHashedTitle,
+          id: secretId,
         })
     );
 
     it('Should be able to unshare', () =>
-      this.secretin.loginUser('user3', 'user3')
-        .then(() => this.secretin.unshareSecret(secretHashedTitle, 'user1'))
+      this.secretin.loginUser(userReadWriteShare, passwordReadWriteShare)
+        .then(() => this.secretin.unshareSecret(secretId, userNoAccess))
         .then(() => {
           this.secretin.currentUser.disconnect();
-          return this.secretin.loginUser('user1', 'user1');
+          return this.secretin.loginUser(userNoAccess, passwordNoAccess);
         })
-        .then(() => this.secretin.getSecret(secretHashedTitle))
+        .then(() => this.secretin.getSecret(secretId))
         .should.be.rejectedWith('You don\'t have this secret')
         .then(() => {
           this.secretin.currentUser.disconnect();
-          return this.secretin.loginUser('user2', 'user2');
+          return this.secretin.loginUser(userRead, passwordRead);
         })
-        .then(() => this.secretin.getSecret(secretHashedTitle))
+        .then(() => this.secretin.getSecret(secretId))
+        .should.eventually.deep.equal(secretContent)
+        .then(() => this.secretin.currentUser.metadatas[secretId])
         .should.eventually.deep.equal({
-          fields: [{
-            label: 'a',
-            content: 'b',
-          }],
-        })
-        .then(() => this.secretin.currentUser.metadatas[secretHashedTitle])
-        .should.eventually.deep.equal({
-          lastModifiedAt: '2016-01-01T00:00:00.000Z',
-          lastModifiedBy: 'user3',
+          lastModifiedAt: now,
+          lastModifiedBy: userReadWriteShare,
           users: {
-            user: {
-              username: 'user',
-              rights: 2,
+            [userRead]: {
+              username: userRead,
+              rights: 0,
             },
-            user2: {
-              username: 'user2',
+            [userReadWrite]: {
+              username: userReadWrite,
               rights: 1,
             },
-            user3: {
-              username: 'user3',
+            [userReadWriteShare]: {
+              username: userReadWriteShare,
               rights: 2,
             },
           },
           folders: {},
-          title: 'secret',
+          title: secretTitle,
           type: 'secret',
-          id: secretHashedTitle,
+          id: secretId,
         })
     );
 
     it('Should not be able to unshare with itself', () =>
-      this.secretin.loginUser('user3', 'user3')
-        .then(() => this.secretin.unshareSecret(secretHashedTitle, 'user3'))
+      this.secretin.loginUser(userReadWriteShare, passwordReadWriteShare)
+        .then(() => this.secretin.unshareSecret(secretId, userReadWriteShare))
         .should.be.rejectedWith('You can\'t unshare with yourself')
     );
 
     it('Should not be able to share with itself', () =>
-      this.secretin.loginUser('user3', 'user3')
-        .then(() => this.secretin.shareSecret(secretHashedTitle, 'user3', 'secret', 0))
+      this.secretin.loginUser(userReadWriteShare, passwordReadWriteShare)
+        .then(() => this.secretin.shareSecret(secretId, userReadWriteShare, secretTitle, 0))
         .should.be.rejectedWith('You can\'t share with yourself')
     );
   });
