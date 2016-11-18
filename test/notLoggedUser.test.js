@@ -3,8 +3,12 @@ describe('Not logged user', () => {
   const password = 'password';
   const wrongPassword = 'wrongPassword';
 
-  // eslint-disable-next-line
-  before(() => resetAndGetDB());
+  beforeEach(() => {
+    // eslint-disable-next-line
+    availableKeyCounter = 0;
+    // eslint-disable-next-line
+    return resetAndGetDB()
+  });
 
   afterEach(() => {
     this.secretin.currentUser.disconnect();
@@ -27,7 +31,9 @@ describe('Not logged user', () => {
   );
 
   it('Can login', () =>
-    this.secretin.loginUser(username, password)
+    this.secretin.newUser(username, password)
+      .then(() => this.secretin.currentUser.disconnect())
+      .then(() => this.secretin.loginUser(username, password))
       .should.eventually.have.all.keys(
         'totp',
         'username',
@@ -43,7 +49,9 @@ describe('Not logged user', () => {
   );
 
   it('Can\'t login with invalid password', () =>
-    this.secretin.loginUser(username, wrongPassword)
+    this.secretin.newUser(username, password)
+      .then(() => this.secretin.currentUser.disconnect())
+      .then(() => this.secretin.loginUser(username, wrongPassword))
       .should.be.rejectedWith('Invalid Password')
       .then(() => this.secretin.currentUser.privateKey)
       .should.eventually.be.null
@@ -51,6 +59,8 @@ describe('Not logged user', () => {
 
   it('Can\'t create user with existing username', () =>
     this.secretin.newUser(username, password)
+      .then(() => this.secretin.currentUser.disconnect())
+      .then(() => this.secretin.newUser(username, password))
       .should.be.rejectedWith('Username already exists')
       .then(() => this.secretin.currentUser.privateKey)
       .should.eventually.be.null

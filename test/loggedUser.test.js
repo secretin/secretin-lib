@@ -16,8 +16,12 @@ describe('Logged user', () => {
     }],
   };
 
+  const newSecretTitle = 'newSecret';
+
   const secretTitle = 'secret';
   let secretId = '';
+
+  const newFolderTitle = 'newFolder';
 
   const folderTitle = 'folder';
   let folderId = '';
@@ -30,7 +34,11 @@ describe('Logged user', () => {
   const newPassword = 'newPassword';
 
   // eslint-disable-next-line
-  before(() => resetAndGetDB()
+  beforeEach(() => {
+    // eslint-disable-next-line
+    availableKeyCounter = 0;
+    // eslint-disable-next-line
+    return resetAndGetDB()
     .then(() => this.secretin.newUser(username, password))
     .then(() => this.secretin.addSecret(secretTitle, secretContent))
     .then((hashedTitle) => {
@@ -45,11 +53,10 @@ describe('Logged user', () => {
       secretInFolderId = hashedTitle;
       return this.secretin.addSecretToFolder(secretInFolderId, folderId);
     })
-  );
-
-  beforeEach(() => {
-    this.secretin.currentUser.disconnect();
-    return this.secretin.loginUser(username, password);
+    .then(() => {
+      this.secretin.currentUser.disconnect();
+      return this.secretin.loginUser(username, password);
+    });
   });
 
   it('Can retrieve metadatas', () => {
@@ -106,11 +113,11 @@ describe('Logged user', () => {
 
   it('Can create secret', () => {
     let hashedTitle;
-    return this.secretin.addSecret(secretTitle, newSecretContent)
+    return this.secretin.addSecret(newSecretTitle, newSecretContent)
       .then(() => {
         let id = -1;
         Object.keys(this.secretin.currentUser.metadatas).forEach((mHashedTitle, i) => {
-          if (this.secretin.currentUser.metadatas[mHashedTitle].title === secretTitle) {
+          if (this.secretin.currentUser.metadatas[mHashedTitle].title === newSecretTitle) {
             id = i;
           }
         });
@@ -119,7 +126,7 @@ describe('Logged user', () => {
         return this.secretin.currentUser.metadatas[hashedTitle];
       })
       .should.eventually.deep.equal({
-        lastModifiedAt: '2016-01-01T00:00:00.000Z',
+        lastModifiedAt: now,
         lastModifiedBy: username,
         users: {
           [username]: {
@@ -128,16 +135,14 @@ describe('Logged user', () => {
           },
         },
         folders: {},
-        title: secretTitle,
+        title: newSecretTitle,
         type: 'secret',
       })
       .then(() => this.secretin.getSecret(hashedTitle))
-      .should.eventually.deep.equal(newSecretContent)
-      .then(() => this.secretin.deleteSecret(hashedTitle));
+      .should.eventually.deep.equal(newSecretContent);
   });
 
   it('Can create folder', () => {
-    const newFolderTitle = 'folder1';
     let hashedTitle;
     return this.secretin.addFolder(newFolderTitle)
       .then(() => {
@@ -152,7 +157,7 @@ describe('Logged user', () => {
         return this.secretin.currentUser.metadatas[hashedTitle];
       })
       .should.eventually.deep.equal({
-        lastModifiedAt: '2016-01-01T00:00:00.000Z',
+        lastModifiedAt: now,
         lastModifiedBy: username,
         users: {
           [username]: {
@@ -165,8 +170,7 @@ describe('Logged user', () => {
         type: 'folder',
       })
       .then(() => this.secretin.getSecret(hashedTitle))
-      .should.eventually.deep.equal({})
-      .then(() => this.secretin.deleteSecret(hashedTitle));
+      .should.eventually.deep.equal({});
   });
 
   it('Can disconnect', () => {
@@ -200,7 +204,6 @@ describe('Logged user', () => {
       )
       .then((currentUser) => currentUser.privateKey)
       .should.eventually.be.instanceOf(CryptoKey)
-      .then(() => this.secretin.changePassword(password))
   );
 
   it('Can get secret', () => this.secretin.getSecret(secretId)
@@ -210,13 +213,12 @@ describe('Logged user', () => {
   it('Can edit secret', () => this.secretin.editSecret(secretId, newSecretContent)
       .then(() => this.secretin.getSecret(secretId))
       .should.eventually.deep.equal(newSecretContent)
-      .then(() => this.secretin.editSecret(secretId, secretContent))
   );
 
   it('Can add secret to folder', () => this.secretin.addSecretToFolder(secretId, folderId)
       .then(() => this.secretin.currentUser.metadatas[secretId])
       .should.eventually.deep.equal({
-        lastModifiedAt: '2016-01-01T00:00:00.000Z',
+        lastModifiedAt: now,
         lastModifiedBy: username,
         users: {
           [username]: {
@@ -239,14 +241,13 @@ describe('Logged user', () => {
         [secretId]: 1,
         [secretInFolderId]: 1,
       })
-      .then(() => this.secretin.removeSecretFromFolder(secretId, folderId))
   );
 
   it('Can remove secret from folder', () =>
     this.secretin.removeSecretFromFolder(secretInFolderId, folderId)
       .then(() => this.secretin.currentUser.metadatas[secretInFolderId])
       .should.eventually.deep.equal({
-        lastModifiedAt: '2016-01-01T00:00:00.000Z',
+        lastModifiedAt: now,
         lastModifiedBy: username,
         users: {
           [username]: {
@@ -262,13 +263,7 @@ describe('Logged user', () => {
       .then(() => this.secretin.getSecret(folderId))
       .should.eventually.deep.equal({})
       .then(() => this.secretin.getSecret(secretInFolderId))
-      .should.eventually.deep.equal({
-        fields: [{
-          label: 'a',
-          content: 'b',
-        }],
-      })
-      .then(() => this.secretin.addSecretToFolder(secretInFolderId, folderId))
+      .should.eventually.deep.equal(secretContent)
   );
 
   it('Can delete secret', () => this.secretin.deleteSecret(secretId)
@@ -313,6 +308,20 @@ describe('Logged user', () => {
   it('Can delete secret in a folder', () => this.secretin.deleteSecret(secretInFolderId)
       .then(() => this.secretin.currentUser.metadatas)
       .should.eventually.deep.equal({
+        [secretId]: {
+          folders: {},
+          id: secretId,
+          lastModifiedAt: now,
+          lastModifiedBy: username,
+          title: secretTitle,
+          type: 'secret',
+          users: {
+            [username]: {
+              username,
+              rights: 2,
+            },
+          },
+        },
         [folderId]: {
           folders: {},
           id: folderId,

@@ -4,6 +4,7 @@
 module.exports = function(config) {
   const files = [
     'dist/secretin.js',
+    'test/fixtures/keys.js',
     'test/*.js',
   ];
 

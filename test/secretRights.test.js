@@ -30,8 +30,11 @@ describe('Secret accesses', () => {
   };
 
 
-  // eslint-disable-next-line
-  before(() => resetAndGetDB()
+  beforeEach(() => {
+    // eslint-disable-next-line
+    availableKeyCounter = 0;
+    // eslint-disable-next-line
+    return resetAndGetDB()
     .then(() => this.secretin.newUser(userNoAccess, passwordNoAccess))
     .then(() => this.secretin.newUser(userRead, passwordRead))
     .then(() => this.secretin.newUser(userReadWrite, passwordReadWrite))
@@ -41,11 +44,7 @@ describe('Secret accesses', () => {
       secretId = hashedTitle;
       return this.secretin.shareSecret(secretId, userRead, secretTitle, 0);
     })
-    .then(() => this.secretin.shareSecret(secretId, userReadWrite, secretTitle, 1))
-  );
-
-  beforeEach(() => {
-    this.secretin.currentUser.disconnect();
+    .then(() => this.secretin.shareSecret(secretId, userReadWrite, secretTitle, 1));
   });
 
   describe('No access user', () => {
@@ -200,11 +199,11 @@ describe('Secret accesses', () => {
     it('Should be able to read', () =>
       this.secretin.loginUser(userReadWriteShare, passwordReadWriteShare)
         .then(() => this.secretin.getSecret(secretId))
-        .should.eventually.deep.equal(newSecretContent)
+        .should.eventually.deep.equal(secretContent)
         .then(() => this.secretin.currentUser.metadatas[secretId])
         .should.eventually.deep.equal({
           lastModifiedAt: now,
-          lastModifiedBy: userReadWrite,
+          lastModifiedBy: userReadWriteShare,
           users: {
             [userRead]: {
               username: userRead,
@@ -296,16 +295,16 @@ describe('Secret accesses', () => {
 
     it('Should be able to unshare', () =>
       this.secretin.loginUser(userReadWriteShare, passwordReadWriteShare)
-        .then(() => this.secretin.unshareSecret(secretId, userNoAccess))
+        .then(() => this.secretin.unshareSecret(secretId, userRead))
         .then(() => {
           this.secretin.currentUser.disconnect();
-          return this.secretin.loginUser(userNoAccess, passwordNoAccess);
+          return this.secretin.loginUser(userRead, passwordRead);
         })
         .then(() => this.secretin.getSecret(secretId))
         .should.be.rejectedWith('You don\'t have this secret')
         .then(() => {
           this.secretin.currentUser.disconnect();
-          return this.secretin.loginUser(userRead, passwordRead);
+          return this.secretin.loginUser(userReadWrite, passwordReadWrite);
         })
         .then(() => this.secretin.getSecret(secretId))
         .should.eventually.deep.equal(secretContent)
@@ -314,10 +313,6 @@ describe('Secret accesses', () => {
           lastModifiedAt: now,
           lastModifiedBy: userReadWriteShare,
           users: {
-            [userRead]: {
-              username: userRead,
-              rights: 0,
-            },
             [userReadWrite]: {
               username: userReadWrite,
               rights: 1,
