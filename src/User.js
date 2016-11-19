@@ -246,8 +246,8 @@ class User {
         return exportKey(protectKey, this.privateKey);
       })
       .then((object) => {
-        localStorage.setItem('privateKey', bytesToHexString(object.key));
-        localStorage.setItem('privateKeyIv', bytesToHexString(object.iv));
+        localStorage.setItem(`${Secretin.prefix}privateKey`, bytesToHexString(object.key));
+        localStorage.setItem(`${Secretin.prefix}privateKeyIv`, bytesToHexString(object.iv));
         return derivePassword(shortpass);
       })
       .then((derived) => {
@@ -258,13 +258,13 @@ class User {
       })
       .then((keyObject) => {
         toSend.protectKey = bytesToHexString(keyObject.key);
-        localStorage.setItem('iv', bytesToHexString(keyObject.iv));
-        localStorage.setItem('username', this.username);
+        localStorage.setItem(`${Secretin.prefix}iv`, bytesToHexString(keyObject.iv));
+        localStorage.setItem(`${Secretin.prefix}username`, this.username);
         return getSHA256(deviceName);
       })
       .then((deviceId) => {
         toSend.deviceId = bytesToHexString(deviceId);
-        localStorage.setItem('deviceName', deviceName);
+        localStorage.setItem(`${Secretin.prefix}deviceName`, deviceName);
         return toSend;
       });
   }
@@ -272,13 +272,13 @@ class User {
   shortLogin(shortpass, wrappedProtectKey) {
     const keyObject = {
       key: wrappedProtectKey,
-      iv: localStorage.getItem('iv'),
+      iv: localStorage.getItem(`${Secretin.prefix}iv`),
     };
     return importKey(shortpass, keyObject)
       .then((protectKey) => {
         const privateKeyObject = {
-          privateKey: localStorage.getItem('privateKey'),
-          iv: localStorage.getItem('privateKeyIv'),
+          privateKey: localStorage.getItem(`${Secretin.prefix}privateKey`),
+          iv: localStorage.getItem(`${Secretin.prefix}privateKeyIv`),
         };
         return importPrivateKey(protectKey, privateKeyObject);
       })

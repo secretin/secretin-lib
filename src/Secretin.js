@@ -554,8 +554,8 @@ class Secretin {
   }
 
   shortLogin(shortpass) {
-    const username = localStorage.getItem('username');
-    const deviceName = localStorage.getItem('deviceName');
+    const username = localStorage.getItem(`${Secretin.prefix}username`);
+    const deviceName = localStorage.getItem(`${Secretin.prefix}deviceName`);
     let shortpassKey;
     let parameters;
     this.currentUser = new User(username);
@@ -573,18 +573,25 @@ class Secretin {
       .then((protectKey) => this.currentUser.shortLogin(shortpassKey, protectKey))
       .then(() => this.refreshUser())
       .then(() => this.currentUser, (e) => {
-        localStorage.removeItem('username');
-        localStorage.removeItem('deviceName');
-        localStorage.removeItem('privateKey');
-        localStorage.removeItem('privateKeyIv');
-        localStorage.removeItem('iv');
+        localStorage.removeItem(`${Secretin.prefix}username`);
+        localStorage.removeItem(`${Secretin.prefix}deviceName`);
+        localStorage.removeItem(`${Secretin.prefix}privateKey`);
+        localStorage.removeItem(`${Secretin.prefix}privateKeyIv`);
+        localStorage.removeItem(`${Secretin.prefix}iv`);
         throw e;
       });
   }
 
   canITryShortpass() {
-    return (localStorageAvailable() && localStorage.getItem('username') !== null);
+    return (localStorageAvailable() && localStorage.getItem(`${Secretin.prefix}username`) !== null);
   }
 }
+
+Object.defineProperty(Secretin, 'prefix', {
+  value: 'Secret-in:',
+  writable: false,
+  enumerable: true,
+  configurable: false,
+});
 
 export default Secretin;
