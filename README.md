@@ -1,5 +1,6 @@
 # secretin
-![](http://www.echo62.com/images/sportif/sportif48.jpg)
+![Jacques Secrétin](http://www.echo62.com/images/sportif/sportif48.jpg)
+
 Open source secret manager with groups managment based on webapi crypto http://www.w3.org/TR/WebCryptoAPI/
 
 **No dependencies**, only "vanilla" JS
