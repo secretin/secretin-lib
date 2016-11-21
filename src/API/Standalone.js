@@ -392,7 +392,7 @@ class API {
   }
 
   getSecret(hash, user) {
-    return user.getToken(this)
+    return user.sign(hash)
       .then(() =>
         new Promise((resolve, reject) => {
           if (typeof this.db.secrets[hash] === 'undefined') {

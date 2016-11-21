@@ -125,6 +125,14 @@ export function wrapRSAOAEP(key, wrappingPublicKey) {
   return crypto.subtle.wrapKey(format, key, wrappingPublicKey, wrapAlgorithm);
 }
 
+export function sign(datas, key) {
+  const signAlgorithm = {
+    name: 'RSA-PSS',
+    saltLength: 32, // In byte
+  };
+  return crypto.subtle.sign(signAlgorithm, key, asciiToUint8Array(datas));
+}
+
 export function unwrapRSAOAEP(wrappedKeyHex, unwrappingPrivateKey) {
   const format = 'raw';
   const wrappedKey = hexStringToUint8Array(wrappedKeyHex);
@@ -150,9 +158,28 @@ export function unwrapRSAOAEP(wrappedKeyHex, unwrappingPrivateKey) {
   );
 }
 
-export function exportPublicKey(publicKey) {
+export function exportClearKey(key) {
   const format = 'jwk';
-  return crypto.subtle.exportKey(format, publicKey);
+  return crypto.subtle.exportKey(format, key);
+}
+
+export function convertOAEPToPSS(key) {
+  return exportClearKey(key)
+    .then((OAEPKey) => {
+      const format = 'jwk';
+      const algorithm = {
+        name: 'RSA-PSS',
+        hash: { name: 'SHA-256' },
+      };
+      const extractable = false;
+      const keyUsages = ['sign'];
+
+      const PSSKey = OAEPKey;
+      PSSKey.alg = 'PS256';
+      PSSKey.key_ops = keyUsages;
+
+      return crypto.subtle.importKey(format, PSSKey, algorithm, extractable, keyUsages);
+    });
 }
 
 export function importPublicKey(jwkPublicKey) {
@@ -161,7 +188,7 @@ export function importPublicKey(jwkPublicKey) {
     name: 'RSA-OAEP',
     hash: { name: 'SHA-256' },
   };
-  const extractable = false;
+  const extractable = true;
   const keyUsages = [
     'wrapKey', 'encrypt',
   ];

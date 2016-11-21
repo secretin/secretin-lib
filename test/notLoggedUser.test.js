@@ -24,7 +24,8 @@ describe('Not logged user', () => {
         'metadatas',
         'token',
         'publicKey',
-        'privateKey'
+        'privateKey',
+        'privateKeySign'
       )
       .then((currentUser) => currentUser.privateKey)
       .should.eventually.be.instanceOf(CryptoKey)
@@ -39,6 +40,7 @@ describe('Not logged user', () => {
         'username',
         'publicKey',
         'privateKey',
+        'privateKeySign',
         'keys',
         'hash',
         'metadatas',

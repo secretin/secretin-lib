@@ -5,7 +5,8 @@ import {
   genRSAOAEP,
   decryptRSAOAEP,
   encryptRSAOAEP,
-  exportPublicKey,
+  exportClearKey,
+  convertOAEPToPSS,
   importPublicKey,
   importPrivateKey,
   encryptAESGCM256,
@@ -14,6 +15,7 @@ import {
   unwrapRSAOAEP,
   generateWrappingKey,
   derivePassword,
+  sign,
 } from './lib/crypto';
 
 import {
@@ -41,6 +43,7 @@ class User {
     delete this.username;
     delete this.publicKey;
     delete this.privateKey;
+    delete this.privateKeySign;
     delete this.metadatas;
     delete this.keys;
     delete this.token;
@@ -65,17 +68,25 @@ class User {
       });
   }
 
+  sign(datas) {
+    return sign(datas, this.privateKeySign);
+  }
+
   generateMasterKey() {
     return genRSAOAEP()
       .then((keyPair) => {
         this.publicKey = keyPair.publicKey;
         this.privateKey = keyPair.privateKey;
+        return convertOAEPToPSS(this.privateKey);
+      })
+      .then((privateKeySign) => {
+        this.privateKeySign = privateKeySign;
         return;
       });
   }
 
   exportPublicKey() {
-    return exportPublicKey(this.publicKey);
+    return exportClearKey(this.publicKey);
   }
 
   importPublicKey(jwkPublicKey) {
@@ -109,6 +120,10 @@ class User {
     return importPrivateKey(dKey, privateKeyObject)
       .then((privateKey) => {
         this.privateKey = privateKey;
+        return convertOAEPToPSS(this.privateKey);
+      })
+      .then((privateKeySign) => {
+        this.privateKeySign = privateKeySign;
         return;
       });
   }
@@ -280,11 +295,7 @@ class User {
           privateKey: localStorage.getItem(`${Secretin.prefix}privateKey`),
           iv: localStorage.getItem(`${Secretin.prefix}privateKeyIv`),
         };
-        return importPrivateKey(protectKey, privateKeyObject);
-      })
-      .then((privateKey) => {
-        this.privateKey = privateKey;
-        return;
+        return this.importPrivateKey(protectKey, privateKeyObject);
       });
   }
 }
