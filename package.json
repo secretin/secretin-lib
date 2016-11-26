@@ -12,14 +12,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/agix/secretin.git"
+    "url": "https://github.com/secretin/secretin-lib.git"
   },
   "author": "agix",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/agix/secretin/issues"
+    "url": "https://github.com/secretin/secretin-libissues"
   },
-  "homepage": "https://github.com/agix/secretin",
+  "homepage": "https://github.com/secretin/secretin-lib",
   "devDependencies": {
     "babel-cli": "^6.14.0",
     "babel-eslint": "^6.1.2",
