@@ -14,7 +14,7 @@ module.exports = function(config) {
     files.push('test/hooks/standalone.js');
   }
 
-  config.set({
+  const karmaConfig = {
 
     // base path that will be used to resolve all patterns (eg. files, exclude)
     basePath: '',
@@ -76,13 +76,26 @@ module.exports = function(config) {
     // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
     browsers: ['Chrome'],
 
+    customLaunchers: {
+      ChromeOnTravis: {
+        base: 'Chrome',
+        flags: ['--no-sandbox'],
+      },
+    },
+
 
     // Continuous Integration mode
     // if true, Karma captures browsers, runs the tests and exits
-    singleRun: false,
+    singleRun: process.env.CI === 'true',
 
     // Concurrency level
     // how many browser should be started simultaneous
     concurrency: Infinity,
-  })
-}
+  };
+
+  if (process.env.CI === 'true') {
+    karmaConfig.browsers = ['ChromeOnTravis'];
+  }
+
+  config.set(karmaConfig);
+};

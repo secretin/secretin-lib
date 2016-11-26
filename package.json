@@ -8,7 +8,8 @@
     "build": "npm run lint && rollup -c config/rollup.config.js",
     "watch": "rollup -c config/rollup.config.js --watch",
     "lint": "eslint src/ test/",
-    "test": "./node_modules/karma/bin/karma start karma.conf.js"
+    "karma": "./node_modules/karma/bin/karma start karma.conf.js",
+    "test": "npm run build && npm run karma"
   },
   "repository": {
     "type": "git",
