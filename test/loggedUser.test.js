@@ -179,12 +179,12 @@ describe('Logged user', () => {
       'totp',
       'username',
       'publicKey',
+      'publicKeySign',
       'privateKey',
       'privateKeySign',
       'keys',
       'hash',
-      'metadatas',
-      'token'
+      'metadatas'
     );
   });
 
@@ -197,12 +197,12 @@ describe('Logged user', () => {
         'totp',
         'username',
         'publicKey',
+        'publicKeySign',
         'privateKey',
         'privateKeySign',
         'keys',
         'hash',
-        'metadatas',
-        'token'
+        'metadatas'
       )
       .then((currentUser) => currentUser.privateKey)
       .should.eventually.be.instanceOf(CryptoKey)

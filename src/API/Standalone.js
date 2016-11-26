@@ -52,28 +52,27 @@ class API {
   }
 
   addSecret(user, secretObject) {
-    return user.getToken(this)
-      .then(() => {
-        if (typeof this.db.users[secretObject.hashedUsername] !== 'undefined') {
-          if (typeof this.db.secrets[secretObject.hashedTitle] === 'undefined') {
-            this.db.secrets[secretObject.hashedTitle] = {
-              secret: secretObject.secret,
-              metadatas: secretObject.metadatas,
-              iv: secretObject.iv,
-              iv_meta: secretObject.iv_meta,
-              users: [secretObject.hashedUsername],
-            };
-            this.db.users[secretObject.hashedUsername].keys[secretObject.hashedTitle] = {
-              key: secretObject.wrappedKey,
-              rights: 2,
-            };
-            return;
-          }
-          throw ('Secret already exists');
-        } else {
-          throw ('User not found');
+    return new Promise((resolve, reject) => {
+      if (typeof this.db.users[secretObject.hashedUsername] !== 'undefined') {
+        if (typeof this.db.secrets[secretObject.hashedTitle] === 'undefined') {
+          this.db.secrets[secretObject.hashedTitle] = {
+            secret: secretObject.secret,
+            metadatas: secretObject.metadatas,
+            iv: secretObject.iv,
+            iv_meta: secretObject.iv_meta,
+            users: [secretObject.hashedUsername],
+          };
+          this.db.users[secretObject.hashedUsername].keys[secretObject.hashedTitle] = {
+            key: secretObject.wrappedKey,
+            rights: 2,
+          };
+          resolve();
         }
-      });
+        reject('Secret already exists');
+      } else {
+        reject('User not found');
+      }
+    });
   }
 
   deleteSecret(user, hashedTitle) {
@@ -81,8 +80,6 @@ class API {
     return getSHA256(user.username)
       .then((rHashedUsername) => {
         hashedUsername = bytesToHexString(rHashedUsername);
-        return user.getToken(this);
-      }).then(() => {
         if (typeof this.db.users[hashedUsername] !== 'undefined') {
           if (typeof this.db.secrets[hashedTitle] !== 'undefined') {
             delete this.db.users[hashedUsername].keys[hashedTitle];
@@ -122,8 +119,6 @@ class API {
     return getSHA256(user.username)
       .then((rHashedUsername) => {
         hashedUsername = bytesToHexString(rHashedUsername);
-        return user.getToken(this);
-      }).then(() => {
         if (typeof this.db.users[hashedUsername] !== 'undefined') {
           if (typeof this.db.secrets[hashedTitle] !== 'undefined') {
             if (typeof this.db.users[hashedUsername].keys[hashedTitle].rights !== 'undefined'
@@ -149,8 +144,6 @@ class API {
     return getSHA256(user.username)
       .then((rHashedUsername) => {
         hashedUsername = bytesToHexString(rHashedUsername);
-        return user.getToken(this);
-      }).then(() => {
         if (typeof this.db.users[hashedUsername] !== 'undefined') {
           if (typeof this.db.secrets[hashedTitle] !== 'undefined') {
             if (typeof this.db.users[hashedUsername].keys[hashedTitle].rights !== 'undefined'
@@ -194,8 +187,6 @@ class API {
         rHashedFriendUserames.forEach((hashedFriendUserame) => {
           hashedFriendUsernames.push(bytesToHexString(hashedFriendUserame));
         });
-        return user.getToken(this);
-      }).then(() => {
         if (typeof this.db.users[hashedUsername] !== 'undefined') {
           if (typeof this.db.secrets[hashedTitle] !== 'undefined') {
             if (typeof this.db.users[hashedUsername].keys[hashedTitle].rights !== 'undefined'
@@ -246,8 +237,6 @@ class API {
     return getSHA256(user.username)
       .then((rHashedUsername) => {
         hashedUsername = bytesToHexString(rHashedUsername);
-        return user.getToken(this);
-      }).then(() => {
         const dbUser = this.db.users[hashedUsername];
         if (typeof dbUser !== 'undefined') {
           let nb = 0;
@@ -368,9 +357,7 @@ class API {
     return getSHA256(user.username)
       .then((rHashedUsername) => {
         hashedUsername = bytesToHexString(rHashedUsername);
-        return user.getToken(this);
-      }).then(() =>
-        new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => {
           if (typeof this.db.users[hashedUsername] === 'undefined') {
             reject('User not found');
           } else {
@@ -387,8 +374,8 @@ class API {
             userObject.metadatas = metadatas;
             resolve(userObject);
           }
-        })
-      );
+        });
+      });
   }
 
   getSecret(hash, user) {
@@ -406,20 +393,17 @@ class API {
 
   getAllMetadatas(user) {
     const result = {};
-    return user.getToken(this)
-      .then(() =>
-        new Promise((resolve) => {
-          const hashedTitles = Object.keys(user.keys);
-          hashedTitles.forEach((hashedTitle) => {
-            const secret = this.db.secrets[hashedTitle];
-            result[hashedTitle] = {
-              iv: secret.iv_meta,
-              secret: secret.metadatas,
-            };
-          });
-          resolve(result);
-        })
-      );
+    return new Promise((resolve) => {
+      const hashedTitles = Object.keys(user.keys);
+      hashedTitles.forEach((hashedTitle) => {
+        const secret = this.db.secrets[hashedTitle];
+        result[hashedTitle] = {
+          iv: secret.iv_meta,
+          secret: secret.metadatas,
+        };
+      });
+      resolve(result);
+    });
   }
 
   getDb() {
@@ -433,16 +417,14 @@ class API {
     return getSHA256(user.username)
       .then((rHashedUsername) => {
         hashedUsername = bytesToHexString(rHashedUsername);
-        return user.getToken(this);
-      }).then(() =>
-        new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => {
           if (typeof this.db.users[hashedUsername] !== 'undefined') {
             resolve(getSHA256(pass.hash));
           } else {
             reject('User not found');
           }
-        })
-      )
+        });
+      })
       .then((hashedHash) => {
         const newPass = pass;
         newPass.hash = bytesToHexString(hashedHash);

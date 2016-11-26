@@ -28,44 +28,25 @@ class User {
   constructor(username) {
     this.username = username;
     this.publicKey = null;
+    this.publicKeySign = null;
     this.privateKey = null;
+    this.privateKeySign = null;
     this.keys = {};
     this.hash = '';
     this.totp = false;
     this.metadatas = {};
-    this.token = {
-      value: '',
-      time: 0,
-    };
   }
 
   disconnect() {
     delete this.username;
     delete this.publicKey;
+    delete this.publicKeySign;
     delete this.privateKey;
     delete this.privateKeySign;
     delete this.metadatas;
     delete this.keys;
-    delete this.token;
     delete this.hash;
     delete this.totp;
-  }
-
-  isTokenValid() {
-    return this.token.time > (Date.now() - 10000);
-  }
-
-  getToken(api) {
-    if (this.isTokenValid()) {
-      return this.token.value;
-    }
-
-    return api.getNewChallenge(this)
-      .then((challenge) => {
-        this.token.time = challenge.time;
-        this.token.value = decryptRSAOAEP(challenge.value, this.privateKey);
-        return this.token.value;
-      });
   }
 
   sign(datas) {
