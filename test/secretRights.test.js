@@ -118,7 +118,7 @@ describe('Secret accesses', () => {
     it('Should not be able to unshare', () =>
       this.secretin.loginUser(userRead, passwordRead)
         .then(() => this.secretin.unshareSecret(secretId, userReadWrite))
-        .should.be.rejectedWith(`You can\'t unshare secret ${secretId}`)
+        .should.be.rejectedWith(`You can't unshare secret ${secretId}`)
     );
   });
 
@@ -191,7 +191,7 @@ describe('Secret accesses', () => {
     it('Should not be able to unshare', () =>
       this.secretin.loginUser(userReadWrite, passwordReadWrite)
         .then(() => this.secretin.unshareSecret(secretId, userRead))
-        .should.be.rejectedWith(`You can\'t unshare secret ${secretId}`)
+        .should.be.rejectedWith(`You can't unshare secret ${secretId}`)
     );
   });
 

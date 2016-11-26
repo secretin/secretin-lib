@@ -1,7 +1,8 @@
 let availableKeyCounter = 0;
 crypto.subtle.oldGenerateKey = crypto.subtle.generateKey;
-crypto.subtle.generateKey = function (algorithm, extractable, keyUsages) {
+crypto.subtle.generateKey = function generateKey(algorithm, extractable, keyUsages) {
   if (algorithm.name === 'RSA-OAEP') {
+    // eslint-disable-next-line
     const key = mockedKeys[availableKeyCounter];
     const keyObject = {};
     availableKeyCounter += 1;
@@ -31,7 +32,5 @@ crypto.subtle.generateKey = function (algorithm, extractable, keyUsages) {
     });
   }
   return crypto.subtle.oldGenerateKey(algorithm, extractable, keyUsages)
-  .then((test) => {
-    return test;
-  });
+  .then((test) => test);
 };
