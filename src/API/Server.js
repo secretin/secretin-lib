@@ -171,7 +171,6 @@ class API {
         .then(() => getSHA256(username))
         .then((rHashedUsername) => {
           hashedUsername = bytesToHexString(rHashedUsername);
-          return;
         });
     }
     return isHashed

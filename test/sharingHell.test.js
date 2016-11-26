@@ -31,15 +31,32 @@ xdescribe('Sharing hell', () => {
     availableKeyCounter = 0;
     // eslint-disable-next-line
     return resetAndGetDB()
-    .then(() => this.secretin.newUser(user1, password1))
-    .then(() => this.secretin.newUser(user2, password2))
-    .then(() => this.secretin.newUser(user3, password3))
-    .then(() => this.secretin.newUser(user4, password4))
-    .then(() => this.secretin.addSecret(secret1Title, secret1Content))
-    .then((hashedTitle) => {
-      secret1Id = hashedTitle;
-      return this.secretin.addFolder(folder1Title);
-    })
-    .then(() => this.secretin.shareSecret(secret1Id, user2, secret1Title, 1));
+      .then(() => this.secretin.newUser(user1, password1))
+      .then(() => this.secretin.newUser(user2, password2))
+      .then(() => this.secretin.newUser(user3, password3))
+      .then(() => this.secretin.newUser(user4, password4))
+      .then(() => this.secretin.addSecret(secret1Title, secret1Content))
+      .then((hashedTitle) => {
+        secret1Id = hashedTitle;
+        return this.secretin.addFolder(folder1Title);
+      })
+      .then((hashedTitle) => {
+        folder1Id = hashedTitle;
+        this.secretin.currentUser.currentFolder = folder1Id;
+        return this.secretin.addSecretToFolder(secret1Id, folder1Id);
+      })
+      .then(() => this.secretin.shareSecret(folder1Id, user1, 'folder', 0))
+      .then(() => this.secretin.shareSecret(folder1Id, user2, 'folder', 0))
+      .then(() => this.secretin.shareSecret(folder1Id, user3, 'folder', 0))
+      .then(() => this.secretin.currentUser.disconnect());
   });
+
+  it('Can yolo', () =>
+    this.secretin.login(user4, password4)
+      .then(() => this.secretin.unshareSecret(folder1Id, user1))
+      .then(() => {
+        this.secretin.disconnect();
+        return this.secretin.login(user1, password1);
+      })
+  );
 });

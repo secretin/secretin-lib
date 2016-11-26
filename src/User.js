@@ -73,7 +73,6 @@ class User {
       })
       .then((publicKeySign) => {
         this.publicKeySign = publicKeySign;
-        return;
       });
   }
 
@@ -89,7 +88,6 @@ class User {
       })
       .then((publicKeySign) => {
         this.publicKeySign = publicKeySign;
-        return;
       });
   }
 
@@ -120,7 +118,6 @@ class User {
       })
       .then((privateKeySign) => {
         this.privateKeySign = privateKeySign;
-        return;
       });
   }
 
@@ -153,7 +150,6 @@ class User {
         } else {
           this.options = User.defaultOptions;
         }
-        return;
       });
   }
 
@@ -268,7 +264,6 @@ class User {
         this.decryptSecret(hashedTitle, allMetadatas[hashedTitle])
           .then((metadatas) => {
             this.metadatas[hashedTitle] = JSON.parse(metadatas);
-            return;
           })
       );
     });

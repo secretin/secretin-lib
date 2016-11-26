@@ -48,7 +48,6 @@ class API {
           keys: {},
           options,
         };
-        return;
       });
   }
 
@@ -82,18 +81,17 @@ class API {
       .then((rHashedUsername) => {
         hashedUsername = bytesToHexString(rHashedUsername);
         if (typeof this.db.users[hashedUsername] !== 'undefined') {
-          if (typeof this.db.secrets[hashedTitle] !== 'undefined') {
-            delete this.db.users[hashedUsername].keys[hashedTitle];
-            const index = this.db.secrets[hashedTitle].users.indexOf(hashedUsername);
-            if (index > -1) {
-              this.db.secrets[hashedTitle].users.splice(index, 1);
-            }
-            if (this.db.secrets[hashedTitle].users.length === 0) {
-              delete this.db.secrets[hashedTitle];
-            }
-            return;
+          if (typeof this.db.secrets[hashedTitle] === 'undefined') {
+            throw ('Secret not found');
           }
-          throw ('Secret not found');
+          delete this.db.users[hashedUsername].keys[hashedTitle];
+          const index = this.db.secrets[hashedTitle].users.indexOf(hashedUsername);
+          if (index > -1) {
+            this.db.secrets[hashedTitle].users.splice(index, 1);
+          }
+          if (this.db.secrets[hashedTitle].users.length === 0) {
+            delete this.db.secrets[hashedTitle];
+          }
         } else {
           throw ('User not found');
         }
@@ -122,15 +120,14 @@ class API {
         hashedUsername = bytesToHexString(rHashedUsername);
         if (typeof this.db.users[hashedUsername] !== 'undefined') {
           if (typeof this.db.secrets[hashedTitle] !== 'undefined') {
-            if (typeof this.db.users[hashedUsername].keys[hashedTitle].rights !== 'undefined'
-                && this.db.users[hashedUsername].keys[hashedTitle].rights > 0) {
-              this.db.secrets[hashedTitle].iv = secretObject.iv;
-              this.db.secrets[hashedTitle].secret = secretObject.secret;
-              this.db.secrets[hashedTitle].iv_meta = secretObject.iv_meta;
-              this.db.secrets[hashedTitle].metadatas = secretObject.metadatas;
-              return;
+            if (typeof this.db.users[hashedUsername].keys[hashedTitle].rights === 'undefined'
+                || this.db.users[hashedUsername].keys[hashedTitle].rights <= 0) {
+              throw ('You can\'t edit this secret');
             }
-            throw ('You can\'t edit this secret');
+            this.db.secrets[hashedTitle].iv = secretObject.iv;
+            this.db.secrets[hashedTitle].secret = secretObject.secret;
+            this.db.secrets[hashedTitle].iv_meta = secretObject.iv_meta;
+            this.db.secrets[hashedTitle].metadatas = secretObject.metadatas;
           } else {
             throw ('Secret not found');
           }
@@ -147,22 +144,21 @@ class API {
         hashedUsername = bytesToHexString(rHashedUsername);
         if (typeof this.db.users[hashedUsername] !== 'undefined') {
           if (typeof this.db.secrets[hashedTitle] !== 'undefined') {
-            if (typeof this.db.users[hashedUsername].keys[hashedTitle].rights !== 'undefined'
-                && this.db.users[hashedUsername].keys[hashedTitle].rights > 1) {
-              this.db.secrets[hashedTitle].iv = secret.iv;
-              this.db.secrets[hashedTitle].secret = secret.secret;
-              this.db.secrets[hashedTitle].iv_meta = secret.iv_meta;
-              this.db.secrets[hashedTitle].metadatas = secret.metadatas;
-              wrappedKeys.forEach((wrappedKey) => {
-                if (typeof this.db.users[wrappedKey.user] !== 'undefined') {
-                  if (typeof this.db.users[wrappedKey.user].keys[hashedTitle] !== 'undefined') {
-                    this.db.users[wrappedKey.user].keys[hashedTitle].key = wrappedKey.key;
-                  }
-                }
-              });
-              return;
+            if (typeof this.db.users[hashedUsername].keys[hashedTitle].rights === 'undefined'
+                || this.db.users[hashedUsername].keys[hashedTitle].rights <= 1) {
+              throw ('You can\'t generate new key for this secret');
             }
-            throw ('You can\'t generate new key for this secret');
+            this.db.secrets[hashedTitle].iv = secret.iv;
+            this.db.secrets[hashedTitle].secret = secret.secret;
+            this.db.secrets[hashedTitle].iv_meta = secret.iv_meta;
+            this.db.secrets[hashedTitle].metadatas = secret.metadatas;
+            wrappedKeys.forEach((wrappedKey) => {
+              if (typeof this.db.users[wrappedKey.user] !== 'undefined') {
+                if (typeof this.db.users[wrappedKey.user].keys[hashedTitle] !== 'undefined') {
+                  this.db.users[wrappedKey.user].keys[hashedTitle].key = wrappedKey.key;
+                }
+              }
+            });
           } else {
             throw ('Secret not found');
           }
@@ -270,10 +266,9 @@ class API {
               throw ('You can\'t share with yourself');
             }
           });
-          if (nb === sharedSecretObjects.length) {
-            return;
+          if (nb !== sharedSecretObjects.length) {
+            throw ('Something goes wrong.');
           }
-          throw ('Something goes wrong.');
         } else {
           throw ('User not found');
         }
@@ -290,7 +285,6 @@ class API {
         .then(() => getSHA256(username))
         .then((rHashedUsername) => {
           hashedUsername = bytesToHexString(rHashedUsername);
-          return;
         });
     }
 
@@ -440,7 +434,6 @@ class API {
         newPass.hash = bytesToHexString(hashedHash);
         this.db.users[hashedUsername].privateKey = privateKey;
         this.db.users[hashedUsername].pass = newPass;
-        return;
       });
   }
 
