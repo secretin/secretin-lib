@@ -29,6 +29,7 @@ class Secretin {
   newUser(username, password) {
     let privateKey;
     let pass;
+    let options;
     this.currentUser = new User(username);
     return this.api.userExists(username)
       .then((exists) =>
@@ -46,6 +47,11 @@ class Secretin {
         pass = objectPrivateKey.pass;
         pass.totp = false;
         pass.shortpass = false;
+
+        return this.currentUser.exportOptions();
+      })
+      .then((rOptions) => {
+        options = rOptions;
         return this.currentUser.exportPublicKey();
       })
       .then((publicKey) =>
@@ -53,7 +59,8 @@ class Secretin {
           this.currentUser.username,
           privateKey,
           publicKey,
-          pass
+          pass,
+          options
         )
       )
       .then(() => this.currentUser);
@@ -87,6 +94,7 @@ class Secretin {
       })
       .then(() => this.currentUser.importPrivateKey(key, remoteUser.privateKey))
       .then(() => this.currentUser.decryptAllMetadatas(remoteUser.metadatas))
+      .then(() => this.currentUser.importOptions(remoteUser.options))
       .then(() => this.currentUser);
   }
 
@@ -158,10 +166,10 @@ class Secretin {
   changePassword(password) {
     return this.currentUser.exportPrivateKey(password)
       .then((objectPrivateKey) =>
-        this.api.changePassword(
+        this.api.editUser(
           this.currentUser,
-          objectPrivateKey.privateKey,
-          objectPrivateKey.pass
+          objectPrivateKey,
+          'password'
         )
       );
   }
@@ -169,6 +177,12 @@ class Secretin {
   editSecret(hashedTitle, content) {
     return this.currentUser.editSecret(hashedTitle, content)
       .then((secretObject) => this.api.editSecret(this.currentUser, secretObject, hashedTitle));
+  }
+
+  editOptions(options) {
+    this.currentUser.options = options;
+    return this.currentUser.exportOptions()
+      .then((encryptedOptions) => this.api.editUser(this.currentUser, encryptedOptions, 'options'));
   }
 
   addSecretToFolder(hashedSecretTitle, hashedFolder) {

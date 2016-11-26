@@ -133,6 +133,19 @@ export function sign(datas, key) {
   return crypto.subtle.sign(signAlgorithm, key, asciiToUint8Array(datas));
 }
 
+export function verify(datas, signature, key) {
+  const signAlgorithm = {
+    name: 'RSA-PSS',
+    saltLength: 32, // In byte
+  };
+  return crypto.subtle.verify(
+    signAlgorithm,
+    key,
+    hexStringToUint8Array(signature),
+    asciiToUint8Array(datas)
+  );
+}
+
 export function unwrapRSAOAEP(wrappedKeyHex, unwrappingPrivateKey) {
   const format = 'raw';
   const wrappedKey = hexStringToUint8Array(wrappedKeyHex);
@@ -163,7 +176,7 @@ export function exportClearKey(key) {
   return crypto.subtle.exportKey(format, key);
 }
 
-export function convertOAEPToPSS(key) {
+export function convertOAEPToPSS(key, keyUsage) {
   return exportClearKey(key)
     .then((OAEPKey) => {
       const format = 'jwk';
@@ -172,7 +185,7 @@ export function convertOAEPToPSS(key) {
         hash: { name: 'SHA-256' },
       };
       const extractable = false;
-      const keyUsages = ['sign'];
+      const keyUsages = [keyUsage];
 
       const PSSKey = OAEPKey;
       PSSKey.alg = 'PS256';

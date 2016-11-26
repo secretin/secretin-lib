@@ -59,7 +59,7 @@ describe('Logged user', () => {
     });
   });
 
-  it('Can retrieve metadatas', () => {
+  it('Can retrieve metadatas', () =>
     this.secretin.currentUser.metadatas.should.deep.equal({
       [secretId]: {
         folders: {},
@@ -108,8 +108,32 @@ describe('Logged user', () => {
         type: 'secret',
         id: secretInFolderId,
       },
-    });
-  });
+    })
+  );
+
+  it('Can retrieve options', () =>
+    this.secretin.currentUser.options.should.deep.equal({
+      timeToClose: 30,
+    })
+  );
+
+  it('Can edit options', () =>
+    this.secretin.editOptions({
+      timeToClose: 60,
+    })
+    .then(() => this.secretin.currentUser.options)
+    .should.eventually.deep.equal({
+      timeToClose: 60,
+    })
+    .then(() => {
+      this.secretin.currentUser.disconnect();
+      return this.secretin.loginUser(username, password);
+    })
+    .then(() => this.secretin.currentUser.options)
+    .should.eventually.deep.equal({
+      timeToClose: 60,
+    })
+  );
 
   it('Can create secret', () => {
     let hashedTitle;
@@ -184,7 +208,8 @@ describe('Logged user', () => {
       'privateKeySign',
       'keys',
       'hash',
-      'metadatas'
+      'metadatas',
+      'options'
     );
   });
 
@@ -202,7 +227,8 @@ describe('Logged user', () => {
         'privateKeySign',
         'keys',
         'hash',
-        'metadatas'
+        'metadatas',
+        'options'
       )
       .then((currentUser) => currentUser.privateKey)
       .should.eventually.be.instanceOf(CryptoKey)

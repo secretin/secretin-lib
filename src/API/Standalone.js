@@ -23,7 +23,7 @@ class API {
       .then(() => true, () => false);
   }
 
-  addUser(username, privateKey, publicKey, pass) {
+  addUser(username, privateKey, publicKey, pass, options) {
     let hashedUsername;
     return getSHA256(username)
       .then((rHashedUsername) => {
@@ -46,6 +46,7 @@ class API {
           privateKey,
           publicKey,
           keys: {},
+          options,
         };
         return;
       });
@@ -412,19 +413,28 @@ class API {
     });
   }
 
-  changePassword(user, privateKey, pass) {
+  editUser(user, datas, type) {
     let hashedUsername;
     return getSHA256(user.username)
       .then((rHashedUsername) => {
         hashedUsername = bytesToHexString(rHashedUsername);
         return new Promise((resolve, reject) => {
           if (typeof this.db.users[hashedUsername] !== 'undefined') {
-            resolve(getSHA256(pass.hash));
+            if (type === 'password') {
+              resolve(this.changePassword(hashedUsername, datas.privateKey, datas.pass));
+            } else {
+              this.db.users[hashedUsername].options = datas;
+              resolve();
+            }
           } else {
             reject('User not found');
           }
         });
-      })
+      });
+  }
+
+  changePassword(hashedUsername, privateKey, pass) {
+    return getSHA256(pass.hash)
       .then((hashedHash) => {
         const newPass = pass;
         newPass.hash = bytesToHexString(hashedHash);

@@ -16,6 +16,7 @@ import {
   generateWrappingKey,
   derivePassword,
   sign,
+  verify,
 } from './lib/crypto';
 
 import {
@@ -35,6 +36,7 @@ class User {
     this.hash = '';
     this.totp = false;
     this.metadatas = {};
+    this.options = User.defaultOptions;
   }
 
   disconnect() {
@@ -47,10 +49,15 @@ class User {
     delete this.keys;
     delete this.hash;
     delete this.totp;
+    delete this.options;
   }
 
   sign(datas) {
     return sign(datas, this.privateKeySign);
+  }
+
+  verify(datas, signature) {
+    return verify(datas, signature, this.publicKeySign);
   }
 
   generateMasterKey() {
@@ -58,10 +65,14 @@ class User {
       .then((keyPair) => {
         this.publicKey = keyPair.publicKey;
         this.privateKey = keyPair.privateKey;
-        return convertOAEPToPSS(this.privateKey);
+        return convertOAEPToPSS(this.privateKey, 'sign');
       })
       .then((privateKeySign) => {
         this.privateKeySign = privateKeySign;
+        return convertOAEPToPSS(this.publicKey, 'verify');
+      })
+      .then((publicKeySign) => {
+        this.publicKeySign = publicKeySign;
         return;
       });
   }
@@ -74,6 +85,10 @@ class User {
     return importPublicKey(jwkPublicKey)
       .then((publicKey) => {
         this.publicKey = publicKey;
+        return convertOAEPToPSS(this.publicKey, 'verify');
+      })
+      .then((publicKeySign) => {
+        this.publicKeySign = publicKeySign;
         return;
       });
   }
@@ -101,7 +116,7 @@ class User {
     return importPrivateKey(dKey, privateKeyObject)
       .then((privateKey) => {
         this.privateKey = privateKey;
-        return convertOAEPToPSS(this.privateKey);
+        return convertOAEPToPSS(this.privateKey, 'sign');
       })
       .then((privateKeySign) => {
         this.privateKeySign = privateKeySign;
@@ -109,9 +124,37 @@ class User {
       });
   }
 
-  encryptTitle(title, publicKey) {
-    return encryptRSAOAEP(title, publicKey)
-      .then((encryptedTitle) => bytesToHexString(encryptedTitle));
+  exportOptions() {
+    const result = {};
+    return encryptRSAOAEP(JSON.stringify(this.options), this.publicKey)
+      .then((encryptedOptions) => {
+        result.options = bytesToHexString(encryptedOptions);
+        return this.sign(result.options);
+      })
+      .then((signature) => {
+        result.signature = bytesToHexString(signature);
+        return result;
+      });
+  }
+
+  importOptions(optionsObject) {
+    let verified;
+    return this.verify(optionsObject.options, optionsObject.signature)
+      .then((ok) => {
+        verified = ok;
+        if (ok) {
+          return decryptRSAOAEP(optionsObject.options, this.privateKey);
+        }
+        return null;
+      })
+      .then((options) => {
+        if (verified) {
+          this.options = JSON.parse(bytesToASCIIString(options));
+        } else {
+          this.options = User.defaultOptions;
+        }
+        return;
+      });
   }
 
   shareSecret(friend, wrappedKey, hashedTitle) {
@@ -281,5 +324,13 @@ class User {
   }
 }
 
+Object.defineProperty(User, 'defaultOptions', {
+  value: {
+    timeToClose: 30,
+  },
+  writable: false,
+  enumerable: true,
+  configurable: false,
+});
 
 export default User;

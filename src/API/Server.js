@@ -28,7 +28,7 @@ class API {
       .then(() => true, () => false);
   }
 
-  addUser(username, privateKey, publicKey, pass) {
+  addUser(username, privateKey, publicKey, pass, options) {
     return getSHA256(username)
       .then((hashedUsername) =>
         doPOST(`${this.db}/user/${bytesToHexString(hashedUsername)}`, {
@@ -36,6 +36,7 @@ class API {
           privateKey,
           publicKey,
           keys: {},
+          options,
         })
       );
   }
@@ -256,6 +257,21 @@ class API {
       })
       .then((signature) =>
         doGET(`${this.db}${url}?sig=${bytesToHexString(signature)}`));
+  }
+
+  editUser(user, datas, type) {
+    let hashedUsername;
+    const json = JSON.stringify(datas);
+    return getSHA256(user.username)
+      .then((rHashedUsername) => {
+        hashedUsername = bytesToHexString(rHashedUsername);
+        return user.sign(json);
+      }).then((signature) =>
+        doPUT(`${this.db}/user/${hashedUsername}?type=${type}`, {
+          json,
+          sig: bytesToHexString(signature),
+        })
+      );
   }
 
   changePassword(user, privateKey, pass) {

@@ -8,8 +8,8 @@ module.exports = function(config) {
     'test/*.js',
   ];
 
-  if (typeof process.env.APIType !== 'undefined') {
-    files.push(`test/hooks/${process.env.APIType}.js`);
+  if (typeof process.env.API_TYPE !== 'undefined') {
+    files.push(`test/hooks/${process.env.API_TYPE}.js`);
   } else {
     files.push('test/hooks/standalone.js');
   }
