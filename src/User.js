@@ -136,6 +136,11 @@ class User {
 
   importOptions(optionsObject) {
     let verified;
+    // Retro compatibility
+    if (typeof optionsObject === 'undefined') {
+      this.options = User.defaultOptions;
+      return new Promise(null);
+    }
     return this.verify(optionsObject.options, optionsObject.signature)
       .then((ok) => {
         verified = ok;
