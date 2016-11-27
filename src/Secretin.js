@@ -3,6 +3,17 @@ import {
 } from './lib/crypto';
 
 import {
+  WrappingError,
+  UsernameAlreadyExistsError,
+  NeedTOTPTokenError,
+  DisconnectedError,
+  DontHaveSecretError,
+  FolderNotFoundError,
+  FolderInItselfError,
+  LocalStorageUnavailableError,
+} from './Errors';
+
+import {
   bytesToHexString,
   hexStringToUint8Array,
   localStorageAvailable,
@@ -37,7 +48,7 @@ class Secretin {
           if (!exists) {
             resolve(this.currentUser.generateMasterKey());
           } else {
-            reject('Username already exists');
+            reject(new UsernameAlreadyExistsError());
           }
         })
       )
@@ -63,7 +74,10 @@ class Secretin {
           options
         )
       )
-      .then(() => this.currentUser);
+      .then(() => this.currentUser, (err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      });
   }
 
   loginUser(username, password, otp) {
@@ -75,7 +89,7 @@ class Secretin {
       .then((rParameters) => {
         parameters = rParameters;
         if (parameters.totp && (typeof otp === 'undefined' || otp === '')) {
-          throw ('Need TOTP token');
+          throw new NeedTOTPTokenError();
         }
         return derivePassword(password, parameters);
       })
@@ -95,14 +109,20 @@ class Secretin {
       .then(() => this.currentUser.importPrivateKey(key, remoteUser.privateKey))
       .then(() => this.currentUser.decryptAllMetadatas(remoteUser.metadatas))
       .then(() => this.currentUser.importOptions(remoteUser.options))
-      .then(() => this.currentUser);
+      .then(() => this.currentUser, (err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      });
   }
 
   refreshUser() {
-    return this.api.getUserWithToken(this.currentUser)
+    return this.api.getUserWithSignature(this.currentUser)
       .then((user) => {
         this.currentUser.keys = user.keys;
         return this.currentUser.decryptAllMetadatas(user.metadatas);
+      }, (err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
       });
   }
 
@@ -156,9 +176,12 @@ class Secretin {
             } else {
               resolve(hashedTitle);
             }
+          }, (err) => {
+            const wrapper = new WrappingError(err);
+            throw wrapper.error;
           });
       } else {
-        reject('You are disconnected');
+        reject(new DisconnectedError());
       }
     });
   }
@@ -170,19 +193,29 @@ class Secretin {
           this.currentUser,
           objectPrivateKey,
           'password'
-        )
-      );
+        ), (err) => {
+          const wrapper = new WrappingError(err);
+          throw wrapper.error;
+        });
   }
 
   editSecret(hashedTitle, content) {
     return this.currentUser.editSecret(hashedTitle, content)
-      .then((secretObject) => this.api.editSecret(this.currentUser, secretObject, hashedTitle));
+      .then((secretObject) => this.api.editSecret(this.currentUser, secretObject, hashedTitle))
+      .catch((err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      });
   }
 
   editOptions(options) {
     this.currentUser.options = options;
     return this.currentUser.exportOptions()
-      .then((encryptedOptions) => this.api.editUser(this.currentUser, encryptedOptions, 'options'));
+      .then((encryptedOptions) => this.api.editUser(this.currentUser, encryptedOptions, 'options'),
+        (err) => {
+          const wrapper = new WrappingError(err);
+          return wrapper.error;
+        });
   }
 
   addSecretToFolder(hashedSecretTitle, hashedFolder) {
@@ -269,7 +302,10 @@ class Secretin {
         folder[hashedSecretTitle] = 1;
         return this.editSecret(hashedFolder, folder);
       })
-      .then(() => hashedSecretTitle);
+      .then(() => hashedSecretTitle, (err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      });
   }
 
   getSharedSecretObjects(hashedTitle, friend, rights, fullSharedSecretObjects, folderName) {
@@ -277,7 +313,7 @@ class Secretin {
     const sharedSecretObjectPromises = [];
     const secretMetadatas = this.currentUser.metadatas[hashedTitle];
     if (typeof (secretMetadatas) === 'undefined') {
-      throw 'You don\'t have this secret';
+      throw new DontHaveSecretError();
     } else {
       if (secretMetadatas.type === 'folder') {
         isFolder = isFolder
@@ -311,6 +347,9 @@ class Secretin {
           newSecretObject.username = friend.username;
           fullSharedSecretObjects.push(newSecretObject);
           return fullSharedSecretObjects;
+        }, (err) => {
+          const wrapper = new WrappingError(err);
+          throw wrapper.error;
         });
     }
   }
@@ -321,7 +360,10 @@ class Secretin {
     secretMetadatas.lastModifiedAt = now;
     secretMetadatas.lastModifiedBy = this.currentUser.username;
     return this.getSecret(hashedTitle)
-      .then((secret) => this.editSecret(hashedTitle, secret));
+      .then((secret) => this.editSecret(hashedTitle, secret), (err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      });
   }
 
   shareSecret(hashedTitle, friendName, type, rights) {
@@ -336,9 +378,9 @@ class Secretin {
           }
         });
         if (hashedFolder === false) {
-          reject('Folder not found');
+          reject(new FolderNotFoundError());
         } else if (hashedTitle === hashedFolder) {
-          reject('You can\'t put this folder in itself.');
+          reject(new FolderInItselfError());
         } else {
           resolve(this.addSecretToFolder(hashedTitle, hashedFolder));
         }
@@ -369,6 +411,9 @@ class Secretin {
           resetMetaPromises.push(this.resetMetadatas(sharedSecretObject.hashedTitle));
         });
         return Promise.all(resetMetaPromises);
+      }, (err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
       });
   }
 
@@ -376,7 +421,7 @@ class Secretin {
     let isFolder = Promise.resolve();
     const secretMetadatas = this.currentUser.metadatas[hashedTitle];
     if (typeof (secretMetadatas) === 'undefined') {
-      throw 'You don\'t have this secret';
+      throw new DontHaveSecretError();
     } else {
       if (secretMetadatas.type === 'folder') {
         isFolder = isFolder
@@ -387,7 +432,8 @@ class Secretin {
         .then(() => this.api.unshareSecret(this.currentUser, [friendName], hashedTitle))
         .then((result) => {
           if (result !== 'Secret unshared') {
-            throw result;
+            const wrapper = new WrappingError(result);
+            throw wrapper.error;
           }
           delete secretMetadatas.users[friendName];
           return this.resetMetadatas(hashedTitle);
@@ -397,7 +443,8 @@ class Secretin {
             delete this.currentUser.metadatas[err.datas.title].users[err.datas.friendName];
             return this.resetMetadatas(hashedTitle);
           }
-          throw (err);
+          const wrapper = new WrappingError(err);
+          throw wrapper.error;
         });
     }
   }
@@ -411,8 +458,10 @@ class Secretin {
           (promise, hashedTitle) =>
             promise.then(() => this.unshareSecret(hashedTitle, friendName))
           , Promise.resolve()
-        )
-      );
+        ), (err) => {
+          const wrapper = new WrappingError(err);
+          throw wrapper.error;
+        });
   }
 
   wrapKeyForFriend(hashedUsername, key) {
@@ -423,7 +472,11 @@ class Secretin {
         return friend.importPublicKey(publicKey);
       })
       .then(() => this.currentUser.wrapKey(key, friend.publicKey))
-      .then((friendWrappedKey) => ({ user: hashedUsername, key: friendWrappedKey }));
+      .then((friendWrappedKey) => ({ user: hashedUsername, key: friendWrappedKey }),
+        (err) => {
+          const wrapper = new WrappingError(err);
+          throw wrapper.error;
+        });
   }
 
   renewKey(hashedTitle) {
@@ -467,6 +520,9 @@ class Secretin {
           }
         });
         return this.api.newKey(this.currentUser, hashedTitle, secret, wrappedKeys);
+      }, (err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
       });
   }
 
@@ -500,6 +556,9 @@ class Secretin {
         const folder = JSON.parse(secret);
         delete folder[hashedTitle];
         return this.editSecret(hashedFolder, folder);
+      }, (err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
       });
   }
 
@@ -507,7 +566,10 @@ class Secretin {
     return this.api.getSecret(hashedTitle, this.currentUser)
       .then((encryptedSecret) =>
         this.currentUser.decryptSecret(hashedTitle, encryptedSecret))
-      .then((secret) => JSON.parse(secret));
+      .then((secret) => JSON.parse(secret), (err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      });
   }
 
   deleteSecret(hashedTitle) {
@@ -537,6 +599,9 @@ class Secretin {
         );
       });
       return Promise.all(editFolderPromises);
+    }, (err) => {
+      const wrapper = new WrappingError(err);
+      throw wrapper.error;
     });
   }
 
@@ -550,21 +615,29 @@ class Secretin {
             promise.then(() =>
               this.deleteSecret(hashedTitle))
           , Promise.resolve()
-        )
-      );
+        ), (err) => {
+          const wrapper = new WrappingError(err);
+          throw wrapper.error;
+        });
   }
 
   activateTotp(seed) {
     const protectedSeed = xorSeed(hexStringToUint8Array(this.currentUser.hash), seed.raw);
-    return this.api.activateTotp(bytesToHexString(protectedSeed), this.currentUser);
+    return this.api.activateTotp(bytesToHexString(protectedSeed), this.currentUser, (err) => {
+      const wrapper = new WrappingError(err);
+      throw wrapper.error;
+    });
   }
 
   activateShortpass(shortpass, deviceName) {
     if (localStorageAvailable()) {
       return this.currentUser.activateShortpass(shortpass, deviceName)
-        .then((toSend) => this.api.activateShortpass(toSend, this.currentUser));
+        .then((toSend) => this.api.activateShortpass(toSend, this.currentUser), (err) => {
+          const wrapper = new WrappingError(err);
+          throw wrapper.error;
+        });
     }
-    throw ('LocalStorage unavailable');
+    throw new LocalStorageUnavailableError();
   }
 
   shortLogin(shortpass) {
@@ -586,13 +659,14 @@ class Secretin {
       })
       .then((protectKey) => this.currentUser.shortLogin(shortpassKey, protectKey))
       .then(() => this.refreshUser())
-      .then(() => this.currentUser, (e) => {
+      .then(() => this.currentUser, (err) => {
         localStorage.removeItem(`${Secretin.prefix}username`);
         localStorage.removeItem(`${Secretin.prefix}deviceName`);
         localStorage.removeItem(`${Secretin.prefix}privateKey`);
         localStorage.removeItem(`${Secretin.prefix}privateKeyIv`);
         localStorage.removeItem(`${Secretin.prefix}iv`);
-        throw e;
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
       });
   }
 

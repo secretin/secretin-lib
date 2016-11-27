@@ -51,25 +51,25 @@ describe('Secret accesses', () => {
     it('Should not be able to read', () =>
       this.secretin.loginUser(userNoAccess, passwordNoAccess)
         .then(() => this.secretin.getSecret(secretId))
-        .should.be.rejectedWith('You don\'t have this secret')
+        .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError)
     );
 
     it('Should not be able to write', () =>
       this.secretin.loginUser(userNoAccess, passwordNoAccess)
         .then(() => this.secretin.editSecret(secretId, newSecretContent))
-        .should.be.rejectedWith('You don\'t have this secret')
+        .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError)
     );
 
     it('Should not be able to share', () =>
       this.secretin.loginUser(userNoAccess, passwordNoAccess)
         .then(() => this.secretin.shareSecret(secretId, userRead, secretTitle, 0))
-        .should.be.rejectedWith('You don\'t have this secret')
+        .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError)
     );
 
     it('Should not be able to unshare', () =>
       this.secretin.loginUser(userNoAccess, passwordNoAccess)
         .then(() => this.secretin.unshareSecret(secretId, userRead))
-        .should.be.rejectedWith('You don\'t have this secret')
+        .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError)
     );
   });
 
@@ -106,19 +106,19 @@ describe('Secret accesses', () => {
     it('Should not be able to write', () =>
       this.secretin.loginUser(userRead, passwordRead)
         .then(() => this.secretin.editSecret(secretId, newSecretContent))
-        .should.be.rejectedWith('You can\'t edit this secret')
+        .should.be.rejectedWith(Secretin.Errors.CantEditSecretError)
     );
 
     it('Should not be able to share', () =>
       this.secretin.loginUser(userRead, passwordRead)
         .then(() => this.secretin.shareSecret(secretId, userNoAccess, secretTitle, 0))
-        .should.be.rejectedWith(`You can't share secret ${secretId}`)
+        .should.be.rejectedWith(Secretin.Errors.CantShareSecretError)
     );
 
     it('Should not be able to unshare', () =>
       this.secretin.loginUser(userRead, passwordRead)
         .then(() => this.secretin.unshareSecret(secretId, userReadWrite))
-        .should.be.rejectedWith(`You can't unshare secret ${secretId}`)
+        .should.be.rejectedWith(Secretin.Errors.CantUnshareSecretError)
     );
   });
 
@@ -185,13 +185,13 @@ describe('Secret accesses', () => {
     it('Should not be able to share', () =>
       this.secretin.loginUser(userReadWrite, passwordReadWrite)
         .then(() => this.secretin.shareSecret(secretId, userNoAccess, secretTitle, 0))
-        .should.be.rejectedWith(`You can't share secret ${secretId}`)
+        .should.be.rejectedWith(Secretin.Errors.CantShareSecretError)
     );
 
     it('Should not be able to unshare', () =>
       this.secretin.loginUser(userReadWrite, passwordReadWrite)
         .then(() => this.secretin.unshareSecret(secretId, userRead))
-        .should.be.rejectedWith(`You can't unshare secret ${secretId}`)
+        .should.be.rejectedWith(Secretin.Errors.CantUnshareSecretError)
     );
   });
 
@@ -301,7 +301,7 @@ describe('Secret accesses', () => {
           return this.secretin.loginUser(userRead, passwordRead);
         })
         .then(() => this.secretin.getSecret(secretId))
-        .should.be.rejectedWith('You don\'t have this secret')
+        .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError)
         .then(() => {
           this.secretin.currentUser.disconnect();
           return this.secretin.loginUser(userReadWrite, passwordReadWrite);

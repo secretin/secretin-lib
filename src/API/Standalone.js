@@ -122,18 +122,17 @@ class API {
           if (typeof this.db.secrets[hashedTitle] !== 'undefined') {
             if (typeof this.db.users[hashedUsername].keys[hashedTitle].rights === 'undefined'
                 || this.db.users[hashedUsername].keys[hashedTitle].rights <= 0) {
-              throw ('You can\'t edit this secret');
+              throw 'You can\'t edit this secret';
             }
             this.db.secrets[hashedTitle].iv = secretObject.iv;
             this.db.secrets[hashedTitle].secret = secretObject.secret;
             this.db.secrets[hashedTitle].iv_meta = secretObject.iv_meta;
             this.db.secrets[hashedTitle].metadatas = secretObject.metadatas;
-          } else {
-            throw ('Secret not found');
+            return Promise.resolve();
           }
-        } else {
-          throw ('User not found');
+          return Promise.reject('Secret not found');
         }
+        return Promise.reject('User not found');
       });
   }
 
@@ -218,7 +217,7 @@ class API {
               }
               throw ('Something goes wrong.');
             } else {
-              throw (`You can't unshare secret ${hashedTitle}`);
+              throw ('You can\'t unshare this secret');
             }
           } else {
             throw ('Secret not found');
@@ -257,10 +256,10 @@ class API {
                     throw (`Friend ${sharedSecretObject.friendName} not found`);
                   }
                 } else {
-                  throw (`You can't share secret ${sharedSecretObject.hashedTitle}`);
+                  throw ('You can\'t share this secret');
                 }
               } else {
-                throw (`Secret ${sharedSecretObject.hashedTitle} not found`);
+                throw ('Secret not found');
               }
             } else {
               throw ('You can\'t share with yourself');
@@ -347,7 +346,7 @@ class API {
     return this.retrieveUser(username, hash, false);
   }
 
-  getUserWithToken(user) {
+  getUserWithSignature(user) {
     let hashedUsername;
     return getSHA256(user.username)
       .then((rHashedUsername) => {
