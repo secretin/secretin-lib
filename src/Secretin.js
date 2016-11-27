@@ -7,6 +7,7 @@ import {
   hexStringToUint8Array,
   localStorageAvailable,
   xorSeed,
+  generateRandomNumber,
 } from './lib/util';
 
 import APIStandalone from './API/Standalone';
@@ -600,6 +601,8 @@ class Secretin {
     return (localStorageAvailable() && localStorage.getItem(`${Secretin.prefix}username`) !== null);
   }
 }
+
+Secretin.prototype.generateRandomNumber = generateRandomNumber;
 
 Object.defineProperty(Secretin, 'prefix', {
   value: 'Secret-in:',

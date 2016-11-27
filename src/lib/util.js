@@ -45,19 +45,10 @@ export function bytesToASCIIString(bytes) {
   return String.fromCharCode.apply(null, new Uint8Array(bytes));
 }
 
-export function generateRandomString(length) {
-  const charset = (
-    'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789 !"#$%&\'()*+,-./:;<=>?@[\\]_{}'
-  );
-  const randomValues = new Uint8Array(length);
+export function generateRandomNumber(max) {
+  const randomValues = new Uint8Array(1);
   crypto.getRandomValues(randomValues);
-
-  let string = '';
-  for (let i = 0; i < length; i++) {
-    string += charset[randomValues[i] % charset.length];
-  }
-
-  return string;
+  return (randomValues[0] % max);
 }
 
 export function generateSeed() {
