@@ -1,4 +1,4 @@
-describe('Logged user', () => {
+xdescribe('Logged user', () => {
   const now = '2016-01-01T00:00:00.000Z';
   // eslint-disable-next-line
   Date.prototype.toISOString = () => now;
@@ -111,6 +111,60 @@ describe('Logged user', () => {
     })
   );
 
+  it('Can refresh infos', () =>
+    this.secretin.refreshUser()
+      .then(() => this.secretin.currentUser.metadatas)
+      .should.eventually.deep.equal({
+        [secretId]: {
+          folders: {},
+          id: secretId,
+          lastModifiedAt: now,
+          lastModifiedBy: username,
+          title: secretTitle,
+          type: 'secret',
+          users: {
+            [username]: {
+              username,
+              rights: 2,
+            },
+          },
+        },
+        [folderId]: {
+          folders: {},
+          id: folderId,
+          lastModifiedAt: now,
+          lastModifiedBy: username,
+          title: folderTitle,
+          type: 'folder',
+          users: {
+            [username]: {
+              username,
+              rights: 2,
+            },
+          },
+        },
+        [secretInFolderId]: {
+          users: {
+            [username]: {
+              username,
+              rights: 2,
+              folder: 'folder',
+            },
+          },
+          lastModifiedAt: now,
+          lastModifiedBy: username,
+          folders: {
+            [folderId]: {
+              name: folderTitle,
+            },
+          },
+          title: secretInFolderTitle,
+          type: 'secret',
+          id: secretInFolderId,
+        },
+      })
+  );
+
   it('Can retrieve options', () =>
     this.secretin.currentUser.options.should.deep.equal({
       timeToClose: 30,
@@ -213,7 +267,8 @@ describe('Logged user', () => {
     );
   });
 
-  it('Can change its password', () => this.secretin.changePassword(newPassword)
+  it('Can change its password', () =>
+    this.secretin.changePassword(newPassword)
       .then(() => {
         this.secretin.currentUser.disconnect();
         return this.secretin.loginUser(username, newPassword);
@@ -234,16 +289,19 @@ describe('Logged user', () => {
       .should.eventually.be.instanceOf(CryptoKey)
   );
 
-  it('Can get secret', () => this.secretin.getSecret(secretId)
+  it('Can get secret', () =>
+    this.secretin.getSecret(secretId)
       .should.eventually.deep.equal(secretContent)
   );
 
-  it('Can edit secret', () => this.secretin.editSecret(secretId, newSecretContent)
+  it('Can edit secret', () =>
+    this.secretin.editSecret(secretId, newSecretContent)
       .then(() => this.secretin.getSecret(secretId))
       .should.eventually.deep.equal(newSecretContent)
   );
 
-  it('Can add secret to folder', () => this.secretin.addSecretToFolder(secretId, folderId)
+  it('Can add secret to folder', () =>
+    this.secretin.addSecretToFolder(secretId, folderId)
       .then(() => this.secretin.currentUser.metadatas[secretId])
       .should.eventually.deep.equal({
         lastModifiedAt: now,
@@ -294,7 +352,8 @@ describe('Logged user', () => {
       .should.eventually.deep.equal(secretContent)
   );
 
-  it('Can delete secret', () => this.secretin.deleteSecret(secretId)
+  it('Can delete secret', () =>
+    this.secretin.deleteSecret(secretId)
       .then(() => this.secretin.currentUser.metadatas)
       .should.eventually.deep.equal({
         [folderId]: {
@@ -333,7 +392,8 @@ describe('Logged user', () => {
       })
   );
 
-  it('Can delete secret in a folder', () => this.secretin.deleteSecret(secretInFolderId)
+  it('Can delete secret in a folder', () =>
+    this.secretin.deleteSecret(secretInFolderId)
       .then(() => this.secretin.currentUser.metadatas)
       .should.eventually.deep.equal({
         [secretId]: {

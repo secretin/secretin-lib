@@ -32,7 +32,7 @@ class API {
           if (typeof this.db.users[bytesToHexString(hashedUsername)] === 'undefined') {
             resolve(getSHA256(pass.hash));
           } else {
-            reject('User already exists');
+            reject('Username already exists');
           }
         });
       })

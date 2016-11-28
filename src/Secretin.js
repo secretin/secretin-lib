@@ -75,7 +75,8 @@ class Secretin {
           options
         )
       )
-      .then(() => this.currentUser, (err) => {
+      .then(() => this.currentUser)
+      .catch((err) => {
         const wrapper = new WrappingError(err);
         throw wrapper.error;
       });
@@ -110,7 +111,8 @@ class Secretin {
       .then(() => this.currentUser.importPrivateKey(key, remoteUser.privateKey))
       .then(() => this.currentUser.decryptAllMetadatas(remoteUser.metadatas))
       .then(() => this.currentUser.importOptions(remoteUser.options))
-      .then(() => this.currentUser, (err) => {
+      .then(() => this.currentUser)
+      .catch((err) => {
         const wrapper = new WrappingError(err);
         throw wrapper.error;
       });
@@ -121,7 +123,8 @@ class Secretin {
       .then((user) => {
         this.currentUser.keys = user.keys;
         return this.currentUser.decryptAllMetadatas(user.metadatas);
-      }, (err) => {
+      })
+      .catch((err) => {
         const wrapper = new WrappingError(err);
         throw wrapper.error;
       });
@@ -177,7 +180,8 @@ class Secretin {
             } else {
               resolve(hashedTitle);
             }
-          }, (err) => {
+          })
+          .catch((err) => {
             const wrapper = new WrappingError(err);
             throw wrapper.error;
           });
@@ -194,10 +198,12 @@ class Secretin {
           this.currentUser,
           objectPrivateKey,
           'password'
-        ), (err) => {
-          const wrapper = new WrappingError(err);
-          throw wrapper.error;
-        });
+        )
+      )
+      .catch((err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      });
   }
 
   editSecret(hashedTitle, content) {
@@ -212,11 +218,11 @@ class Secretin {
   editOptions(options) {
     this.currentUser.options = options;
     return this.currentUser.exportOptions()
-      .then((encryptedOptions) => this.api.editUser(this.currentUser, encryptedOptions, 'options'),
-        (err) => {
-          const wrapper = new WrappingError(err);
-          return wrapper.error;
-        });
+      .then((encryptedOptions) => this.api.editUser(this.currentUser, encryptedOptions, 'options'))
+      .catch((err) => {
+        const wrapper = new WrappingError(err);
+        return wrapper.error;
+      });
   }
 
   addSecretToFolder(hashedSecretTitle, hashedFolder) {
@@ -303,7 +309,8 @@ class Secretin {
         folder[hashedSecretTitle] = 1;
         return this.editSecret(hashedFolder, folder);
       })
-      .then(() => hashedSecretTitle, (err) => {
+      .then(() => hashedSecretTitle)
+      .catch((err) => {
         const wrapper = new WrappingError(err);
         throw wrapper.error;
       });
@@ -348,7 +355,8 @@ class Secretin {
           newSecretObject.username = friend.username;
           fullSharedSecretObjects.push(newSecretObject);
           return fullSharedSecretObjects;
-        }, (err) => {
+        })
+        .catch((err) => {
           const wrapper = new WrappingError(err);
           throw wrapper.error;
         });
@@ -361,7 +369,8 @@ class Secretin {
     secretMetadatas.lastModifiedAt = now;
     secretMetadatas.lastModifiedBy = this.currentUser.username;
     return this.getSecret(hashedTitle)
-      .then((secret) => this.editSecret(hashedTitle, secret), (err) => {
+      .then((secret) => this.editSecret(hashedTitle, secret))
+      .catch((err) => {
         const wrapper = new WrappingError(err);
         throw wrapper.error;
       });
@@ -413,7 +422,8 @@ class Secretin {
           resetMetaPromises.push(this.resetMetadatas(sharedSecretObject.hashedTitle));
         });
         return Promise.all(resetMetaPromises);
-      }, (err) => {
+      })
+      .catch((err) => {
         const wrapper = new WrappingError(err);
         throw wrapper.error;
       });
@@ -440,7 +450,8 @@ class Secretin {
           delete secretMetadatas.users[friendName];
           return this.resetMetadatas(hashedTitle);
         })
-        .then(() => this.renewKey(hashedTitle), (err) => {
+        .then(() => this.renewKey(hashedTitle))
+        .catch((err) => {
           if (err.status === 'Desync') {
             delete this.currentUser.metadatas[err.datas.title].users[err.datas.friendName];
             return this.resetMetadatas(hashedTitle);
@@ -460,10 +471,12 @@ class Secretin {
           (promise, hashedTitle) =>
             promise.then(() => this.unshareSecret(hashedTitle, friendName))
           , Promise.resolve()
-        ), (err) => {
-          const wrapper = new WrappingError(err);
-          throw wrapper.error;
-        });
+        )
+      )
+      .catch((err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      });
   }
 
   wrapKeyForFriend(hashedUsername, key) {
@@ -474,17 +487,18 @@ class Secretin {
         return friend.importPublicKey(publicKey);
       })
       .then(() => this.currentUser.wrapKey(key, friend.publicKey))
-      .then((friendWrappedKey) => ({ user: hashedUsername, key: friendWrappedKey }),
-        (err) => {
-          const wrapper = new WrappingError(err);
-          throw wrapper.error;
-        });
+      .then((friendWrappedKey) => ({ user: hashedUsername, key: friendWrappedKey }))
+      .catch((err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      });
   }
 
   renewKey(hashedTitle) {
     let encryptedSecret;
     const secret = {};
     let hashedCurrentUsername;
+    let wrappedKeys;
     return this.api.getSecret(hashedTitle, this.currentUser)
       .then((eSecret) => {
         encryptedSecret = eSecret;
@@ -515,14 +529,18 @@ class Secretin {
 
         return Promise.all(wrappedKeysPromises);
       })
-      .then((wrappedKeys) => {
+      .then((rWrappedKeys) => {
+        wrappedKeys = rWrappedKeys;
+        return this.api.newKey(this.currentUser, hashedTitle, secret, wrappedKeys);
+      })
+      .then(() => {
         wrappedKeys.forEach((wrappedKey) => {
           if (wrappedKey.user === hashedCurrentUsername) {
             this.currentUser.keys[hashedTitle].key = wrappedKey.key;
           }
         });
-        return this.api.newKey(this.currentUser, hashedTitle, secret, wrappedKeys);
-      }, (err) => {
+      })
+      .catch((err) => {
         const wrapper = new WrappingError(err);
         throw wrapper.error;
       });
@@ -558,7 +576,8 @@ class Secretin {
         const folder = JSON.parse(secret);
         delete folder[hashedTitle];
         return this.editSecret(hashedFolder, folder);
-      }, (err) => {
+      })
+      .catch((err) => {
         const wrapper = new WrappingError(err);
         throw wrapper.error;
       });
@@ -568,7 +587,8 @@ class Secretin {
     return this.api.getSecret(hashedTitle, this.currentUser)
       .then((encryptedSecret) =>
         this.currentUser.decryptSecret(hashedTitle, encryptedSecret))
-      .then((secret) => JSON.parse(secret), (err) => {
+      .then((secret) => JSON.parse(secret))
+      .catch((err) => {
         const wrapper = new WrappingError(err);
         throw wrapper.error;
       });
@@ -601,7 +621,8 @@ class Secretin {
         );
       });
       return Promise.all(editFolderPromises);
-    }, (err) => {
+    })
+    .catch((err) => {
       const wrapper = new WrappingError(err);
       throw wrapper.error;
     });
@@ -617,24 +638,28 @@ class Secretin {
             promise.then(() =>
               this.deleteSecret(hashedTitle))
           , Promise.resolve()
-        ), (err) => {
-          const wrapper = new WrappingError(err);
-          throw wrapper.error;
-        });
+        )
+      )
+      .catch((err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      });
   }
 
   activateTotp(seed) {
     const protectedSeed = xorSeed(hexStringToUint8Array(this.currentUser.hash), seed.raw);
-    return this.api.activateTotp(bytesToHexString(protectedSeed), this.currentUser, (err) => {
-      const wrapper = new WrappingError(err);
-      throw wrapper.error;
-    });
+    return this.api.activateTotp(bytesToHexString(protectedSeed), this.currentUser)
+      .catch((err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      });
   }
 
   activateShortpass(shortpass, deviceName) {
     if (localStorageAvailable()) {
       return this.currentUser.activateShortpass(shortpass, deviceName)
-        .then((toSend) => this.api.activateShortpass(toSend, this.currentUser), (err) => {
+        .then((toSend) => this.api.activateShortpass(toSend, this.currentUser))
+        .catch((err) => {
           const wrapper = new WrappingError(err);
           throw wrapper.error;
         });
@@ -661,7 +686,8 @@ class Secretin {
       })
       .then((protectKey) => this.currentUser.shortLogin(shortpassKey, protectKey))
       .then(() => this.refreshUser())
-      .then(() => this.currentUser, (err) => {
+      .then(() => this.currentUser)
+      .catch((err) => {
         localStorage.removeItem(`${Secretin.prefix}username`);
         localStorage.removeItem(`${Secretin.prefix}deviceName`);
         localStorage.removeItem(`${Secretin.prefix}privateKey`);

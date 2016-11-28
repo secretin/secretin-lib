@@ -28,6 +28,9 @@ describe('Secret accesses', () => {
       content: 'd',
     }],
   };
+  let secretKeyRead = '';
+  let secretKeyReadWrite = '';
+  let secretKeyReadWriteShare = '';
 
 
   beforeEach(() => {
@@ -42,9 +45,23 @@ describe('Secret accesses', () => {
     .then(() => this.secretin.addSecret(secretTitle, secretContent))
     .then((hashedTitle) => {
       secretId = hashedTitle;
+      secretKeyReadWriteShare = this.secretin.currentUser.keys[secretId].key;
       return this.secretin.shareSecret(secretId, userRead, 0);
     })
-    .then(() => this.secretin.shareSecret(secretId, userReadWrite, 1));
+    .then(() => this.secretin.shareSecret(secretId, userReadWrite, 1))
+    .then(() => {
+      this.secretin.currentUser.disconnect();
+      return this.secretin.loginUser(userReadWrite, passwordReadWrite);
+    })
+    .then(() => {
+      secretKeyReadWrite = this.secretin.currentUser.keys[secretId].key;
+      this.secretin.currentUser.disconnect();
+      return this.secretin.loginUser(userRead, passwordRead);
+    })
+    .then(() => {
+      secretKeyRead = this.secretin.currentUser.keys[secretId].key;
+      this.secretin.currentUser.disconnect();
+    });
   });
 
   describe('No access user', () => {
@@ -70,6 +87,12 @@ describe('Secret accesses', () => {
       this.secretin.loginUser(userNoAccess, passwordNoAccess)
         .then(() => this.secretin.unshareSecret(secretId, userRead))
         .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError)
+    );
+
+    it('Should not be able to renew intermediate key', () =>
+      this.secretin.loginUser(userNoAccess, passwordNoAccess)
+        .then(() => this.secretin.renewKey(secretId))
+        .should.eventually.be.rejectedWith(Secretin.Errors.DontHaveSecretError)
     );
   });
 
@@ -119,6 +142,14 @@ describe('Secret accesses', () => {
       this.secretin.loginUser(userRead, passwordRead)
         .then(() => this.secretin.unshareSecret(secretId, userReadWrite))
         .should.be.rejectedWith(Secretin.Errors.CantUnshareSecretError)
+    );
+
+    it('Should not be able to renew intermediate key', () =>
+      this.secretin.loginUser(userRead, passwordRead)
+        .then(() => this.secretin.renewKey(secretId))
+        .should.eventually.be.rejectedWith(Secretin.Errors.CantGenerateNewKeyError)
+        .then(() => this.secretin.currentUser.keys[secretId].key)
+        .should.eventually.be.equal(secretKeyRead)
     );
   });
 
@@ -191,7 +222,15 @@ describe('Secret accesses', () => {
     it('Should not be able to unshare', () =>
       this.secretin.loginUser(userReadWrite, passwordReadWrite)
         .then(() => this.secretin.unshareSecret(secretId, userRead))
-        .should.be.rejectedWith(Secretin.Errors.CantUnshareSecretError)
+        .should.eventually.be.rejectedWith(Secretin.Errors.CantUnshareSecretError)
+    );
+
+    it('Should not be able to renew intermediate key', () =>
+      this.secretin.loginUser(userReadWrite, passwordReadWrite)
+        .then(() => this.secretin.renewKey(secretId))
+        .should.eventually.be.rejectedWith(Secretin.Errors.CantGenerateNewKeyError)
+        .then(() => this.secretin.currentUser.keys[secretId].key)
+        .should.eventually.be.equal(secretKeyReadWrite)
     );
   });
 
@@ -329,16 +368,48 @@ describe('Secret accesses', () => {
         })
     );
 
+    it('Should be able to renew intermediate key', () =>
+      this.secretin.loginUser(userReadWriteShare, passwordReadWriteShare)
+        .then(() => this.secretin.renewKey(secretId))
+        .then(() => this.secretin.currentUser.keys[secretId].key)
+        .should.eventually.not.equal(secretKeyReadWriteShare)
+        .then(() => this.secretin.getSecret(secretId))
+        .should.eventually.deep.equal(secretContent)
+        .then(() => this.secretin.currentUser.metadatas[secretId])
+        .should.eventually.deep.equal({
+          lastModifiedAt: now,
+          lastModifiedBy: userReadWriteShare,
+          users: {
+            [userRead]: {
+              username: userRead,
+              rights: 0,
+            },
+            [userReadWrite]: {
+              username: userReadWrite,
+              rights: 1,
+            },
+            [userReadWriteShare]: {
+              username: userReadWriteShare,
+              rights: 2,
+            },
+          },
+          folders: {},
+          title: secretTitle,
+          type: 'secret',
+          id: secretId,
+        })
+    );
+
     it('Should not be able to unshare with itself', () =>
       this.secretin.loginUser(userReadWriteShare, passwordReadWriteShare)
         .then(() => this.secretin.unshareSecret(secretId, userReadWriteShare))
-        .should.be.rejectedWith('You can\'t unshare with yourself')
+        .should.be.rejectedWith(Secretin.Errors.CantUnshareWithYourselfError)
     );
 
     it('Should not be able to share with itself', () =>
       this.secretin.loginUser(userReadWriteShare, passwordReadWriteShare)
         .then(() => this.secretin.shareSecret(secretId, userReadWriteShare, 0))
-        .should.be.rejectedWith('You can\'t share with yourself')
+        .should.be.rejectedWith(Secretin.Errors.CantShareWithYourselfError)
     );
   });
 });
