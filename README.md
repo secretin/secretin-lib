@@ -6,8 +6,8 @@ Open source secret manager with groups managment based on webapi crypto http://w
 **No dependencies**, only "vanilla" JS
 
 Exists in two versions :
-* Standalone (you have to copy paste your json DB)
-* Server saved (CouchDB save your encrypted DB)
+* Standalone (you have to copy paste your json DB) (`new Secretin();`)
+* Server saved (a server save your encrypted DB) (`new Secretin(Secretin.API.Server, serverURI);`)
 
 # Install
 ## Standalone
@@ -20,91 +20,28 @@ google-chrome index.html
 ```
 
 ## Specific pre logon windows hooking
+WIP
 Step to install is not written yet but here is the result :
 
 ![](http://i.imgur.com/HK6Nqpi.gif)
 
 ## Server saved
-You need to install couchDB and redis on your server.
+Use https://github.com/secretin/secretin-server 
 
-You can download last dist version secretin.tar.gz
-```
-tar xvzf secretin.tar.gz
-npm install
-node install.js
-node index.js
-```
+Then use https://github.com/secretin/secretin-app which embed this lib.
 
-install.js is just for _design creation in couchDB.
-
-Application listen on localhost port 3000 and should be used with reverse proxy !
-
-**nginx configuration example**
-```
-server {
-    listen      443;
-    server_name *.secret-in.me;
-    ssl on;
-    ssl_certificate /etc/nginx/tls/secret-in.me.crt;
-    ssl_certificate_key /etc/nginx/tls/secret-in.me.key;
-    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
-    ssl_ciphers 'AES256+EECDH:AES256+EDH';
-    ssl_dhparam /etc/nginx/tls/dhparam.pem;
-    ssl_prefer_server_ciphers on;
-
-    charset     utf-8;
-
-    client_max_body_size 512M;
-
-    location / {
-        proxy_http_version 1.1;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header Host $host;
-        proxy_pass http://127.0.0.1:3000;
-    }
-
-}
-```
-
-**init.d script example**
-```
-#! /bin/sh -e
-
-DAEMON_DIR="/home/secretin/server/"
-DAEMON_LOGDIR="/home/secretin/"
-DAEMON_UID="secretin"
-DAEMON_NAME="secretin"
-
-case "$1" in
-  start)
-  echo "Starting $DAEMON_NAME..."
-  sudo -H -u secretin forever start --sourceDir=$DAEMON_DIR --workingDir=$DAEMON_DIR -a -o $DAEMON_LOGDIR"access.log" -e $DAEMON_LOGDIR"error.log" --uid $DAEMON_UID index.js
-  ;;
-
-  stop)
-  echo "Stoping $DAEMON_NAME..."
-  sudo -H -u secretin forever stop $DAEMON_UID
-  ;;
-
-  *)
-  echo "Usage: /etc/init.d/$DAEMON_NAME {start|stop}"
-  exit 1
-  ;;
-esac
-
-exit 0
-```
-
-## Build yourself
-You need to install gulp
-
+## Build and test
 ```
 npm install
-gulp &
-google-chrome dist/index.html
+npm test
 ```
+You'll need chrome to test the webcryptoAPI with karma (https://karma-runner.github.io/).
 
-You can use `gulp deploy` to create tar.gz archives (secretin.tar.gz for server version and server/client/secretinAlone.tar.gz for stand alone)
+To test with the server part you should set `API_TYPE` environment variable to `server` and `SERVER_URI` to the server base uri (default is http://127.0.0.1:3000)
+
+`API_TYPE=server SERVER_URI=http://test.secret-in.me:3000 npm test`
+
+Server should be in test mode (check README of https://github.com/secretin/secretin-server) to respond to `/reset` route.
 
 # How it works
 ## Introduction
