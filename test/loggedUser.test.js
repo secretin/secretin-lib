@@ -1,4 +1,4 @@
-xdescribe('Logged user', () => {
+describe('Logged user', () => {
   const now = '2016-01-01T00:00:00.000Z';
   // eslint-disable-next-line
   Date.prototype.toISOString = () => now;
@@ -293,6 +293,11 @@ xdescribe('Logged user', () => {
     this.secretin.getSecret(secretId)
       .should.eventually.deep.equal(secretContent)
   );
+
+  it('Can\'t get unknown secret', () =>
+      this.secretin.getSecret('unknown')
+        .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError)
+    );
 
   it('Can edit secret', () =>
     this.secretin.editSecret(secretId, newSecretContent)

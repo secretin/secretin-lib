@@ -377,7 +377,7 @@ class API {
       .then(() =>
         new Promise((resolve, reject) => {
           if (typeof this.db.secrets[hash] === 'undefined') {
-            reject('Invalid secret');
+            reject('You don\'t have this secret');
           } else {
             resolve(this.db.secrets[hash]);
           }
