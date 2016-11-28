@@ -42,9 +42,9 @@ describe('Secret accesses', () => {
     .then(() => this.secretin.addSecret(secretTitle, secretContent))
     .then((hashedTitle) => {
       secretId = hashedTitle;
-      return this.secretin.shareSecret(secretId, userRead, secretTitle, 0);
+      return this.secretin.shareSecret(secretId, userRead, 0);
     })
-    .then(() => this.secretin.shareSecret(secretId, userReadWrite, secretTitle, 1));
+    .then(() => this.secretin.shareSecret(secretId, userReadWrite, 1));
   });
 
   describe('No access user', () => {
@@ -62,7 +62,7 @@ describe('Secret accesses', () => {
 
     it('Should not be able to share', () =>
       this.secretin.loginUser(userNoAccess, passwordNoAccess)
-        .then(() => this.secretin.shareSecret(secretId, userRead, secretTitle, 0))
+        .then(() => this.secretin.shareSecret(secretId, userRead, 0))
         .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError)
     );
 
@@ -111,7 +111,7 @@ describe('Secret accesses', () => {
 
     it('Should not be able to share', () =>
       this.secretin.loginUser(userRead, passwordRead)
-        .then(() => this.secretin.shareSecret(secretId, userNoAccess, secretTitle, 0))
+        .then(() => this.secretin.shareSecret(secretId, userNoAccess, 0))
         .should.be.rejectedWith(Secretin.Errors.CantShareSecretError)
     );
 
@@ -184,7 +184,7 @@ describe('Secret accesses', () => {
 
     it('Should not be able to share', () =>
       this.secretin.loginUser(userReadWrite, passwordReadWrite)
-        .then(() => this.secretin.shareSecret(secretId, userNoAccess, secretTitle, 0))
+        .then(() => this.secretin.shareSecret(secretId, userNoAccess, 0))
         .should.be.rejectedWith(Secretin.Errors.CantShareSecretError)
     );
 
@@ -257,7 +257,7 @@ describe('Secret accesses', () => {
 
     it('Should be able to share', () =>
       this.secretin.loginUser(userReadWriteShare, passwordReadWriteShare)
-        .then(() => this.secretin.shareSecret(secretId, userNoAccess, passwordNoAccess, 0))
+        .then(() => this.secretin.shareSecret(secretId, userNoAccess, 0))
         .then(() => {
           this.secretin.currentUser.disconnect();
           return this.secretin.loginUser(userNoAccess, passwordNoAccess);
@@ -337,7 +337,7 @@ describe('Secret accesses', () => {
 
     it('Should not be able to share with itself', () =>
       this.secretin.loginUser(userReadWriteShare, passwordReadWriteShare)
-        .then(() => this.secretin.shareSecret(secretId, userReadWriteShare, secretTitle, 0))
+        .then(() => this.secretin.shareSecret(secretId, userReadWriteShare, 0))
         .should.be.rejectedWith('You can\'t share with yourself')
     );
   });

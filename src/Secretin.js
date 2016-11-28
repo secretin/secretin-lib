@@ -18,6 +18,7 @@ import {
   hexStringToUint8Array,
   localStorageAvailable,
   xorSeed,
+  generateRandomNumber,
 } from './lib/util';
 
 import APIStandalone from './API/Standalone';
@@ -366,28 +367,29 @@ class Secretin {
       });
   }
 
-  shareSecret(hashedTitle, friendName, type, rights) {
-    if (type === 'folder') {
-      return new Promise((resolve, reject) => {
-        let hashedFolder = false;
-        Object.keys(this.currentUser.metadatas).forEach((hash) => {
-          const secretMetadatas = this.currentUser.metadatas[hash];
-          if (secretMetadatas.type === 'folder'
-              && secretMetadatas.title === friendName) {
-            hashedFolder = hash;
-          }
-        });
-        if (hashedFolder === false) {
-          reject(new FolderNotFoundError());
-        } else if (hashedTitle === hashedFolder) {
-          reject(new FolderInItselfError());
-        } else {
-          resolve(this.addSecretToFolder(hashedTitle, hashedFolder));
+  // this one should disappear
+  shareFolder(hashedTitle, folderName) {
+    return new Promise((resolve, reject) => {
+      let hashedFolder = false;
+      Object.keys(this.currentUser.metadatas).forEach((hash) => {
+        const secretMetadatas = this.currentUser.metadatas[hash];
+        if (secretMetadatas.type === 'folder'
+            && secretMetadatas.title === folderName) {
+          hashedFolder = hash;
         }
       });
-    }
+      if (hashedFolder === false) {
+        reject(new FolderNotFoundError());
+      } else if (hashedTitle === hashedFolder) {
+        reject(new FolderInItselfError());
+      } else {
+        resolve(this.addSecretToFolder(hashedTitle, hashedFolder));
+      }
+    });
+  }
+  //
 
-
+  shareSecret(hashedTitle, friendName, rights) {
     let sharedSecretObjects;
     const friend = new User(friendName);
     return this.api.getPublicKey(friend.username)
@@ -674,6 +676,8 @@ class Secretin {
     return (localStorageAvailable() && localStorage.getItem(`${Secretin.prefix}username`) !== null);
   }
 }
+
+Secretin.prototype.generateRandomNumber = generateRandomNumber;
 
 Object.defineProperty(Secretin, 'prefix', {
   value: 'Secret-in:',

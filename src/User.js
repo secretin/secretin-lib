@@ -135,17 +135,20 @@ class User {
   }
 
   importOptions(optionsObject) {
-    let verified;
+    // Retro compatibility
+    if (typeof optionsObject === 'undefined') {
+      this.options = User.defaultOptions;
+      return Promise.resolve(null);
+    }
     return this.verify(optionsObject.options, optionsObject.signature)
-      .then((ok) => {
-        verified = ok;
-        if (ok) {
+      .then((verified) => {
+        if (verified) {
           return decryptRSAOAEP(optionsObject.options, this.privateKey);
         }
         return null;
       })
       .then((options) => {
-        if (verified) {
+        if (options) {
           this.options = JSON.parse(bytesToASCIIString(options));
         } else {
           this.options = User.defaultOptions;

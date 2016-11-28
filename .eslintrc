@@ -8,7 +8,10 @@
   },
   "globals": {
     "crypto": true,
-    "Secretin": true
+    "Secretin": true,
+    "__karma__": true,
+    "module": true,
+    "process": true,
   },
   "rules": {
     "no-throw-literal": 0
