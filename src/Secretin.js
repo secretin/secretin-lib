@@ -325,28 +325,29 @@ class Secretin {
       .then((secret) => this.editSecret(hashedTitle, secret));
   }
 
-  shareSecret(hashedTitle, friendName, type, rights) {
-    if (type === 'folder') {
-      return new Promise((resolve, reject) => {
-        let hashedFolder = false;
-        Object.keys(this.currentUser.metadatas).forEach((hash) => {
-          const secretMetadatas = this.currentUser.metadatas[hash];
-          if (secretMetadatas.type === 'folder'
-              && secretMetadatas.title === friendName) {
-            hashedFolder = hash;
-          }
-        });
-        if (hashedFolder === false) {
-          reject('Folder not found');
-        } else if (hashedTitle === hashedFolder) {
-          reject('You can\'t put this folder in itself.');
-        } else {
-          resolve(this.addSecretToFolder(hashedTitle, hashedFolder));
+  // this one should disappear
+  shareFolder(hashedTitle, folderName) {
+    return new Promise((resolve, reject) => {
+      let hashedFolder = false;
+      Object.keys(this.currentUser.metadatas).forEach((hash) => {
+        const secretMetadatas = this.currentUser.metadatas[hash];
+        if (secretMetadatas.type === 'folder'
+            && secretMetadatas.title === folderName) {
+          hashedFolder = hash;
         }
       });
-    }
+      if (hashedFolder === false) {
+        reject('Folder not found');
+      } else if (hashedTitle === hashedFolder) {
+        reject('You can\'t put this folder in itself.');
+      } else {
+        resolve(this.addSecretToFolder(hashedTitle, hashedFolder));
+      }
+    });
+  }
+  //
 
-
+  shareSecret(hashedTitle, friendName, rights) {
     let sharedSecretObjects;
     const friend = new User(friendName);
     return this.api.getPublicKey(friend.username)
