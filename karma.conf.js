@@ -1,18 +1,12 @@
 // Karma configuration
 // Generated on Sat Sep 10 2016 10:00:25 GMT+0200 (CEST)
 
-module.exports = function(config) {
+module.exports = function exports(config) {
   const files = [
     'dist/secretin.js',
     'test/fixtures/keys.js',
     'test/*.js',
   ];
-
-  if (typeof process.env.API_TYPE !== 'undefined') {
-    files.push(`test/hooks/${process.env.API_TYPE}.js`);
-  } else {
-    files.push('test/hooks/standalone.js');
-  }
 
   const karmaConfig = {
 
@@ -27,8 +21,12 @@ module.exports = function(config) {
 
     client: {
       mocha: {
-        timeout: '30000',
+        timeout: '10000',
       },
+      args: [
+        process.env.API_TYPE,
+        process.env.SERVER_URI,
+      ],
     },
 
     browserNoActivityTimeout: '30000',
