@@ -18,8 +18,7 @@ import {
   hexStringToUint8Array,
   localStorageAvailable,
   xorSeed,
-  generateRandomNumber,
-} from './lib/util';
+} from './lib/utils';
 
 import APIStandalone from './API/Standalone';
 import User from './User';
@@ -433,33 +432,32 @@ class Secretin {
     let isFolder = Promise.resolve();
     const secretMetadatas = this.currentUser.metadatas[hashedTitle];
     if (typeof (secretMetadatas) === 'undefined') {
-      throw new DontHaveSecretError();
-    } else {
-      if (secretMetadatas.type === 'folder') {
-        isFolder = isFolder
-          .then(() => this.unshareFolderSecrets(hashedTitle, friendName));
-      }
-
-      return isFolder
-        .then(() => this.api.unshareSecret(this.currentUser, [friendName], hashedTitle))
-        .then((result) => {
-          if (result !== 'Secret unshared') {
-            const wrapper = new WrappingError(result);
-            throw wrapper.error;
-          }
-          delete secretMetadatas.users[friendName];
-          return this.resetMetadatas(hashedTitle);
-        })
-        .then(() => this.renewKey(hashedTitle))
-        .catch((err) => {
-          if (err.status === 'Desync') {
-            delete this.currentUser.metadatas[err.datas.title].users[err.datas.friendName];
-            return this.resetMetadatas(hashedTitle);
-          }
-          const wrapper = new WrappingError(err);
-          throw wrapper.error;
-        });
+      return Promise.reject(new DontHaveSecretError());
     }
+    if (secretMetadatas.type === 'folder') {
+      isFolder = isFolder
+        .then(() => this.unshareFolderSecrets(hashedTitle, friendName));
+    }
+
+    return isFolder
+      .then(() => this.api.unshareSecret(this.currentUser, [friendName], hashedTitle))
+      .then((result) => {
+        if (result !== 'Secret unshared') {
+          const wrapper = new WrappingError(result);
+          throw wrapper.error;
+        }
+        delete secretMetadatas.users[friendName];
+        return this.resetMetadatas(hashedTitle);
+      })
+      .then(() => this.renewKey(hashedTitle))
+      .catch((err) => {
+        if (err.status === 'Desync') {
+          delete this.currentUser.metadatas[err.datas.title].users[err.datas.friendName];
+          return this.resetMetadatas(hashedTitle);
+        }
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      });
   }
 
   unshareFolderSecrets(hashedFolder, friendName) {
@@ -597,6 +595,9 @@ class Secretin {
   deleteSecret(hashedTitle) {
     let isFolder = Promise.resolve();
     const secretMetadatas = this.currentUser.metadatas[hashedTitle];
+    if (typeof (secretMetadatas) === 'undefined') {
+      return Promise.reject(new DontHaveSecretError());
+    }
     if (secretMetadatas.type === 'folder') {
       isFolder = isFolder
         .then(() => this.deleteFolderSecrets(hashedTitle));
@@ -664,7 +665,7 @@ class Secretin {
           throw wrapper.error;
         });
     }
-    throw new LocalStorageUnavailableError();
+    return Promise.reject(new LocalStorageUnavailableError());
   }
 
   shortLogin(shortpass) {
@@ -702,8 +703,6 @@ class Secretin {
     return (localStorageAvailable() && localStorage.getItem(`${Secretin.prefix}username`) !== null);
   }
 }
-
-Secretin.prototype.generateRandomNumber = generateRandomNumber;
 
 Object.defineProperty(Secretin, 'prefix', {
   value: 'Secret-in:',

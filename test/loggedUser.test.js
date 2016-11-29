@@ -29,6 +29,9 @@ describe('Logged user', () => {
   const secretInFolderTitle = 'secret in folder';
   let secretInFolderId = '';
 
+  const unknownSecretId = 'b23a6a8439c0dde5515893e7c90c1e3233b8616e634470f20dc4928bcf3609bc';
+  const unknownUser = 'unknownUser';
+
   const username = 'user';
   const password = 'password';
   const newPassword = 'newPassword';
@@ -295,7 +298,7 @@ describe('Logged user', () => {
   );
 
   it('Can\'t get unknown secret', () =>
-      this.secretin.getSecret('unknown')
+      this.secretin.getSecret(unknownSecretId)
         .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError)
     );
 
@@ -397,6 +400,11 @@ describe('Logged user', () => {
       })
   );
 
+  it('Can\'t delete unknown secret', () =>
+    this.secretin.deleteSecret(unknownSecretId)
+      .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError)
+  );
+
   it('Can delete secret in a folder', () =>
     this.secretin.deleteSecret(secretInFolderId)
       .then(() => this.secretin.currentUser.metadatas)
@@ -432,5 +440,33 @@ describe('Logged user', () => {
       })
       .then(() => this.secretin.getSecret(folderId))
       .should.eventually.deep.equal({})
+  );
+
+  it('Can delete folder', () =>
+    this.secretin.deleteSecret(folderId)
+      .then(() => this.secretin.currentUser.metadatas)
+      .should.eventually.deep.equal({
+        [secretId]: {
+          folders: {},
+          id: secretId,
+          lastModifiedAt: now,
+          lastModifiedBy: username,
+          title: secretTitle,
+          type: 'secret',
+          users: {
+            [username]: {
+              username,
+              rights: 2,
+            },
+          },
+        },
+      })
+      .then(() => this.secretin.getSecret(secretInFolderId))
+      .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError)
+  );
+
+  it('Can\'t share to unknown user', () =>
+    this.secretin.shareSecret(secretId, unknownUser)
+      .should.be.rejectedWith(Secretin.Errors.UserNotFoundError)
   );
 });

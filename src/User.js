@@ -22,7 +22,7 @@ import {
 import {
   bytesToHexString,
   bytesToASCIIString,
-} from './lib/util';
+} from './lib/utils';
 
 
 class User {
@@ -238,13 +238,12 @@ class User {
 
   decryptSecret(hashedTitle, secret) {
     if (typeof (this.keys[hashedTitle]) === 'undefined') {
-      throw 'You don\'t have this secret';
-    } else {
-      const wrappedKey = this.keys[hashedTitle].key;
-      return this.unwrapKey(wrappedKey)
-        .then((key) => decryptAESGCM256(secret, key))
-        .then((decryptedSecret) => bytesToASCIIString(decryptedSecret));
+      return Promise.reject('You don\'t have this secret');
     }
+    const wrappedKey = this.keys[hashedTitle].key;
+    return this.unwrapKey(wrappedKey)
+      .then((key) => decryptAESGCM256(secret, key))
+      .then((decryptedSecret) => bytesToASCIIString(decryptedSecret));
   }
 
   unwrapKey(wrappedKey) {

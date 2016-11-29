@@ -112,3 +112,10 @@ export function xorSeed(byteArray1, byteArray2) {
   }
   throw 'xorSeed wait for 32 bytes arrays';
 }
+
+const Utils = {
+  generateRandomNumber,
+  generateSeed,
+};
+
+export default Utils;
