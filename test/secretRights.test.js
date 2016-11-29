@@ -368,6 +368,12 @@ describe('Secret accesses', () => {
         })
     );
 
+    it('Should not be able to unshare with user who don\'t have access', () =>
+      this.secretin.loginUser(userReadWriteShare, passwordReadWriteShare)
+        .then(() => this.secretin.unshareSecret(secretId, userNoAccess))
+        .should.be.rejectedWith(Secretin.Errors.NotSharedWithUserError)
+    );
+
     it('Should be able to renew intermediate key', () =>
       this.secretin.loginUser(userReadWriteShare, passwordReadWriteShare)
         .then(() => this.secretin.renewKey(secretId))

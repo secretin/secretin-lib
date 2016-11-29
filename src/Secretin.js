@@ -401,7 +401,8 @@ class Secretin {
     let sharedSecretObjects;
     const friend = new User(friendName);
     return this.api.getPublicKey(friend.username)
-      .then((publicKey) => friend.importPublicKey(publicKey))
+      .then((publicKey) => friend.importPublicKey(publicKey),
+            () => Promise.reject('Friend not found'))
       .then(() => this.getSharedSecretObjects(hashedTitle, friend, rights, []))
       .then((rSharedSecretObjects) => {
         sharedSecretObjects = rSharedSecretObjects;
@@ -451,10 +452,6 @@ class Secretin {
       })
       .then(() => this.renewKey(hashedTitle))
       .catch((err) => {
-        if (err.status === 'Desync') {
-          delete this.currentUser.metadatas[err.datas.title].users[err.datas.friendName];
-          return this.resetMetadatas(hashedTitle);
-        }
         const wrapper = new WrappingError(err);
         throw wrapper.error;
       });

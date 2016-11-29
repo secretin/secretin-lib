@@ -467,6 +467,11 @@ describe('Logged user', () => {
 
   it('Can\'t share to unknown user', () =>
     this.secretin.shareSecret(secretId, unknownUser)
-      .should.be.rejectedWith(Secretin.Errors.UserNotFoundError)
+      .should.be.rejectedWith(Secretin.Errors.FriendNotFoundError)
+  );
+
+  it('Can\'t unshare to unknown user', () =>
+    this.secretin.unshareSecret(secretId, unknownUser)
+      .should.be.rejectedWith(Secretin.Errors.FriendNotFoundError)
   );
 });
