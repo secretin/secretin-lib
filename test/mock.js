@@ -36,7 +36,7 @@ crypto.subtle.generateKey = function generateKey(algorithm, extractable, keyUsag
 };
 
 // eslint-disable-next-line
-let randomnessSeed = 1337;
+let expectedRandom = 1337;
 crypto.getRandomValues = function getRandomValues(typedArray) {
-  typedArray.fill(randomnessSeed);
+  typedArray.fill(expectedRandom);
 };
