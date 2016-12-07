@@ -423,6 +423,7 @@ class Secretin {
         });
         return Promise.all(resetMetaPromises);
       })
+      .then(() => this.currentUser.metadatas[hashedTitle])
       .catch((err) => {
         const wrapper = new WrappingError(err);
         throw wrapper.error;
@@ -451,6 +452,7 @@ class Secretin {
         return this.resetMetadatas(hashedTitle);
       })
       .then(() => this.renewKey(hashedTitle))
+      .then(() => this.currentUser.metadatas[hashedTitle])
       .catch((err) => {
         const wrapper = new WrappingError(err);
         throw wrapper.error;

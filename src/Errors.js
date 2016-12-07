@@ -203,7 +203,6 @@ export class WrappingError {
     } else if (error === 'Friend not found') {
       this.error = new FriendNotFoundError();
     } else {
-      console.log(error);
       this.error = new Error(error);
     }
   }
