@@ -4,6 +4,7 @@ import Secretin from './Secretin';
 import User from './User';
 import APIStandalone from './API/Standalone';
 import APIServer from './API/Server';
+import Errors from './Errors';
 
 import { generateSeed } from './lib/util.js';
 
@@ -14,5 +15,7 @@ Secretin.API = {
   Standalone: APIStandalone,
   Server: APIServer,
 };
+
+Secretin.Errors = Errors;
 
 export default Secretin;

@@ -200,7 +200,7 @@ class API {
         doGET(`${this.db}/user/${bytesToHexString(hashedUsername)}/${hash}?otp=${otp}`));
   }
 
-  getUserWithToken(user) {
+  getUserWithSignature(user) {
     let hashedUsername;
     let url;
     return getSHA256(user.username)

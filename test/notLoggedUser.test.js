@@ -56,7 +56,7 @@ describe('Not logged user', () => {
     this.secretin.newUser(username, password)
       .then(() => this.secretin.currentUser.disconnect())
       .then(() => this.secretin.loginUser(username, wrongPassword))
-      .should.be.rejectedWith('Invalid Password')
+      .should.be.rejectedWith(Secretin.Errors.InvalidPasswordError)
       .then(() => this.secretin.currentUser.privateKey)
       .should.eventually.be.null
   );
@@ -65,7 +65,7 @@ describe('Not logged user', () => {
     this.secretin.newUser(username, password)
       .then(() => this.secretin.currentUser.disconnect())
       .then(() => this.secretin.newUser(username, password))
-      .should.be.rejectedWith('Username already exists')
+      .should.be.rejectedWith(Secretin.Errors.UsernameAlreadyExistsError)
       .then(() => this.secretin.currentUser.privateKey)
       .should.eventually.be.null
   );
