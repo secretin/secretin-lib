@@ -1,6 +1,7 @@
 describe('Not logged user', () => {
   const username = 'user';
   const password = 'password';
+  const wrongUsername = 'wrongUser';
   const wrongPassword = 'wrongPassword';
 
   beforeEach(() => {
@@ -59,6 +60,15 @@ describe('Not logged user', () => {
       .should.be.rejectedWith(Secretin.Errors.InvalidPasswordError)
       .then(() => this.secretin.currentUser.privateKey)
       .should.eventually.be.null
+  );
+
+  it('Can\'t login with invalid username', () =>
+    this.secretin.newUser(wrongUsername, password)
+      .then(() => this.secretin.currentUser.disconnect())
+      .then(() => this.secretin.loginUser(username, wrongPassword))
+      .should.be.rejectedWith(Secretin.Errors.UserNotFoundError)
+      .then(() => this.secretin.currentUser.privateKey)
+      .should.eventually.be.undefined
   );
 
   it('Can\'t create user with existing username', () =>

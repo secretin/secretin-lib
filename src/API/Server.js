@@ -11,7 +11,7 @@ import {
 
 import {
   bytesToHexString,
-} from '../lib/util';
+} from '../lib/utils';
 
 
 class API {

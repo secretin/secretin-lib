@@ -121,6 +121,41 @@ export class CantShareWithYourselfError extends Error {
   }
 }
 
+export class SecretAlreadyExistsError extends Error {
+  constructor() {
+    super();
+    this.message = 'Wow you are unlucky ! SecretID already exists';
+  }
+}
+
+export class SecretNotFoundError extends Error {
+  constructor() {
+    super();
+    this.message = 'Secret not found';
+  }
+}
+
+export class CantGenerateNewKeyError extends Error {
+  constructor() {
+    super();
+    this.message = 'You can\'t generate new key for this secret';
+  }
+}
+
+export class NotSharedWithUserError extends Error {
+  constructor() {
+    super();
+    this.message = 'You didn\'t share this secret with this user';
+  }
+}
+
+export class FriendNotFoundError extends Error {
+  constructor() {
+    super();
+    this.message = 'Friend not found';
+  }
+}
+
 export class WrappingError {
   constructor(error) {
     if (error.constructor !== String) {
@@ -157,6 +192,16 @@ export class WrappingError {
       this.error = new CantUnshareWithYourselfError();
     } else if (error === 'You can\'t share with yourself') {
       this.error = new CantShareWithYourselfError();
+    } else if (error === 'Secret already exists') {
+      this.error = new SecretAlreadyExistsError();
+    } else if (error === 'Secret not found') {
+      this.error = new SecretNotFoundError();
+    } else if (error === 'You can\'t generate new key for this secret') {
+      this.error = new CantGenerateNewKeyError();
+    } else if (error === 'You didn\'t share this secret with this user') {
+      this.error = new NotSharedWithUserError();
+    } else if (error === 'Friend not found') {
+      this.error = new FriendNotFoundError();
     } else {
       this.error = new Error(error);
     }
@@ -180,6 +225,13 @@ const Errors = {
   CantEditSecretError,
   CantShareSecretError,
   CantUnshareSecretError,
+  CantUnshareWithYourselfError,
+  CantShareWithYourselfError,
+  SecretAlreadyExistsError,
+  SecretNotFoundError,
+  CantGenerateNewKeyError,
+  NotSharedWithUserError,
+  FriendNotFoundError,
 };
 
 export default Errors;

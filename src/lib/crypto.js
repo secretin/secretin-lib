@@ -1,7 +1,7 @@
 import {
   asciiToUint8Array,
   hexStringToUint8Array,
-} from './util';
+} from './utils';
 
 
 export function getSHA256(str) {
@@ -301,9 +301,7 @@ export function importPrivateKey(key, privateKeyObject) {
   return crypto.subtle.unwrapKey(
     format, wrappedPrivateKey, key, unwrapAlgorithm, unwrappedKeyAlgorithm, extractable, keyUsages
   )
-    .catch(
-      () => { throw 'Invalid Password'; }
-    );
+    .catch(() => Promise.reject('Invalid Password'));
 }
 
 export function importKey(key, keyObject) {
@@ -320,7 +318,5 @@ export function importKey(key, keyObject) {
   return crypto.subtle.unwrapKey(
     format, wrappedKey, key, unwrapAlgorithm, unwrappedKeyAlgorithm, extractable, keyUsages
   )
-    .catch(
-      () => { throw 'Invalid Password'; }
-    );
+    .catch(() => Promise.reject('Invalid Password'));
 }

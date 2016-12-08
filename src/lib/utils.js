@@ -102,7 +102,8 @@ export function localStorageAvailable() {
 }
 
 export function xorSeed(byteArray1, byteArray2) {
-  if (byteArray1.length === byteArray2.length && byteArray1.length === 32) {
+  if (byteArray1 instanceof Uint8Array && byteArray2 instanceof Uint8Array &&
+      byteArray1.length === 32 && byteArray2.length === 32) {
     const buf = new Uint8Array(32);
     let i;
     for (i = 0; i < 32; i++) {
@@ -110,5 +111,17 @@ export function xorSeed(byteArray1, byteArray2) {
     }
     return buf;
   }
-  throw 'xorSeed wait for 32 bytes arrays';
+  throw 'Utils.xorSeed expect 32 bytes Uint8Arrays';
 }
+
+const Utils = {
+  generateRandomNumber,
+  generateSeed,
+  hexStringToUint8Array,
+  bytesToHexString,
+  asciiToUint8Array,
+  bytesToASCIIString,
+  xorSeed,
+};
+
+export default Utils;
