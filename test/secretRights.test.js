@@ -89,6 +89,12 @@ describe('Secret accesses', () => {
         .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError)
     );
 
+    it('Should not be able to delete', () =>
+      this.secretin.loginUser(userNoAccess, passwordNoAccess)
+        .then(() => this.secretin.deleteSecret(secretId))
+        .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError)
+    );
+
     it('Should not be able to renew intermediate key', () =>
       this.secretin.loginUser(userNoAccess, passwordNoAccess)
         .then(() => this.secretin.renewKey(secretId))
@@ -109,17 +115,19 @@ describe('Secret accesses', () => {
             [userRead]: {
               username: userRead,
               rights: 0,
+              folders: { ROOT: true },
             },
             [userReadWrite]: {
               username: userReadWrite,
               rights: 1,
+              folders: { ROOT: true },
             },
             [userReadWriteShare]: {
               username: userReadWriteShare,
               rights: 2,
+              folders: { ROOT: true },
             },
           },
-          folders: {},
           title: secretTitle,
           type: 'secret',
           id: secretId,
@@ -166,17 +174,19 @@ describe('Secret accesses', () => {
             [userRead]: {
               username: userRead,
               rights: 0,
+              folders: { ROOT: true },
             },
             [userReadWrite]: {
               username: userReadWrite,
               rights: 1,
+              folders: { ROOT: true },
             },
             [userReadWriteShare]: {
               username: userReadWriteShare,
               rights: 2,
+              folders: { ROOT: true },
             },
           },
-          folders: {},
           title: secretTitle,
           type: 'secret',
           id: secretId,
@@ -196,17 +206,19 @@ describe('Secret accesses', () => {
             [userRead]: {
               username: userRead,
               rights: 0,
+              folders: { ROOT: true },
             },
             [userReadWrite]: {
               username: userReadWrite,
               rights: 1,
+              folders: { ROOT: true },
             },
             [userReadWriteShare]: {
               username: userReadWriteShare,
               rights: 2,
+              folders: { ROOT: true },
             },
           },
-          folders: {},
           title: secretTitle,
           type: 'secret',
           id: secretId,
@@ -247,17 +259,19 @@ describe('Secret accesses', () => {
             [userRead]: {
               username: userRead,
               rights: 0,
+              folders: { ROOT: true },
             },
             [userReadWrite]: {
               username: userReadWrite,
               rights: 1,
+              folders: { ROOT: true },
             },
             [userReadWriteShare]: {
               username: userReadWriteShare,
               rights: 2,
+              folders: { ROOT: true },
             },
           },
-          folders: {},
           title: secretTitle,
           type: 'secret',
           id: secretId,
@@ -277,17 +291,19 @@ describe('Secret accesses', () => {
             [userRead]: {
               username: userRead,
               rights: 0,
+              folders: { ROOT: true },
             },
             [userReadWrite]: {
               username: userReadWrite,
               rights: 1,
+              folders: { ROOT: true },
             },
             [userReadWriteShare]: {
               username: userReadWriteShare,
               rights: 2,
+              folders: { ROOT: true },
             },
           },
-          folders: {},
           title: secretTitle,
           type: 'secret',
           id: secretId,
@@ -311,21 +327,24 @@ describe('Secret accesses', () => {
             [userRead]: {
               username: userRead,
               rights: 0,
+              folders: { ROOT: true },
             },
             [userReadWrite]: {
               username: userReadWrite,
               rights: 1,
+              folders: { ROOT: true },
             },
             [userReadWriteShare]: {
               username: userReadWriteShare,
               rights: 2,
+              folders: { ROOT: true },
             },
             [userNoAccess]: {
               username: userNoAccess,
               rights: 0,
+              folders: { ROOT: true },
             },
           },
-          folders: {},
           title: secretTitle,
           type: 'secret',
           id: secretId,
@@ -355,13 +374,14 @@ describe('Secret accesses', () => {
             [userReadWrite]: {
               username: userReadWrite,
               rights: 1,
+              folders: { ROOT: true },
             },
             [userReadWriteShare]: {
               username: userReadWriteShare,
               rights: 2,
+              folders: { ROOT: true },
             },
           },
-          folders: {},
           title: secretTitle,
           type: 'secret',
           id: secretId,
@@ -389,17 +409,19 @@ describe('Secret accesses', () => {
             [userRead]: {
               username: userRead,
               rights: 0,
+              folders: { ROOT: true },
             },
             [userReadWrite]: {
               username: userReadWrite,
               rights: 1,
+              folders: { ROOT: true },
             },
             [userReadWriteShare]: {
               username: userReadWriteShare,
               rights: 2,
+              folders: { ROOT: true },
             },
           },
-          folders: {},
           title: secretTitle,
           type: 'secret',
           id: secretId,
