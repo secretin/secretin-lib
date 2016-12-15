@@ -140,7 +140,6 @@ class Secretin {
       lastModifiedAt: now.toISOString(),
       lastModifiedBy: this.currentUser.username,
       users: {},
-      folders: {},
       title: clearTitle,
       type: 'secret',
     };
@@ -150,18 +149,13 @@ class Secretin {
 
 
     return new Promise((resolve, reject) => {
-      if (typeof this.currentUser.currentFolder !== 'undefined') {
-        metadatas.users[this.currentUser.username] = {
-          username: this.currentUser.username,
-          rights: this.currentUser.keys[this.currentUser.currentFolder].rights,
-        };
-      } else {
-        metadatas.users[this.currentUser.username] = {
-          username: this.currentUser.username,
-          rights: 2,
-        };
-      }
-
+      metadatas.users[this.currentUser.username] = {
+        username: this.currentUser.username,
+        rights: 2,
+        folders: {
+          ROOT: true,
+        },
+      };
       if (typeof this.currentUser.username === 'string') {
         this.currentUser.createSecret(metadatas, content)
           .then((secretObject) => {
@@ -236,7 +230,8 @@ class Secretin {
             .then((publicKey) => friend.importPublicKey(publicKey))
             .then(() => this.getSharedSecretObjects(
               hashedSecretTitle,
-              friend, folderMetadatas.users[friend.username].rights,
+              friend,
+              folderMetadatas.users[friend.username].rights,
               []
             ));
         })()
@@ -245,6 +240,7 @@ class Secretin {
 
     const metadatasUsers = {};
     const currentFolder = this.currentUser.currentFolder;
+    const commonParentToClean = [];
     return Promise.all(sharedSecretObjectsPromises)
       .then((sharedSecretObjectsArray) => {
         const fullSharedSecretObjects = [];
@@ -269,23 +265,43 @@ class Secretin {
       })
       .then(() => {
         const resetMetaPromises = [];
-        if (typeof currentFolder !== 'undefined') {
-          delete secretMetadatas.folders[currentFolder];
-        }
-        secretMetadatas.folders[hashedFolder] = {
-          name: folderMetadatas.title,
-        };
+        Object.keys(folderMetadatas.users).forEach((username) => {
+          Object.keys(folderMetadatas.users[username].folders).forEach((parentFolder) => {
+            if (typeof secretMetadatas.users[username].folders[parentFolder] !== 'undefined') {
+              commonParentToClean.push(parentFolder);
+            }
+          });
+        });
+
         Object.keys(metadatasUsers).forEach((hashedTitle) => {
           metadatasUsers[hashedTitle].forEach((infos) => {
+            const currentSecret = this.currentUser.metadatas[hashedTitle];
             const metaUser = {
               username: infos.friendName,
               rights: folderMetadatas.users[infos.friendName].rights,
             };
-            if (typeof (infos.folder) === 'undefined') {
-              metaUser.folder = folderMetadatas.title;
+
+            if (typeof currentSecret.users[infos.friendName] !== 'undefined') {
+              metaUser.folders = currentSecret.users[infos.friendName].folders;
             } else {
-              metaUser.folder = infos.folder;
+              metaUser.folders = {};
             }
+
+            if (typeof infos.folder !== 'undefined') {
+              const parentMetadatas = this.currentUser.metadatas[infos.folder];
+              metaUser.folders[infos.folder] = {
+                name: parentMetadatas.title,
+              };
+            } else {
+              metaUser.folders[hashedFolder] = {
+                name: folderMetadatas.title,
+              };
+            }
+
+            commonParentToClean.forEach((parentFolder) => {
+              delete metaUser.folders[parentFolder];
+            });
+
             if (infos.friendName === this.currentUser.username) {
               if (typeof currentFolder === 'undefined') {
                 metaUser.rights = 2;
@@ -304,9 +320,28 @@ class Secretin {
       .then((encryptedSecret) =>
         this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
       .then((secret) => {
-        const folder = JSON.parse(secret);
-        folder[hashedSecretTitle] = 1;
-        return this.editSecret(hashedFolder, folder);
+        const folders = JSON.parse(secret);
+        folders[hashedSecretTitle] = 1;
+        return this.editSecret(hashedFolder, folders);
+      })
+      .then(() => {
+        const parentCleaningPromises = [];
+        commonParentToClean.forEach((parentFolder) => {
+          if (parentFolder !== 'ROOT') {
+            parentCleaningPromises.push(
+              this.api.getSecret(parentFolder, this.currentUser)
+                .then((encryptedSecret) =>
+                  this.currentUser.decryptSecret(parentFolder, encryptedSecret)
+                )
+                .then((secret) => {
+                  const folders = JSON.parse(secret);
+                  delete folders[hashedSecretTitle];
+                  return this.editSecret(parentFolder, folders);
+                })
+            );
+          }
+        });
+        return Promise.all(parentCleaningPromises);
       })
       .then(() => hashedSecretTitle)
       .catch((err) => {
@@ -315,7 +350,7 @@ class Secretin {
       });
   }
 
-  getSharedSecretObjects(hashedTitle, friend, rights, fullSharedSecretObjects, folderName) {
+  getSharedSecretObjects(hashedTitle, friend, rights, fullSharedSecretObjects, hashedFolder) {
     let isFolder = Promise.resolve();
     const sharedSecretObjectPromises = [];
     const secretMetadatas = this.currentUser.metadatas[hashedTitle];
@@ -334,7 +369,7 @@ class Secretin {
                 friend,
                 rights,
                 fullSharedSecretObjects,
-                secretMetadatas.title
+                hashedTitle
               ));
             });
             return Promise.all(sharedSecretObjectPromises);
@@ -350,7 +385,7 @@ class Secretin {
         .then((secretObject) => {
           const newSecretObject = secretObject;
           newSecretObject.rights = rights;
-          newSecretObject.inFolder = folderName;
+          newSecretObject.inFolder = hashedFolder;
           newSecretObject.username = friend.username;
           fullSharedSecretObjects.push(newSecretObject);
           return fullSharedSecretObjects;
@@ -415,9 +450,15 @@ class Secretin {
           secretMetadatas.users[friend.username] = {
             username: friend.username,
             rights,
+            folders: {},
           };
           if (typeof sharedSecretObject.inFolder !== 'undefined') {
-            secretMetadatas.users[friend.username].folder = sharedSecretObject.inFolder;
+            const parentMetadatas = this.currentUser.metadatas[sharedSecretObject.inFolder];
+            secretMetadatas.users[friend.username].folders[sharedSecretObject.inFolder] = {
+              name: parentMetadatas.title,
+            };
+          } else {
+            secretMetadatas.users[friend.username].folders.ROOT = true;
           }
           resetMetaPromises.push(this.resetMetadatas(sharedSecretObject.hashedTitle));
         });
@@ -545,24 +586,24 @@ class Secretin {
 
   removeSecretFromFolder(hashedTitle, hashedFolder) {
     const secretMetadatas = this.currentUser.metadatas[hashedTitle];
-    const folderMetadatas = this.currentUser.metadatas[hashedFolder];
     const usersToDelete = [];
     Object.keys(secretMetadatas.users).forEach((username) => {
-      if (typeof secretMetadatas.users[username].folder !== 'undefined'
-          && secretMetadatas.users[username].folder === folderMetadatas.title) {
+      if (typeof secretMetadatas.users[username].folders[hashedFolder] !== 'undefined') {
         usersToDelete.push(username);
       }
     });
     return this.api.unshareSecret(this.currentUser, usersToDelete, hashedTitle)
       .then(() => {
         usersToDelete.forEach((username) => {
-          if (username !== this.currentUser.username) {
-            delete secretMetadatas.users[username];
-          } else {
-            delete secretMetadatas.users[username].folder;
+          delete secretMetadatas.users[username].folders[hashedFolder];
+          if (Object.keys(secretMetadatas.users[username].folders).length === 0) {
+            if (this.currentUser.username === username) {
+              secretMetadatas.users[username].folders.ROOT = true;
+            } else {
+              delete secretMetadatas.users[username];
+            }
           }
         });
-        delete secretMetadatas.folders[hashedFolder];
         return this.renewKey(hashedTitle);
       })
       .then(() => this.resetMetadatas(hashedTitle))
@@ -608,17 +649,20 @@ class Secretin {
       delete this.currentUser.metadatas[hashedTitle];
       delete this.currentUser.keys[hashedTitle];
       const editFolderPromises = [];
-      Object.keys(secretMetadatas.folders).forEach((hashedFolder) => {
-        editFolderPromises.push(
-          this.api.getSecret(hashedFolder, this.currentUser)
-            .then((encryptedSecret) =>
-              this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
-            .then((secret) => {
-              const folder = JSON.parse(secret);
-              delete folder[hashedTitle];
-              return this.editSecret(hashedFolder, folder);
-            })
-        );
+      const currentUsername = this.currentUser.username;
+      Object.keys(secretMetadatas.users[currentUsername].folders).forEach((hashedFolder) => {
+        if (hashedFolder !== 'ROOT') {
+          editFolderPromises.push(
+            this.api.getSecret(hashedFolder, this.currentUser)
+              .then((encryptedSecret) =>
+                this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
+              .then((secret) => {
+                const folder = JSON.parse(secret);
+                delete folder[hashedTitle];
+                return this.editSecret(hashedFolder, folder);
+              })
+          );
+        }
       });
       return Promise.all(editFolderPromises);
     })
