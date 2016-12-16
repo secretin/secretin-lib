@@ -239,7 +239,6 @@ class Secretin {
     });
 
     const metadatasUsers = {};
-    const currentFolder = this.currentUser.currentFolder;
     const commonParentToClean = [];
     return Promise.all(sharedSecretObjectsPromises)
       .then((sharedSecretObjectsArray) => {
@@ -267,7 +266,8 @@ class Secretin {
         const resetMetaPromises = [];
         Object.keys(folderMetadatas.users).forEach((username) => {
           Object.keys(folderMetadatas.users[username].folders).forEach((parentFolder) => {
-            if (typeof secretMetadatas.users[username].folders[parentFolder] !== 'undefined') {
+            if (typeof secretMetadatas.users[username] !== 'undefined' &&
+                typeof secretMetadatas.users[username].folders[parentFolder] !== 'undefined') {
               commonParentToClean.push(parentFolder);
             }
           });
@@ -303,11 +303,7 @@ class Secretin {
             });
 
             if (infos.friendName === this.currentUser.username) {
-              if (typeof currentFolder === 'undefined') {
-                metaUser.rights = 2;
-              } else {
-                metaUser.rights = this.currentUser.keys[currentFolder].rights;
-              }
+              metaUser.rights = 2;
             }
             this.currentUser.metadatas[hashedTitle].users[infos.friendName] = metaUser;
           });
