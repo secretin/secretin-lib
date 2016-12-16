@@ -632,15 +632,15 @@ class Secretin {
       });
   }
 
-  deleteSecret(hashedTitle) {
+  deleteSecret(hashedTitle, list = []) {
     let isFolder = Promise.resolve();
     const secretMetadatas = this.currentUser.metadatas[hashedTitle];
     if (typeof (secretMetadatas) === 'undefined') {
       return Promise.reject(new DontHaveSecretError());
     }
-    if (secretMetadatas.type === 'folder') {
+    if (secretMetadatas.type === 'folder' && list.indexOf(hashedTitle) === -1) {
       isFolder = isFolder
-        .then(() => this.deleteFolderSecrets(hashedTitle));
+        .then(() => this.deleteFolderSecrets(hashedTitle, list));
     }
 
     return isFolder
@@ -672,7 +672,8 @@ class Secretin {
     });
   }
 
-  deleteFolderSecrets(hashedFolder) {
+  deleteFolderSecrets(hashedFolder, list) {
+    list.push(hashedFolder);
     return this.api.getSecret(hashedFolder, this.currentUser)
       .then((encryptedSecret) =>
         this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
@@ -680,7 +681,7 @@ class Secretin {
         Object.keys(JSON.parse(secrets)).reduce(
           (promise, hashedTitle) =>
             promise.then(() =>
-              this.deleteSecret(hashedTitle))
+              this.deleteSecret(hashedTitle, list))
           , Promise.resolve()
         )
       )
