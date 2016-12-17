@@ -130,10 +130,10 @@ class Secretin {
   }
 
   addFolder(title) {
-    return this.addSecret(title, {}, true);
+    return this.addSecret(title, {}, 'folder');
   }
 
-  addSecret(clearTitle, content, isFolder) {
+  addSecret(clearTitle, content, type = 'secret') {
     let hashedTitle;
     const now = new Date();
     const metadatas = {
@@ -141,12 +141,8 @@ class Secretin {
       lastModifiedBy: this.currentUser.username,
       users: {},
       title: clearTitle,
-      type: 'secret',
+      type,
     };
-    if (isFolder) {
-      metadatas.type = 'folder';
-    }
-
 
     return new Promise((resolve, reject) => {
       metadatas.users[this.currentUser.username] = {
