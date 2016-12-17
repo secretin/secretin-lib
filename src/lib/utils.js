@@ -1,3 +1,5 @@
+import PasswordGenerator from './passwordGenerator';
+
 export function hexStringToUint8Array(hexString) {
   if (hexString.length % 2 !== 0) {
     throw 'Invalid hexString';
@@ -114,6 +116,10 @@ export function xorSeed(byteArray1, byteArray2) {
   throw 'Utils.xorSeed expect 32 bytes Uint8Arrays';
 }
 
+export function escapeRegExp(s) {
+  return s.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+}
+
 const Utils = {
   generateRandomNumber,
   generateSeed,
@@ -122,6 +128,8 @@ const Utils = {
   asciiToUint8Array,
   bytesToASCIIString,
   xorSeed,
+  escapeRegExp,
+  PasswordGenerator,
 };
 
 export default Utils;
