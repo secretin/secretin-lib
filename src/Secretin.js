@@ -204,8 +204,17 @@ class Secretin {
       });
   }
 
+  editOption(name, value) {
+    this.currentUser.options[name] = value;
+    return this.resetOptions();
+  }
+
   editOptions(options) {
     this.currentUser.options = options;
+    return this.resetOptions();
+  }
+
+  resetOptions() {
     return this.currentUser.exportOptions()
       .then((encryptedOptions) => this.api.editUser(this.currentUser, encryptedOptions, 'options'))
       .catch((err) => {
@@ -681,6 +690,14 @@ class Secretin {
           , Promise.resolve()
         )
       )
+      .catch((err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      });
+  }
+
+  deactivateTotp() {
+    return this.api.deactivateTotp(this.currentUser)
       .catch((err) => {
         const wrapper = new WrappingError(err);
         throw wrapper.error;

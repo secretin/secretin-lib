@@ -312,6 +312,18 @@ class API {
       );
   }
 
+  deactivateTotp(user) {
+    let hashedUsername;
+    let url;
+    return getSHA256(user.username)
+      .then((rHashedUsername) => {
+        hashedUsername = bytesToHexString(rHashedUsername);
+        url = `/deactivateTotp/${hashedUsername}`;
+        return user.sign(url);
+      }).then((signature) =>
+        doPUT(`${this.db}${url}?sig=${bytesToHexString(signature)}`, {}));
+  }
+
   activateShortpass(shortpass, user) {
     let hashedUsername;
     const json = JSON.stringify({
