@@ -713,14 +713,26 @@ class Secretin {
       });
   }
 
-  activateShortpass(shortpass, deviceName) {
+  activateShortLogin(shortpass, deviceName) {
     if (localStorageAvailable()) {
-      return this.currentUser.activateShortpass(shortpass, deviceName)
-        .then((toSend) => this.api.activateShortpass(toSend, this.currentUser))
+      return this.currentUser.activateShortLogin(shortpass, deviceName)
+        .then((toSend) => this.api.activateShortLogin(toSend, this.currentUser))
         .catch((err) => {
           const wrapper = new WrappingError(err);
           throw wrapper.error;
         });
+    }
+    return Promise.reject(new LocalStorageUnavailableError());
+  }
+
+  deactivateShortLogin() {
+    if (localStorageAvailable()) {
+      localStorage.removeItem(`${Secretin.prefix}username`);
+      localStorage.removeItem(`${Secretin.prefix}deviceName`);
+      localStorage.removeItem(`${Secretin.prefix}privateKey`);
+      localStorage.removeItem(`${Secretin.prefix}privateKeyIv`);
+      localStorage.removeItem(`${Secretin.prefix}iv`);
+      return Promise.resolve();
     }
     return Promise.reject(new LocalStorageUnavailableError());
   }
@@ -756,7 +768,7 @@ class Secretin {
       });
   }
 
-  canITryShortpass() {
+  canITryShortLogin() {
     return (localStorageAvailable() && localStorage.getItem(`${Secretin.prefix}username`) !== null);
   }
 }

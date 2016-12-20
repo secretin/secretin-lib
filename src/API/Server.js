@@ -324,7 +324,7 @@ class API {
         doPUT(`${this.db}${url}?sig=${bytesToHexString(signature)}`, {}));
   }
 
-  activateShortpass(shortpass, user) {
+  activateShortLogin(shortpass, user) {
     let hashedUsername;
     const json = JSON.stringify({
       shortpass,
@@ -334,7 +334,7 @@ class API {
         hashedUsername = bytesToHexString(rHashedUsername);
         return user.sign(json);
       }).then((signature) =>
-        doPUT(`${this.db}/activateShortpass/${hashedUsername}`, {
+        doPUT(`${this.db}/activateShortLogin/${hashedUsername}`, {
           json,
           sig: bytesToHexString(signature),
         }));
