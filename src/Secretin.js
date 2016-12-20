@@ -772,7 +772,7 @@ class Secretin {
     return (localStorageAvailable() && localStorage.getItem(`${Secretin.prefix}username`) !== null);
   }
 
-  getSavedUser() {
+  getSavedUsername() {
     if (this.canITryShortLogin()) {
       return localStorage.getItem(`${Secretin.prefix}username`);
     }
