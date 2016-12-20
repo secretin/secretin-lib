@@ -7,9 +7,9 @@ Open source secret manager with groups management based on WebCryptoAPI http://w
 
 This repository contains the library that holds the logic for secrets management.
 
-For the default client implementation (web), see https://github.com/secretin/secretin-app
-For the windows native app, see https://github.com/secretin/secretin-windows
-For the default server implementation, see https://github.com/secretin/secretin-server
+* For the default client implementation (web), see https://github.com/secretin/secretin-app
+* For the windows native app, see https://github.com/secretin/secretin-windows
+* For the default server implementation, see https://github.com/secretin/secretin-server
 
 # Install
 
