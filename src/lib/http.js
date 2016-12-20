@@ -4,15 +4,11 @@ function reqData(path, datas, type) {
     xhr.open(type, encodeURI(path));
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.onload = () => {
+      const newData = JSON.parse(xhr.responseText);
       if (xhr.status === 200) {
-        resolve(xhr.statusText);
+        resolve(newData.reason);
       } else {
-        try {
-          const newData = JSON.parse(xhr.responseText);
-          reject({ status: xhr.statusText, datas: newData });
-        } catch (e) {
-          reject(xhr.statusText);
-        }
+        reject(newData.reason);
       }
     };
     xhr.send(JSON.stringify(datas));
@@ -24,11 +20,11 @@ export function doGET(path) {
     const xhr = new XMLHttpRequest();
     xhr.open('GET', encodeURI(path));
     xhr.onload = () => {
+      const datas = JSON.parse(xhr.responseText);
       if (xhr.status === 200) {
-        const datas = JSON.parse(xhr.responseText);
         resolve(datas);
       } else {
-        reject(xhr.statusText);
+        reject(datas.reason);
       }
     };
     xhr.send();
