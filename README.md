@@ -44,7 +44,7 @@ We try to provide maximum anonymity. We want database leakage to be a feature, s
 ## Details
 This part tries to explain how Secretin works under the hood.
 
-First of all, you need to chosse a username and master password.
+First of all, you need to choose a username and a master password.
 
 When you create a new account, username is SHA256'ed and a RSA-OAEP key pair is generated (according to http://www.w3.org/TR/WebCryptoAPI/#algorithm-overview array, RSA-OAEP seems to be the only assymetric algorithm that supports encrypt and decrypt methods).
 
@@ -91,8 +91,8 @@ In server mode, the second argument is server url (default would be `window.loca
 * *newUser* takes `username` and `password` and tries to create a new user with a new RSA key.
 * *loginUser* takes `username`, `password` and optional `totp` token. It will return the user informations (RSA key, secret metadatas, private options, list of secret id).
 * *refreshUser* get user informations using RSA-PSS signature.
-* *addFolder* create a folder. Actually a shorthand for addSecret with `isFolder` parameter to `true`.
-* *addSecret* takes `title`, `content` and optional `isFolder` parameter to create a new secret (`content` will pass through `JSON.stringify`).
+* *addFolder* create a folder. Actually a shorthand for addSecret with `type` parameter to `folder`.
+* *addSecret* takes `title`, `content` and optional `type` parameter to create a new secret (`content` will pass through `JSON.stringify`).
 * *changePassword* takes `newPassword` parameter and changes password for `currentUser`.
 * *editSecret* takes `secretId` and `newContent` and edits the corresponding secret.
 * *editOptions* takes `newOptions` and edits the `currentUser` options.
@@ -104,6 +104,8 @@ In server mode, the second argument is server url (default would be `window.loca
 * *getSecret* takes `secretId` and returns the decrypted corresponding secret.
 * *deleteSecret* takes `secretId` and deletes this secret. If `secretId` is a folder, deletes every child secret.
 * *activateTotp* takes `seed` and activates double authentication based on google authenticator TOTP.
-* *activateShortpass* takes `shortPass` and `deviceName` and activates double authentication based on the device.
+* *deactivateTotp* de-activates double authentication based on google authenticator TOTP.
+* *activateShortLogin* takes `shortPass` and `deviceName` and activates double authentication based on the device.
+* *deactivateShortLogin* de-activates double authentication based on the device.
 * *shortLogin* takes `shortPass` and returns user information if done from same device as `activateShortpass`.
-* *canITryShortpass* checks if double authentication based on device is possible.
+* *canITryShortLogin* checks if double authentication based on device is possible.
