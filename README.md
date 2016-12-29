@@ -17,8 +17,8 @@ npm package is not released yet. In the meanwhile you need to build the lib manu
 
 ## Build and test
 ```
-npm install
-npm test
+yarn install
+yarn test
 ```
 You'll need chrome to test the WebCryptoAPI with karma (https://karma-runner.github.io/).
 
