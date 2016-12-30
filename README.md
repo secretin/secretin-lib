@@ -14,8 +14,8 @@ This repository contains the library that holds the logic for secrets management
 # Install
 ## Build and test
 ```
-npm install
-npm test
+yarn install
+yarn test
 ```
 You'll need chrome to test the WebCryptoAPI with karma (https://karma-runner.github.io/).
 
