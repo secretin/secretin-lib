@@ -1,5 +1,5 @@
 # Secretin
-![Jacques Secrétin](http://www.echo62.com/images/sportif/sportif48.jpg)
+![Jacques Secrétin](http://www.newmedia-fr.info/databank/photo_articles/jacquessecretin.jpg)
 
 Open source secret manager with groups management based on WebCryptoAPI http://www.w3.org/TR/WebCryptoAPI/
 
@@ -12,9 +12,6 @@ This repository contains the library that holds the logic for secrets management
 * For the default server implementation, see https://github.com/secretin/secretin-server
 
 # Install
-
-npm package is not released yet. In the meanwhile you need to build the lib manually (see below).
-
 ## Build and test
 ```
 npm install
