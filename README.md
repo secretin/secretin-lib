@@ -1,5 +1,5 @@
 # Secretin
-![Jacques Secrétin](http://www.newmedia-fr.info/databank/photo_articles/jacquessecretin.jpg)
+<img src="http://www.newmedia-fr.info/databank/photo_articles/jacquessecretin.jpg" alt="Jacques Secrétin" width="200"/>
 
 Open source secret manager with groups management based on WebCryptoAPI http://www.w3.org/TR/WebCryptoAPI/
 
