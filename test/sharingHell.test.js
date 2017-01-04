@@ -1,4 +1,4 @@
-xdescribe('Sharing hell', () => {
+describe('Sharing hell', () => {
   const now = '2016-01-01T00:00:00.000Z';
   // eslint-disable-next-line
   Date.prototype.toISOString = () => now;
@@ -15,16 +15,56 @@ xdescribe('Sharing hell', () => {
   const user4 = 'user4';
   const password4 = 'password4';
 
-  const secret1Title = 'secret1';
-  let secret1Id = '';
-  const secret1Content = {
+  const secretContent = {
     fields: [{
       label: 'a',
       content: 'b',
     }],
   };
-  const folder1Title = 'folder1';
-  let folder1Id = '';
+  const otherSecretInOtherFolderContent = {
+    fields: [{
+      label: 'c',
+      content: 'd',
+    }],
+  };
+  const otherSecretInOtherFolderContent2 = {
+    fields: [{
+      label: 'e',
+      content: 'f',
+    }],
+  };
+
+  const secretTitle = 'secret';
+  let secretId = '';
+
+  const folderTitle = 'folder';
+  let folderId = '';
+
+  const folderInFolderTitle = 'folder in folder';
+  let folderInFolderId = '';
+
+  const otherFolderTitle = 'other folder';
+  let otherFolderId = '';
+
+  const otherSecretInOtherFolderTitle = 'other secret';
+  let otherSecretInOtherFolderId = '';
+
+  const otherSecretInOtherFolderTitle2 = 'other secret2';
+  let otherSecretInOtherFolderId2 = '';
+
+  const secretInFolderTitle = 'secret in folder';
+  let secretInFolderId = '';
+
+  /*
+    Create following arborescence by user3 :
+      secret (user4)
+      folder/ (user1 and user2)
+          folderInFolder/
+          secretInFolder
+      otherFolder/ (user4)
+          otherSecret
+          otherSecret2
+  */
 
   beforeEach(() => {
     // eslint-disable-next-line
@@ -33,30 +73,359 @@ xdescribe('Sharing hell', () => {
     return resetAndGetDB()
       .then(() => this.secretin.newUser(user1, password1))
       .then(() => this.secretin.newUser(user2, password2))
-      .then(() => this.secretin.newUser(user3, password3))
       .then(() => this.secretin.newUser(user4, password4))
-      .then(() => this.secretin.addSecret(secret1Title, secret1Content))
+      .then(() => this.secretin.newUser(user3, password3))
+      .then(() => this.secretin.addSecret(secretTitle, secretContent))
       .then((hashedTitle) => {
-        secret1Id = hashedTitle;
-        return this.secretin.addFolder(folder1Title);
+        secretId = hashedTitle;
+        return this.secretin.addFolder(folderTitle);
       })
       .then((hashedTitle) => {
-        folder1Id = hashedTitle;
-        this.secretin.currentUser.currentFolder = folder1Id;
-        return this.secretin.addSecretToFolder(secret1Id, folder1Id);
+        folderId = hashedTitle;
+        return this.secretin.addFolder(folderInFolderTitle);
       })
-      .then(() => this.secretin.shareSecret(folder1Id, user1, 'folder', 0))
-      .then(() => this.secretin.shareSecret(folder1Id, user2, 'folder', 0))
-      .then(() => this.secretin.shareSecret(folder1Id, user3, 'folder', 0))
+      .then((hashedTitle) => {
+        folderInFolderId = hashedTitle;
+        return this.secretin.addFolder(otherFolderTitle);
+      })
+      .then((hashedTitle) => {
+        otherFolderId = hashedTitle;
+        return this.secretin.addSecret(secretInFolderTitle, secretContent);
+      })
+      .then((hashedTitle) => {
+        secretInFolderId = hashedTitle;
+        return this.secretin.addSecret(
+          otherSecretInOtherFolderTitle,
+          otherSecretInOtherFolderContent
+        );
+      })
+      .then((hashedTitle) => {
+        otherSecretInOtherFolderId = hashedTitle;
+        return this.secretin.addSecret(
+          otherSecretInOtherFolderTitle2,
+          otherSecretInOtherFolderContent2
+        );
+      })
+      .then((hashedTitle) => {
+        otherSecretInOtherFolderId2 = hashedTitle;
+        return this.secretin.addSecretToFolder(secretInFolderId, folderId);
+      })
+      .then(() => this.secretin.addSecretToFolder(folderInFolderId, folderId))
+      .then(() => this.secretin.addSecretToFolder(otherSecretInOtherFolderId, otherFolderId))
+      .then(() => this.secretin.addSecretToFolder(otherSecretInOtherFolderId2, otherFolderId))
+      .then(() => this.secretin.shareSecret(secretId, user4, 0))
+      .then(() => this.secretin.shareSecret(otherFolderId, user4, 0))
+      .then(() => this.secretin.shareSecret(folderId, user1, 0))
+      .then(() => this.secretin.shareSecret(folderId, user2, 1))
       .then(() => this.secretin.currentUser.disconnect());
   });
 
-  it('Can yolo', () =>
-    this.secretin.login(user4, password4)
-      .then(() => this.secretin.unshareSecret(folder1Id, user1))
-      .then(() => {
-        this.secretin.disconnect();
-        return this.secretin.login(user1, password1);
-      })
-  );
+  it('Metadatas are valid', () => {
+    const expectedMetadatas = {
+      [secretId]: {
+        id: secretId,
+        lastModifiedAt: now,
+        lastModifiedBy: user3,
+        title: secretTitle,
+        type: 'secret',
+        users: {
+          [user4]: {
+            username: user4,
+            rights: 0,
+            folders: { ROOT: true },
+          },
+          [user3]: {
+            username: user3,
+            rights: 2,
+            folders: { ROOT: true },
+          },
+        },
+      },
+      [folderId]: {
+        id: folderId,
+        lastModifiedAt: now,
+        lastModifiedBy: user3,
+        title: folderTitle,
+        type: 'folder',
+        users: {
+          [user1]: {
+            username: user1,
+            rights: 0,
+            folders: { ROOT: true },
+          },
+          [user2]: {
+            username: user2,
+            rights: 1,
+            folders: { ROOT: true },
+          },
+          [user3]: {
+            username: user3,
+            rights: 2,
+            folders: { ROOT: true },
+          },
+        },
+      },
+      [otherFolderId]: {
+        id: otherFolderId,
+        lastModifiedAt: now,
+        lastModifiedBy: user3,
+        title: otherFolderTitle,
+        type: 'folder',
+        users: {
+          [user4]: {
+            username: user4,
+            rights: 0,
+            folders: { ROOT: true },
+          },
+          [user3]: {
+            username: user3,
+            rights: 2,
+            folders: { ROOT: true },
+          },
+        },
+      },
+      [secretInFolderId]: {
+        users: {
+          [user1]: {
+            username: user1,
+            rights: 0,
+            folders: {
+              [folderId]: {
+                name: folderTitle,
+              },
+            },
+          },
+          [user2]: {
+            username: user2,
+            rights: 1,
+            folders: {
+              [folderId]: {
+                name: folderTitle,
+              },
+            },
+          },
+          [user3]: {
+            username: user3,
+            rights: 2,
+            folders: {
+              [folderId]: {
+                name: folderTitle,
+              },
+            },
+          },
+        },
+        lastModifiedAt: now,
+        lastModifiedBy: user3,
+        title: secretInFolderTitle,
+        type: 'secret',
+        id: secretInFolderId,
+      },
+      [otherSecretInOtherFolderId]: {
+        users: {
+          [user4]: {
+            username: user4,
+            rights: 0,
+            folders: {
+              [otherFolderId]: {
+                name: otherFolderTitle,
+              },
+            },
+          },
+          [user3]: {
+            username: user3,
+            rights: 2,
+            folders: {
+              [otherFolderId]: {
+                name: otherFolderTitle,
+              },
+            },
+          },
+        },
+        lastModifiedAt: now,
+        lastModifiedBy: user3,
+        title: otherSecretInOtherFolderTitle,
+        type: 'secret',
+        id: otherSecretInOtherFolderId,
+      },
+      [otherSecretInOtherFolderId2]: {
+        users: {
+          [user3]: {
+            username: user3,
+            rights: 2,
+            folders: {
+              [otherFolderId]: {
+                name: otherFolderTitle,
+              },
+            },
+          },
+          [user4]: {
+            username: user4,
+            rights: 0,
+            folders: {
+              [otherFolderId]: {
+                name: otherFolderTitle,
+              },
+            },
+          },
+        },
+        lastModifiedAt: now,
+        lastModifiedBy: user3,
+        title: otherSecretInOtherFolderTitle2,
+        type: 'secret',
+        id: otherSecretInOtherFolderId2,
+      },
+      [folderInFolderId]: {
+        users: {
+          [user1]: {
+            username: user1,
+            rights: 0,
+            folders: {
+              [folderId]: {
+                name: folderTitle,
+              },
+            },
+          },
+          [user2]: {
+            username: user2,
+            rights: 1,
+            folders: {
+              [folderId]: {
+                name: folderTitle,
+              },
+            },
+          },
+          [user3]: {
+            username: user3,
+            rights: 2,
+            folders: {
+              [folderId]: {
+                name: folderTitle,
+              },
+            },
+          },
+        },
+        lastModifiedAt: now,
+        lastModifiedBy: user3,
+        title: folderInFolderTitle,
+        type: 'folder',
+        id: folderInFolderId,
+      },
+    };
+    return this.secretin.loginUser(user3, password3)
+      .then(() => this.secretin.currentUser.metadatas.should.deep.equal(expectedMetadatas));
+  });
+
+  it('Add secret to a folder with multiple users', () => {
+    const expectedMetadatas = {
+      id: secretId,
+      lastModifiedAt: now,
+      lastModifiedBy: user3,
+      title: secretTitle,
+      type: 'secret',
+      users: {
+        [user4]: {
+          username: user4,
+          rights: 0,
+          folders: { ROOT: true },
+        },
+        [user1]: {
+          username: user1,
+          rights: 0,
+          folders: {
+            [folderId]: {
+              name: folderTitle,
+            },
+          },
+        },
+        [user2]: {
+          username: user2,
+          rights: 1,
+          folders: {
+            [folderId]: {
+              name: folderTitle,
+            },
+          },
+        },
+        [user3]: {
+          username: user3,
+          rights: 2,
+          folders: {
+            [folderId]: {
+              name: folderTitle,
+            },
+          },
+        },
+      },
+    };
+    return this.secretin.loginUser(user3, password3)
+      .then(() => this.secretin.addSecretToFolder(secretId, folderId))
+        .then(() => this.secretin.currentUser.metadatas[secretId]
+          .should.deep.equal(expectedMetadatas)
+        )
+        .then(() => {
+          this.secretin.currentUser.disconnect();
+          return this.secretin.loginUser(user1, password1);
+        })
+        .then(() => this.secretin.getSecret(secretId))
+        .then((secret) => secret.should.deep.equal(secretContent))
+        .then(() => {
+          this.secretin.currentUser.disconnect();
+          return this.secretin.loginUser(user4, password4);
+        })
+        .then(() => this.secretin.getSecret(secretId))
+        .then((secret) => secret.should.deep.equal(secretContent))
+        .then(() => {
+          this.secretin.currentUser.disconnect();
+          return this.secretin.loginUser(user2, password2);
+        })
+        .then(() => this.secretin.getSecret(secretId))
+        .then((secret) => secret.should.deep.equal(secretContent));
+  });
+
+  it('Unshare secret with one user in folder', () => {
+    const expectedMetadatas = {
+      id: secretInFolderId,
+      lastModifiedAt: now,
+      lastModifiedBy: user3,
+      title: secretInFolderTitle,
+      type: 'secret',
+      users: {
+        [user2]: {
+          username: user2,
+          rights: 1,
+          folders: {
+            [folderId]: {
+              name: folderTitle,
+            },
+          },
+        },
+        [user3]: {
+          username: user3,
+          rights: 2,
+          folders: {
+            [folderId]: {
+              name: folderTitle,
+            },
+          },
+        },
+      },
+    };
+    return this.secretin.loginUser(user3, password3)
+      .then(() => this.secretin.unshareSecret(secretInFolderId, user1))
+        .then(() => this.secretin.currentUser.metadatas[secretInFolderId]
+          .should.deep.equal(expectedMetadatas)
+        )
+        .then(() => {
+          this.secretin.currentUser.disconnect();
+          return this.secretin.loginUser(user2, password2);
+        })
+        .then(() => this.secretin.getSecret(secretInFolderId))
+        .then((secret) => secret.should.deep.equal(secretContent))
+        .then(() => {
+          this.secretin.currentUser.disconnect();
+          return this.secretin.loginUser(user1, password1);
+        })
+        .then(() => this.secretin.getSecret(secretInFolderId))
+        .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError);
+  });
 });

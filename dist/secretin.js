@@ -1,7 +1,7 @@
 var Secretin = (function () {
 'use strict';
 
-var version = "1.0.0";
+var version = "1.0.1";
 
 var asyncGenerator = function () {
   function AwaitValue(value) {
@@ -2057,7 +2057,6 @@ var Secretin = function () {
     });
 
     var metadatasUsers = {};
-    var currentFolder = this.currentUser.currentFolder;
     var commonParentToClean = [];
     return Promise.all(sharedSecretObjectsPromises).then(function (sharedSecretObjectsArray) {
       var fullSharedSecretObjects = [];
@@ -2083,7 +2082,7 @@ var Secretin = function () {
       var resetMetaPromises = [];
       Object.keys(folderMetadatas.users).forEach(function (username) {
         Object.keys(folderMetadatas.users[username].folders).forEach(function (parentFolder) {
-          if (typeof secretMetadatas.users[username].folders[parentFolder] !== 'undefined') {
+          if (typeof secretMetadatas.users[username] !== 'undefined' && typeof secretMetadatas.users[username].folders[parentFolder] !== 'undefined') {
             commonParentToClean.push(parentFolder);
           }
         });
@@ -2119,11 +2118,7 @@ var Secretin = function () {
           });
 
           if (infos.friendName === _this8.currentUser.username) {
-            if (typeof currentFolder === 'undefined') {
-              metaUser.rights = 2;
-            } else {
-              metaUser.rights = _this8.currentUser.keys[currentFolder].rights;
-            }
+            metaUser.rights = 2;
           }
           _this8.currentUser.metadatas[hashedTitle].users[infos.friendName] = metaUser;
         });
