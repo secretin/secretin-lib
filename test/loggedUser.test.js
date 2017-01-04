@@ -984,7 +984,7 @@ describe('Logged user', () => {
       .should.eventually.deep.equal(expectedMetadatas);
   });
 
-  it('Can add secret in two folder', () => {
+  it('Can add secret in two different folders', () => {
     const expectedMetadatas = {
       lastModifiedAt: now,
       lastModifiedBy: username,
