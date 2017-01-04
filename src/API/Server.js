@@ -312,7 +312,19 @@ class API {
       );
   }
 
-  activateShortpass(shortpass, user) {
+  deactivateTotp(user) {
+    let hashedUsername;
+    let url;
+    return getSHA256(user.username)
+      .then((rHashedUsername) => {
+        hashedUsername = bytesToHexString(rHashedUsername);
+        url = `/deactivateTotp/${hashedUsername}`;
+        return user.sign(url);
+      }).then((signature) =>
+        doPUT(`${this.db}${url}?sig=${bytesToHexString(signature)}`, {}));
+  }
+
+  activateShortLogin(shortpass, user) {
     let hashedUsername;
     const json = JSON.stringify({
       shortpass,
@@ -322,7 +334,7 @@ class API {
         hashedUsername = bytesToHexString(rHashedUsername);
         return user.sign(json);
       }).then((signature) =>
-        doPUT(`${this.db}/activateShortpass/${hashedUsername}`, {
+        doPUT(`${this.db}/activateShortLogin/${hashedUsername}`, {
           json,
           sig: bytesToHexString(signature),
         }));

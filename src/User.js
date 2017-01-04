@@ -19,6 +19,8 @@ import {
   verify,
 } from './lib/crypto';
 
+import Secretin from './Secretin';
+
 import {
   bytesToHexString,
   bytesToASCIIString,
@@ -272,7 +274,7 @@ class User {
     return Promise.all(decryptMetadatasPromises);
   }
 
-  activateShortpass(shortpass, deviceName) {
+  activateShortLogin(shortpass, deviceName) {
     let protectKey;
     const toSend = {};
     return generateWrappingKey()

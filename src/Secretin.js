@@ -130,10 +130,10 @@ class Secretin {
   }
 
   addFolder(title) {
-    return this.addSecret(title, {}, true);
+    return this.addSecret(title, {}, 'folder');
   }
 
-  addSecret(clearTitle, content, isFolder) {
+  addSecret(clearTitle, content, type = 'secret') {
     let hashedTitle;
     const now = new Date();
     const metadatas = {
@@ -141,12 +141,8 @@ class Secretin {
       lastModifiedBy: this.currentUser.username,
       users: {},
       title: clearTitle,
-      type: 'secret',
+      type,
     };
-    if (isFolder) {
-      metadatas.type = 'folder';
-    }
-
 
     return new Promise((resolve, reject) => {
       metadatas.users[this.currentUser.username] = {
@@ -208,8 +204,17 @@ class Secretin {
       });
   }
 
+  editOption(name, value) {
+    this.currentUser.options[name] = value;
+    return this.resetOptions();
+  }
+
   editOptions(options) {
     this.currentUser.options = options;
+    return this.resetOptions();
+  }
+
+  resetOptions() {
     return this.currentUser.exportOptions()
       .then((encryptedOptions) => this.api.editUser(this.currentUser, encryptedOptions, 'options'))
       .catch((err) => {
@@ -687,6 +692,14 @@ class Secretin {
       });
   }
 
+  deactivateTotp() {
+    return this.api.deactivateTotp(this.currentUser)
+      .catch((err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      });
+  }
+
   activateTotp(seed) {
     const protectedSeed = xorSeed(hexStringToUint8Array(this.currentUser.hash), seed.raw);
     return this.api.activateTotp(bytesToHexString(protectedSeed), this.currentUser)
@@ -696,14 +709,26 @@ class Secretin {
       });
   }
 
-  activateShortpass(shortpass, deviceName) {
+  activateShortLogin(shortpass, deviceName) {
     if (localStorageAvailable()) {
-      return this.currentUser.activateShortpass(shortpass, deviceName)
-        .then((toSend) => this.api.activateShortpass(toSend, this.currentUser))
+      return this.currentUser.activateShortLogin(shortpass, deviceName)
+        .then((toSend) => this.api.activateShortLogin(toSend, this.currentUser))
         .catch((err) => {
           const wrapper = new WrappingError(err);
           throw wrapper.error;
         });
+    }
+    return Promise.reject(new LocalStorageUnavailableError());
+  }
+
+  deactivateShortLogin() {
+    if (localStorageAvailable()) {
+      localStorage.removeItem(`${Secretin.prefix}username`);
+      localStorage.removeItem(`${Secretin.prefix}deviceName`);
+      localStorage.removeItem(`${Secretin.prefix}privateKey`);
+      localStorage.removeItem(`${Secretin.prefix}privateKeyIv`);
+      localStorage.removeItem(`${Secretin.prefix}iv`);
+      return Promise.resolve();
     }
     return Promise.reject(new LocalStorageUnavailableError());
   }
@@ -739,8 +764,15 @@ class Secretin {
       });
   }
 
-  canITryShortpass() {
+  canITryShortLogin() {
     return (localStorageAvailable() && localStorage.getItem(`${Secretin.prefix}username`) !== null);
+  }
+
+  getSavedUsername() {
+    if (this.canITryShortLogin()) {
+      return localStorage.getItem(`${Secretin.prefix}username`);
+    }
+    return null;
   }
 }
 
