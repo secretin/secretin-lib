@@ -237,7 +237,8 @@ class Secretin {
               hashedSecretTitle,
               friend,
               folderMetadatas.users[friend.username].rights,
-              []
+              [],
+              true
             ));
         })()
       );
@@ -351,7 +352,8 @@ class Secretin {
       });
   }
 
-  getSharedSecretObjects(hashedTitle, friend, rights, fullSharedSecretObjects, hashedFolder) {
+  getSharedSecretObjects(hashedTitle, friend, rights, fullSharedSecretObjects, addUsername = false,
+    hashedFolder) {
     let isFolder = Promise.resolve();
     const sharedSecretObjectPromises = [];
     const secretMetadatas = this.currentUser.metadatas[hashedTitle];
@@ -370,6 +372,7 @@ class Secretin {
                 friend,
                 rights,
                 fullSharedSecretObjects,
+                addUsername,
                 hashedTitle
               ));
             });
@@ -387,7 +390,9 @@ class Secretin {
           const newSecretObject = secretObject;
           newSecretObject.rights = rights;
           newSecretObject.inFolder = hashedFolder;
-          newSecretObject.username = friend.username;
+          if (addUsername) {
+            newSecretObject.username = friend.username;
+          }
           fullSharedSecretObjects.push(newSecretObject);
           return fullSharedSecretObjects;
         })

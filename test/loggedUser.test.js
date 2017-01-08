@@ -822,7 +822,7 @@ describe('Logged user', () => {
 
   it('Can\'t unshare to unknown user', () =>
     this.secretin.unshareSecret(secretId, unknownUser)
-      .should.be.rejectedWith(Secretin.Errors.FriendNotFoundError)
+      .should.be.rejectedWith(Secretin.Errors.NotSharedWithUserError)
   );
 
   it('Can move secret from folder to subfolder', () => {

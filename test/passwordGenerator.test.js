@@ -1,6 +1,6 @@
-const pw = Secretin.Utils.PasswordGenerator;
-
 describe('Password generation', () => {
+  const pw = Secretin.Utils.PasswordGenerator;
+
   describe('hasNumber', () => {
     it('Should return true if string has number in it', () => {
       pw.hasNumber('aa1aa').should.equal(true);
