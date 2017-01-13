@@ -72,7 +72,7 @@ export const getRandomPassword = (options) => {
 
 export const generatePassword = (customOptions) => {
   const defaults = {
-    length: 15,
+    length: 20,
     readable: false,
     allowSimilarChars: false,
     strictRules: true,
