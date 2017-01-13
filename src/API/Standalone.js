@@ -199,10 +199,10 @@ class API {
                       this.db.secrets[hashedTitle].users.splice(id, 1);
                       nb += 1;
                     } else {
-                      throw 'You didn\'t share this secret with this user';
+                      throw 'Secret not shared with this user';
                     }
                   } else {
-                    throw 'Friend not found';
+                    throw 'Secret not shared with this user';
                   }
                 } else {
                   yourself = 1;

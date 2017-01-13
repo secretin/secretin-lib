@@ -145,7 +145,7 @@ export class CantGenerateNewKeyError extends Error {
 export class NotSharedWithUserError extends Error {
   constructor() {
     super();
-    this.message = 'You didn\'t share this secret with this user';
+    this.message = 'Secret not shared with this user';
   }
 }
 
@@ -198,7 +198,7 @@ export class WrappingError {
       this.error = new SecretNotFoundError();
     } else if (error === 'You can\'t generate new key for this secret') {
       this.error = new CantGenerateNewKeyError();
-    } else if (error === 'You didn\'t share this secret with this user') {
+    } else if (error === 'Secret not shared with this user') {
       this.error = new NotSharedWithUserError();
     } else if (error === 'Friend not found') {
       this.error = new FriendNotFoundError();

@@ -1,7 +1,7 @@
 var Secretin = (function () {
 'use strict';
 
-var version = "1.0.1";
+var version = "1.0.3";
 
 var asyncGenerator = function () {
   function AwaitValue(value) {
@@ -231,7 +231,7 @@ var getRandomPassword = function getRandomPassword(options) {
 
 var generatePassword = function generatePassword(customOptions) {
   var defaults = {
-    length: 15,
+    length: 20,
     readable: false,
     allowSimilarChars: false,
     strictRules: true,
@@ -981,7 +981,7 @@ var NotSharedWithUserError = function (_Error20) {
 
     var _this20 = possibleConstructorReturn(this, _Error20.call(this));
 
-    _this20.message = 'You didn\'t share this secret with this user';
+    _this20.message = 'Secret not shared with this user';
     return _this20;
   }
 
@@ -1046,7 +1046,7 @@ var WrappingError = function WrappingError(error) {
     this.error = new SecretNotFoundError();
   } else if (error === 'You can\'t generate new key for this secret') {
     this.error = new CantGenerateNewKeyError();
-  } else if (error === 'You didn\'t share this secret with this user') {
+  } else if (error === 'Secret not shared with this user') {
     this.error = new NotSharedWithUserError();
   } else if (error === 'Friend not found') {
     this.error = new FriendNotFoundError();
@@ -1277,10 +1277,10 @@ var API = function () {
                     _this6.db.secrets[hashedTitle].users.splice(id, 1);
                     nb += 1;
                   } else {
-                    throw 'You didn\'t share this secret with this user';
+                    throw 'Secret not shared with this user';
                   }
                 } else {
-                  throw 'Friend not found';
+                  throw 'Secret not shared with this user';
                 }
               } else {
                 yourself = 1;
@@ -2051,7 +2051,7 @@ var Secretin = function () {
         return _this8.api.getPublicKey(friend.username).then(function (publicKey) {
           return friend.importPublicKey(publicKey);
         }).then(function () {
-          return _this8.getSharedSecretObjects(hashedSecretTitle, friend, folderMetadatas.users[friend.username].rights, []);
+          return _this8.getSharedSecretObjects(hashedSecretTitle, friend, folderMetadatas.users[friend.username].rights, [], true);
         });
       }());
     });
@@ -2156,8 +2156,11 @@ var Secretin = function () {
     });
   };
 
-  Secretin.prototype.getSharedSecretObjects = function getSharedSecretObjects(hashedTitle, friend, rights, fullSharedSecretObjects, hashedFolder) {
+  Secretin.prototype.getSharedSecretObjects = function getSharedSecretObjects(hashedTitle, friend, rights, fullSharedSecretObjects) {
     var _this9 = this;
+
+    var addUsername = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : false;
+    var hashedFolder = arguments[5];
 
     var isFolder = Promise.resolve();
     var sharedSecretObjectPromises = [];
@@ -2172,7 +2175,7 @@ var Secretin = function () {
           return _this9.currentUser.decryptSecret(hashedTitle, encryptedSecret);
         }).then(function (secrets) {
           Object.keys(JSON.parse(secrets)).forEach(function (hash) {
-            sharedSecretObjectPromises.push(_this9.getSharedSecretObjects(hash, friend, rights, fullSharedSecretObjects, hashedTitle));
+            sharedSecretObjectPromises.push(_this9.getSharedSecretObjects(hash, friend, rights, fullSharedSecretObjects, addUsername, hashedTitle));
           });
           return Promise.all(sharedSecretObjectPromises);
         });
@@ -2184,7 +2187,9 @@ var Secretin = function () {
         var newSecretObject = secretObject;
         newSecretObject.rights = rights;
         newSecretObject.inFolder = hashedFolder;
-        newSecretObject.username = friend.username;
+        if (addUsername) {
+          newSecretObject.username = friend.username;
+        }
         fullSharedSecretObjects.push(newSecretObject);
         return fullSharedSecretObjects;
       }).catch(function (err) {
