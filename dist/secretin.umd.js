@@ -4,7 +4,7 @@
 	(global.Secretin = factory());
 }(this, (function () { 'use strict';
 
-var version = "1.0.2";
+var version = "1.0.3";
 
 var asyncGenerator = function () {
   function AwaitValue(value) {
@@ -234,7 +234,7 @@ var getRandomPassword = function getRandomPassword(options) {
 
 var generatePassword = function generatePassword(customOptions) {
   var defaults = {
-    length: 15,
+    length: 20,
     readable: false,
     allowSimilarChars: false,
     strictRules: true,
