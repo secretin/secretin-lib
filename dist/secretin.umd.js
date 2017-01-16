@@ -377,7 +377,7 @@ function xorSeed(byteArray1, byteArray2) {
     for (i = 0; i < 32; i++) {
       buf[i] = byteArray1[i] ^ byteArray2[i];
     }
-    return buf;
+    return bytesToHexString(buf);
   }
   throw 'Utils.xorSeed expect 32 bytes Uint8Arrays';
 }
@@ -401,7 +401,9 @@ var Utils = {
 function getSHA256(str) {
   var algorithm = 'SHA-256';
   var data = asciiToUint8Array(str);
-  return crypto.subtle.digest(algorithm, data);
+  return crypto.subtle.digest(algorithm, data).then(function (hashedStr) {
+    return bytesToHexString(hashedStr);
+  });
 }
 
 function genRSAOAEP() {
@@ -448,10 +450,10 @@ function encryptAESGCM256(secret, key) {
       };
       var data = asciiToUint8Array(JSON.stringify(secret));
       result.key = newKey;
-      result.iv = iv;
+      result.iv = bytesToHexString(iv);
       return crypto.subtle.encrypt(algorithm, newKey, data);
     }).then(function (encryptedSecret) {
-      result.secret = encryptedSecret;
+      result.secret = bytesToHexString(encryptedSecret);
       return result;
     });
   }
@@ -465,9 +467,9 @@ function encryptAESGCM256(secret, key) {
     tagLength: 128
   };
   var data = asciiToUint8Array(JSON.stringify(secret));
-  result.iv = iv;
+  result.iv = bytesToHexString(iv);
   return crypto.subtle.encrypt(algorithm, key, data).then(function (encryptedSecret) {
-    result.secret = encryptedSecret;
+    result.secret = bytesToHexString(encryptedSecret);
     return result;
   });
 }
@@ -479,7 +481,9 @@ function decryptAESGCM256(secretObject, key) {
     tagLength: 128
   };
   var data = hexStringToUint8Array(secretObject.secret);
-  return crypto.subtle.decrypt(algorithm, key, data);
+  return crypto.subtle.decrypt(algorithm, key, data).then(function (decryptedSecret) {
+    return JSON.parse(bytesToASCIIString(decryptedSecret));
+  });
 }
 
 function encryptRSAOAEP(secret, publicKey) {
@@ -487,8 +491,10 @@ function encryptRSAOAEP(secret, publicKey) {
     name: 'RSA-OAEP',
     hash: { name: 'SHA-256' }
   };
-  var data = asciiToUint8Array(secret);
-  return crypto.subtle.encrypt(algorithm, publicKey, data);
+  var data = asciiToUint8Array(JSON.stringify(secret));
+  return crypto.subtle.encrypt(algorithm, publicKey, data).then(function (encryptedSecret) {
+    return bytesToHexString(encryptedSecret);
+  });
 }
 
 function decryptRSAOAEP(secret, privateKey) {
@@ -497,7 +503,9 @@ function decryptRSAOAEP(secret, privateKey) {
     hash: { name: 'SHA-256' }
   };
   var data = hexStringToUint8Array(secret);
-  return crypto.subtle.decrypt(algorithm, privateKey, data);
+  return crypto.subtle.decrypt(algorithm, privateKey, data).then(function (decryptedSecret) {
+    return JSON.parse(bytesToASCIIString(decryptedSecret));
+  });
 }
 
 function wrapRSAOAEP(key, wrappingPublicKey) {
@@ -506,14 +514,18 @@ function wrapRSAOAEP(key, wrappingPublicKey) {
     name: 'RSA-OAEP',
     hash: { name: 'SHA-256' }
   };
-  return crypto.subtle.wrapKey(format, key, wrappingPublicKey, wrapAlgorithm);
+  return crypto.subtle.wrapKey(format, key, wrappingPublicKey, wrapAlgorithm).then(function (wrappedKey) {
+    return bytesToHexString(wrappedKey);
+  });
 }
 
 function _sign(datas, key) {
   var signAlgorithm = {
     name: 'RSA-PSS',
     saltLength: 32 };
-  return crypto.subtle.sign(signAlgorithm, key, asciiToUint8Array(datas));
+  return crypto.subtle.sign(signAlgorithm, key, asciiToUint8Array(datas)).then(function (signature) {
+    return bytesToHexString(signature);
+  });
 }
 
 function _verify(datas, signature, key) {
@@ -599,7 +611,7 @@ function derivePassword(password, parameters) {
       }
     }
 
-    result.salt = saltBuf;
+    result.salt = bytesToHexString(saltBuf);
     result.iterations = iterations;
 
     var algorithm = {
@@ -624,7 +636,7 @@ function derivePassword(password, parameters) {
   }).then(function (rawKey) {
     return crypto.subtle.digest('SHA-256', rawKey);
   }).then(function (hashedKey) {
-    result.hash = hashedKey;
+    result.hash = bytesToHexString(hashedKey);
     return result;
   });
 }
@@ -638,9 +650,9 @@ function exportKey(wrappingKey, key) {
     name: 'AES-CBC',
     iv: iv
   };
-  result.iv = iv;
+  result.iv = bytesToHexString(iv);
   return crypto.subtle.wrapKey(format, key, wrappingKey, wrapAlgorithm).then(function (wrappedKey) {
-    result.key = wrappedKey;
+    result.key = bytesToHexString(wrappedKey);
     return result;
   });
 }
@@ -1110,17 +1122,17 @@ var API = function () {
     return getSHA256(username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       return new Promise(function (resolve, reject) {
-        if (typeof _this.db.users[bytesToHexString(hashedUsername)] === 'undefined') {
+        if (typeof _this.db.users[hashedUsername] === 'undefined') {
           resolve(getSHA256(pass.hash));
         } else {
           reject('Username already exists');
         }
       });
     }).then(function (hashedHash) {
-      _this.db.users[bytesToHexString(hashedUsername)] = {
+      _this.db.users[hashedUsername] = {
         pass: {
           salt: pass.salt,
-          hash: bytesToHexString(hashedHash),
+          hash: hashedHash,
           iterations: pass.iterations
         },
         privateKey: privateKey,
@@ -1162,7 +1174,7 @@ var API = function () {
 
     var hashedUsername = void 0;
     return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+      hashedUsername = rHashedUsername;
       if (typeof _this3.db.users[hashedUsername] !== 'undefined') {
         if (typeof _this3.db.secrets[hashedTitle] === 'undefined') {
           return Promise.reject('Secret not found');
@@ -1181,26 +1193,12 @@ var API = function () {
     });
   };
 
-  API.prototype.getNewChallenge = function getNewChallenge(user) {
-    return getSHA256(user.username).then(function () {
-      var rawChallenge = new Uint8Array(32);
-      crypto.getRandomValues(rawChallenge);
-      var challenge = bytesToASCIIString(rawChallenge);
-      return encryptRSAOAEP(challenge, user.publicKey);
-    }).then(function (encryptedChallenge) {
-      return {
-        time: Date.now().toString(),
-        value: bytesToHexString(encryptedChallenge)
-      };
-    });
-  };
-
   API.prototype.editSecret = function editSecret(user, secretObject, hashedTitle) {
     var _this4 = this;
 
     var hashedUsername = void 0;
     return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+      hashedUsername = rHashedUsername;
       if (typeof _this4.db.users[hashedUsername] !== 'undefined') {
         if (typeof _this4.db.secrets[hashedTitle] !== 'undefined') {
           if (typeof _this4.db.users[hashedUsername].keys[hashedTitle].rights === 'undefined' || _this4.db.users[hashedUsername].keys[hashedTitle].rights <= 0) {
@@ -1223,7 +1221,7 @@ var API = function () {
 
     var hashedUsername = void 0;
     return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+      hashedUsername = rHashedUsername;
       if (typeof _this5.db.users[hashedUsername] !== 'undefined') {
         if (typeof _this5.db.secrets[hashedTitle] !== 'undefined') {
           if (typeof _this5.db.users[hashedUsername].keys[hashedTitle].rights === 'undefined' || _this5.db.users[hashedUsername].keys[hashedTitle].rights <= 1) {
@@ -1254,7 +1252,7 @@ var API = function () {
     var hashedUsername = void 0;
     var hashedFriendUsernames = [];
     return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+      hashedUsername = rHashedUsername;
       var hashedFriendUseramePromises = [];
       friendNames.forEach(function (username) {
         hashedFriendUseramePromises.push(getSHA256(username));
@@ -1262,7 +1260,7 @@ var API = function () {
       return Promise.all(hashedFriendUseramePromises);
     }).then(function (rHashedFriendUserames) {
       rHashedFriendUserames.forEach(function (hashedFriendUserame) {
-        hashedFriendUsernames.push(bytesToHexString(hashedFriendUserame));
+        hashedFriendUsernames.push(hashedFriendUserame);
       });
       if (typeof _this6.db.users[hashedUsername] !== 'undefined') {
         if (typeof _this6.db.secrets[hashedTitle] !== 'undefined') {
@@ -1310,7 +1308,7 @@ var API = function () {
 
     var hashedUsername = void 0;
     return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+      hashedUsername = rHashedUsername;
       var dbUser = _this7.db.users[hashedUsername];
       if (typeof dbUser !== 'undefined') {
         var nb = 0;
@@ -1362,7 +1360,7 @@ var API = function () {
       isHashed = isHashed.then(function () {
         return getSHA256(username);
       }).then(function (rHashedUsername) {
-        hashedUsername = bytesToHexString(rHashedUsername);
+        hashedUsername = rHashedUsername;
       });
     }
 
@@ -1373,7 +1371,7 @@ var API = function () {
       user = JSON.parse(JSON.stringify(_this8.db.users[hashedUsername]));
       return getSHA256(hash);
     }).then(function (hashedHash) {
-      if (bytesToHexString(hashedHash) === user.pass.hash) {
+      if (hashedHash === user.pass.hash) {
         var _ret = function () {
           var metadatas = {};
           var hashedTitles = Object.keys(user.keys);
@@ -1434,7 +1432,7 @@ var API = function () {
 
     var hashedUsername = void 0;
     return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+      hashedUsername = rHashedUsername;
       return new Promise(function (resolve, reject) {
         if (typeof _this9.db.users[hashedUsername] === 'undefined') {
           reject('User not found');
@@ -1502,7 +1500,7 @@ var API = function () {
 
     var hashedUsername = void 0;
     return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+      hashedUsername = rHashedUsername;
       return new Promise(function (resolve, reject) {
         if (typeof _this13.db.users[hashedUsername] !== 'undefined') {
           if (type === 'password') {
@@ -1523,7 +1521,7 @@ var API = function () {
 
     return getSHA256(pass.hash).then(function (hashedHash) {
       var newPass = pass;
-      newPass.hash = bytesToHexString(hashedHash);
+      newPass.hash = hashedHash;
       _this14.db.users[hashedUsername].privateKey = privateKey;
       _this14.db.users[hashedUsername].pass = newPass;
     });
@@ -1604,16 +1602,16 @@ var User = function () {
 
     var pass = {};
     return derivePassword(password).then(function (dKey) {
-      pass.salt = bytesToHexString(dKey.salt);
-      _this3.hash = bytesToHexString(dKey.hash);
+      pass.salt = dKey.salt;
+      _this3.hash = dKey.hash;
       pass.hash = _this3.hash;
       pass.iterations = dKey.iterations;
       return exportKey(dKey.key, _this3.privateKey);
     }).then(function (keyObject) {
       return {
         privateKey: {
-          privateKey: bytesToHexString(keyObject.key),
-          iv: bytesToHexString(keyObject.iv)
+          privateKey: keyObject.key,
+          iv: keyObject.iv
         },
         pass: pass
       };
@@ -1635,11 +1633,11 @@ var User = function () {
     var _this5 = this;
 
     var result = {};
-    return encryptRSAOAEP(JSON.stringify(this.options), this.publicKey).then(function (encryptedOptions) {
-      result.options = bytesToHexString(encryptedOptions);
+    return encryptRSAOAEP(this.options, this.publicKey).then(function (encryptedOptions) {
+      result.options = encryptedOptions;
       return _this5.sign(result.options);
     }).then(function (signature) {
-      result.signature = bytesToHexString(signature);
+      result.signature = signature;
       return result;
     });
   };
@@ -1659,7 +1657,7 @@ var User = function () {
       return null;
     }).then(function (options) {
       if (options) {
-        _this6.options = JSON.parse(bytesToASCIIString(options));
+        _this6.options = options;
       } else {
         _this6.options = User.defaultOptions;
       }
@@ -1676,7 +1674,7 @@ var User = function () {
       result.wrappedKey = friendWrappedKey;
       return getSHA256(friend.username);
     }).then(function (hashedUsername) {
-      result.friendName = bytesToHexString(hashedUsername);
+      result.friendName = hashedUsername;
       return result;
     });
   };
@@ -1712,7 +1710,7 @@ var User = function () {
     var result = {};
     var newMetadas = metadatas;
     return getSHA256(saltedTitle).then(function (hashedTitle) {
-      result.hashedTitle = bytesToHexString(hashedTitle);
+      result.hashedTitle = hashedTitle;
       newMetadas.id = result.hashedTitle;
       return _this9.encryptSecret(newMetadas, secret);
     }).then(function (secretObject) {
@@ -1733,16 +1731,16 @@ var User = function () {
 
     var result = {};
     return encryptAESGCM256(secret, key).then(function (secretObject) {
-      result.secret = bytesToHexString(secretObject.secret);
-      result.iv = bytesToHexString(secretObject.iv);
+      result.secret = secretObject.secret;
+      result.iv = secretObject.iv;
       result.key = secretObject.key;
       return encryptAESGCM256(metadatas, secretObject.key);
     }).then(function (secretObject) {
-      result.metadatas = bytesToHexString(secretObject.secret);
-      result.iv_meta = bytesToHexString(secretObject.iv);
+      result.metadatas = secretObject.secret;
+      result.iv_meta = secretObject.iv;
       return getSHA256(_this10.username);
     }).then(function (hashedUsername) {
-      result.hashedUsername = bytesToHexString(hashedUsername);
+      result.hashedUsername = hashedUsername;
       return result;
     });
   };
@@ -1754,8 +1752,6 @@ var User = function () {
     var wrappedKey = this.keys[hashedTitle].key;
     return this.unwrapKey(wrappedKey).then(function (key) {
       return decryptAESGCM256(secret, key);
-    }).then(function (decryptedSecret) {
-      return bytesToASCIIString(decryptedSecret);
     });
   };
 
@@ -1764,9 +1760,7 @@ var User = function () {
   };
 
   User.prototype.wrapKey = function wrapKey(key, publicKey) {
-    return wrapRSAOAEP(key, publicKey).then(function (wrappedKey) {
-      return bytesToHexString(wrappedKey);
-    });
+    return wrapRSAOAEP(key, publicKey);
   };
 
   User.prototype.decryptAllMetadatas = function decryptAllMetadatas(allMetadatas) {
@@ -1778,7 +1772,7 @@ var User = function () {
     this.metadatas = {};
     hashedTitles.forEach(function (hashedTitle) {
       decryptMetadatasPromises.push(_this11.decryptSecret(hashedTitle, allMetadatas[hashedTitle]).then(function (metadatas) {
-        _this11.metadatas[hashedTitle] = JSON.parse(metadatas);
+        _this11.metadatas[hashedTitle] = metadatas;
       }));
     });
 
@@ -1794,21 +1788,21 @@ var User = function () {
       protectKey = key;
       return exportKey(protectKey, _this12.privateKey);
     }).then(function (object) {
-      localStorage.setItem(Secretin.prefix + 'privateKey', bytesToHexString(object.key));
-      localStorage.setItem(Secretin.prefix + 'privateKeyIv', bytesToHexString(object.iv));
+      localStorage.setItem(Secretin.prefix + 'privateKey', object.key);
+      localStorage.setItem(Secretin.prefix + 'privateKeyIv', object.iv);
       return derivePassword(shortpass);
     }).then(function (derived) {
-      toSend.salt = bytesToHexString(derived.salt);
+      toSend.salt = derived.salt;
       toSend.iterations = derived.iterations;
-      toSend.hash = bytesToHexString(derived.hash);
+      toSend.hash = derived.hash;
       return exportKey(derived.key, protectKey);
     }).then(function (keyObject) {
-      toSend.protectKey = bytesToHexString(keyObject.key);
-      localStorage.setItem(Secretin.prefix + 'iv', bytesToHexString(keyObject.iv));
+      toSend.protectKey = keyObject.key;
+      localStorage.setItem(Secretin.prefix + 'iv', keyObject.iv);
       localStorage.setItem(Secretin.prefix + 'username', _this12.username);
       return getSHA256(deviceName);
     }).then(function (deviceId) {
-      toSend.deviceId = bytesToHexString(deviceId);
+      toSend.deviceId = deviceId;
       localStorage.setItem(Secretin.prefix + 'deviceName', deviceName);
       return toSend;
     });
@@ -1911,7 +1905,7 @@ var Secretin = function () {
       }
       return derivePassword(password, parameters);
     }).then(function (dKey) {
-      hash = bytesToHexString(dKey.hash);
+      hash = dKey.hash;
       key = dKey.key;
       return _this2.api.getUser(username, hash, otp);
     }).then(function (user) {
@@ -1947,14 +1941,14 @@ var Secretin = function () {
     });
   };
 
-  Secretin.prototype.addFolder = function addFolder(title) {
-    return this.addSecret(title, {}, 'folder');
+  Secretin.prototype.addFolder = function addFolder(title, inFolderId) {
+    return this.addSecret(title, {}, inFolderId, 'folder');
   };
 
-  Secretin.prototype.addSecret = function addSecret(clearTitle, content) {
+  Secretin.prototype.addSecret = function addSecret(clearTitle, content, inFolderId) {
     var _this4 = this;
 
-    var type = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'secret';
+    var type = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 'secret';
 
     var hashedTitle = void 0;
     var now = new Date();
@@ -1970,10 +1964,11 @@ var Secretin = function () {
       metadatas.users[_this4.currentUser.username] = {
         username: _this4.currentUser.username,
         rights: 2,
-        folders: {
-          ROOT: true
-        }
+        folders: {}
       };
+      if (typeof inFolderId === 'undefined') {
+        metadatas.users[_this4.currentUser.username].folders.ROOT = true;
+      }
       if (typeof _this4.currentUser.username === 'string') {
         _this4.currentUser.createSecret(metadatas, content).then(function (secretObject) {
           hashedTitle = secretObject.hashedTitle;
@@ -1984,8 +1979,8 @@ var Secretin = function () {
           _this4.currentUser.metadatas[secretObject.hashedTitle] = metadatas;
           return _this4.api.addSecret(_this4.currentUser, secretObject);
         }).then(function () {
-          if (typeof _this4.currentUser.currentFolder !== 'undefined') {
-            resolve(_this4.addSecretToFolder(hashedTitle, _this4.currentUser.currentFolder));
+          if (typeof inFolderId !== 'undefined') {
+            resolve(_this4.addSecretToFolder(hashedTitle, inFolderId));
           } else {
             resolve(hashedTitle);
           }
@@ -2134,7 +2129,7 @@ var Secretin = function () {
     }).then(function (encryptedSecret) {
       return _this8.currentUser.decryptSecret(hashedFolder, encryptedSecret);
     }).then(function (secret) {
-      var folders = JSON.parse(secret);
+      var folders = secret;
       folders[hashedSecretTitle] = 1;
       return _this8.editSecret(hashedFolder, folders);
     }).then(function () {
@@ -2144,7 +2139,7 @@ var Secretin = function () {
           parentCleaningPromises.push(_this8.api.getSecret(parentFolder, _this8.currentUser).then(function (encryptedSecret) {
             return _this8.currentUser.decryptSecret(parentFolder, encryptedSecret);
           }).then(function (secret) {
-            var folders = JSON.parse(secret);
+            var folders = secret;
             delete folders[hashedSecretTitle];
             return _this8.editSecret(parentFolder, folders);
           }));
@@ -2177,7 +2172,7 @@ var Secretin = function () {
         }).then(function (encryptedSecret) {
           return _this9.currentUser.decryptSecret(hashedTitle, encryptedSecret);
         }).then(function (secrets) {
-          Object.keys(JSON.parse(secrets)).forEach(function (hash) {
+          Object.keys(secrets).forEach(function (hash) {
             sharedSecretObjectPromises.push(_this9.getSharedSecretObjects(hash, friend, rights, fullSharedSecretObjects, addUsername, hashedTitle));
           });
           return Promise.all(sharedSecretObjectPromises);
@@ -2217,33 +2212,8 @@ var Secretin = function () {
     });
   };
 
-  // this one should disappear
-
-
-  Secretin.prototype.shareFolder = function shareFolder(hashedTitle, folderName) {
-    var _this11 = this;
-
-    return new Promise(function (resolve, reject) {
-      var hashedFolder = false;
-      Object.keys(_this11.currentUser.metadatas).forEach(function (hash) {
-        var secretMetadatas = _this11.currentUser.metadatas[hash];
-        if (secretMetadatas.type === 'folder' && secretMetadatas.title === folderName) {
-          hashedFolder = hash;
-        }
-      });
-      if (hashedFolder === false) {
-        reject(new FolderNotFoundError());
-      } else if (hashedTitle === hashedFolder) {
-        reject(new FolderInItselfError());
-      } else {
-        resolve(_this11.addSecretToFolder(hashedTitle, hashedFolder));
-      }
-    });
-  };
-  //
-
   Secretin.prototype.shareSecret = function shareSecret(hashedTitle, friendName, rights) {
-    var _this12 = this;
+    var _this11 = this;
 
     var sharedSecretObjects = void 0;
     var friend = new User(friendName);
@@ -2252,32 +2222,32 @@ var Secretin = function () {
     }, function () {
       return Promise.reject('Friend not found');
     }).then(function () {
-      return _this12.getSharedSecretObjects(hashedTitle, friend, rights, []);
+      return _this11.getSharedSecretObjects(hashedTitle, friend, rights, []);
     }).then(function (rSharedSecretObjects) {
       sharedSecretObjects = rSharedSecretObjects;
-      return _this12.api.shareSecret(_this12.currentUser, sharedSecretObjects);
+      return _this11.api.shareSecret(_this11.currentUser, sharedSecretObjects);
     }).then(function () {
       var resetMetaPromises = [];
       sharedSecretObjects.forEach(function (sharedSecretObject) {
-        var secretMetadatas = _this12.currentUser.metadatas[sharedSecretObject.hashedTitle];
+        var secretMetadatas = _this11.currentUser.metadatas[sharedSecretObject.hashedTitle];
         secretMetadatas.users[friend.username] = {
           username: friend.username,
           rights: rights,
           folders: {}
         };
         if (typeof sharedSecretObject.inFolder !== 'undefined') {
-          var parentMetadatas = _this12.currentUser.metadatas[sharedSecretObject.inFolder];
+          var parentMetadatas = _this11.currentUser.metadatas[sharedSecretObject.inFolder];
           secretMetadatas.users[friend.username].folders[sharedSecretObject.inFolder] = {
             name: parentMetadatas.title
           };
         } else {
           secretMetadatas.users[friend.username].folders.ROOT = true;
         }
-        resetMetaPromises.push(_this12.resetMetadatas(sharedSecretObject.hashedTitle));
+        resetMetaPromises.push(_this11.resetMetadatas(sharedSecretObject.hashedTitle));
       });
       return Promise.all(resetMetaPromises);
     }).then(function () {
-      return _this12.currentUser.metadatas[hashedTitle];
+      return _this11.currentUser.metadatas[hashedTitle];
     }).catch(function (err) {
       var wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -2285,7 +2255,7 @@ var Secretin = function () {
   };
 
   Secretin.prototype.unshareSecret = function unshareSecret(hashedTitle, friendName) {
-    var _this13 = this;
+    var _this12 = this;
 
     var isFolder = Promise.resolve();
     var secretMetadatas = this.currentUser.metadatas[hashedTitle];
@@ -2294,23 +2264,23 @@ var Secretin = function () {
     }
     if (secretMetadatas.type === 'folder') {
       isFolder = isFolder.then(function () {
-        return _this13.unshareFolderSecrets(hashedTitle, friendName);
+        return _this12.unshareFolderSecrets(hashedTitle, friendName);
       });
     }
 
     return isFolder.then(function () {
-      return _this13.api.unshareSecret(_this13.currentUser, [friendName], hashedTitle);
+      return _this12.api.unshareSecret(_this12.currentUser, [friendName], hashedTitle);
     }).then(function (result) {
       if (result !== 'Secret unshared') {
         var wrapper = new WrappingError(result);
         throw wrapper.error;
       }
       delete secretMetadatas.users[friendName];
-      return _this13.resetMetadatas(hashedTitle);
+      return _this12.resetMetadatas(hashedTitle);
     }).then(function () {
-      return _this13.renewKey(hashedTitle);
+      return _this12.renewKey(hashedTitle);
     }).then(function () {
-      return _this13.currentUser.metadatas[hashedTitle];
+      return _this12.currentUser.metadatas[hashedTitle];
     }).catch(function (err) {
       var wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -2318,14 +2288,14 @@ var Secretin = function () {
   };
 
   Secretin.prototype.unshareFolderSecrets = function unshareFolderSecrets(hashedFolder, friendName) {
-    var _this14 = this;
+    var _this13 = this;
 
     return this.api.getSecret(hashedFolder, this.currentUser).then(function (encryptedSecret) {
-      return _this14.currentUser.decryptSecret(hashedFolder, encryptedSecret);
+      return _this13.currentUser.decryptSecret(hashedFolder, encryptedSecret);
     }).then(function (secrets) {
-      return Object.keys(JSON.parse(secrets)).reduce(function (promise, hashedTitle) {
+      return Object.keys(secrets).reduce(function (promise, hashedTitle) {
         return promise.then(function () {
-          return _this14.unshareSecret(hashedTitle, friendName);
+          return _this13.unshareSecret(hashedTitle, friendName);
         });
       }, Promise.resolve());
     }).catch(function (err) {
@@ -2335,14 +2305,14 @@ var Secretin = function () {
   };
 
   Secretin.prototype.wrapKeyForFriend = function wrapKeyForFriend(hashedUsername, key) {
-    var _this15 = this;
+    var _this14 = this;
 
     var friend = void 0;
     return this.api.getPublicKey(hashedUsername, true).then(function (publicKey) {
       friend = new User(hashedUsername);
       return friend.importPublicKey(publicKey);
     }).then(function () {
-      return _this15.currentUser.wrapKey(key, friend.publicKey);
+      return _this14.currentUser.wrapKey(key, friend.publicKey);
     }).then(function (friendWrappedKey) {
       return { user: hashedUsername, key: friendWrappedKey };
     }).catch(function (err) {
@@ -2352,7 +2322,7 @@ var Secretin = function () {
   };
 
   Secretin.prototype.renewKey = function renewKey(hashedTitle) {
-    var _this16 = this;
+    var _this15 = this;
 
     var encryptedSecret = void 0;
     var secret = {};
@@ -2360,9 +2330,9 @@ var Secretin = function () {
     var wrappedKeys = void 0;
     return this.api.getSecret(hashedTitle, this.currentUser).then(function (eSecret) {
       encryptedSecret = eSecret;
-      return _this16.currentUser.decryptSecret(hashedTitle, encryptedSecret);
+      return _this15.currentUser.decryptSecret(hashedTitle, encryptedSecret);
     }).then(function (rawSecret) {
-      return _this16.currentUser.encryptSecret(_this16.currentUser.metadatas[hashedTitle], JSON.parse(rawSecret));
+      return _this15.currentUser.encryptSecret(_this15.currentUser.metadatas[hashedTitle], rawSecret);
     }).then(function (secretObject) {
       secret.secret = secretObject.secret;
       secret.iv = secretObject.iv;
@@ -2372,22 +2342,22 @@ var Secretin = function () {
       var wrappedKeysPromises = [];
       encryptedSecret.users.forEach(function (hashedUsername) {
         if (hashedCurrentUsername === hashedUsername) {
-          wrappedKeysPromises.push(_this16.currentUser.wrapKey(secretObject.key, _this16.currentUser.publicKey).then(function (wrappedKey) {
+          wrappedKeysPromises.push(_this15.currentUser.wrapKey(secretObject.key, _this15.currentUser.publicKey).then(function (wrappedKey) {
             return { user: hashedCurrentUsername, key: wrappedKey };
           }));
         } else {
-          wrappedKeysPromises.push(_this16.wrapKeyForFriend(hashedUsername, secretObject.key));
+          wrappedKeysPromises.push(_this15.wrapKeyForFriend(hashedUsername, secretObject.key));
         }
       });
 
       return Promise.all(wrappedKeysPromises);
     }).then(function (rWrappedKeys) {
       wrappedKeys = rWrappedKeys;
-      return _this16.api.newKey(_this16.currentUser, hashedTitle, secret, wrappedKeys);
+      return _this15.api.newKey(_this15.currentUser, hashedTitle, secret, wrappedKeys);
     }).then(function () {
       wrappedKeys.forEach(function (wrappedKey) {
         if (wrappedKey.user === hashedCurrentUsername) {
-          _this16.currentUser.keys[hashedTitle].key = wrappedKey.key;
+          _this15.currentUser.keys[hashedTitle].key = wrappedKey.key;
         }
       });
     }).catch(function (err) {
@@ -2397,7 +2367,7 @@ var Secretin = function () {
   };
 
   Secretin.prototype.removeSecretFromFolder = function removeSecretFromFolder(hashedTitle, hashedFolder) {
-    var _this17 = this;
+    var _this16 = this;
 
     var secretMetadatas = this.currentUser.metadatas[hashedTitle];
     var usersToDelete = [];
@@ -2410,24 +2380,24 @@ var Secretin = function () {
       usersToDelete.forEach(function (username) {
         delete secretMetadatas.users[username].folders[hashedFolder];
         if (Object.keys(secretMetadatas.users[username].folders).length === 0) {
-          if (_this17.currentUser.username === username) {
+          if (_this16.currentUser.username === username) {
             secretMetadatas.users[username].folders.ROOT = true;
           } else {
             delete secretMetadatas.users[username];
           }
         }
       });
-      return _this17.renewKey(hashedTitle);
+      return _this16.renewKey(hashedTitle);
     }).then(function () {
-      return _this17.resetMetadatas(hashedTitle);
+      return _this16.resetMetadatas(hashedTitle);
     }).then(function () {
-      return _this17.api.getSecret(hashedFolder, _this17.currentUser);
+      return _this16.api.getSecret(hashedFolder, _this16.currentUser);
     }).then(function (encryptedSecret) {
-      return _this17.currentUser.decryptSecret(hashedFolder, encryptedSecret);
+      return _this16.currentUser.decryptSecret(hashedFolder, encryptedSecret);
     }).then(function (secret) {
-      var folder = JSON.parse(secret);
+      var folder = secret;
       delete folder[hashedTitle];
-      return _this17.editSecret(hashedFolder, folder);
+      return _this16.editSecret(hashedFolder, folder);
     }).catch(function (err) {
       var wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -2435,12 +2405,12 @@ var Secretin = function () {
   };
 
   Secretin.prototype.getSecret = function getSecret(hashedTitle) {
-    var _this18 = this;
+    var _this17 = this;
 
     return this.api.getSecret(hashedTitle, this.currentUser).then(function (encryptedSecret) {
-      return _this18.currentUser.decryptSecret(hashedTitle, encryptedSecret);
+      return _this17.currentUser.decryptSecret(hashedTitle, encryptedSecret);
     }).then(function (secret) {
-      return JSON.parse(secret);
+      return secret;
     }).catch(function (err) {
       var wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -2448,7 +2418,7 @@ var Secretin = function () {
   };
 
   Secretin.prototype.deleteSecret = function deleteSecret(hashedTitle) {
-    var _this19 = this;
+    var _this18 = this;
 
     var list = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
 
@@ -2459,25 +2429,25 @@ var Secretin = function () {
     }
     if (secretMetadatas.type === 'folder' && list.indexOf(hashedTitle) === -1) {
       isFolder = isFolder.then(function () {
-        return _this19.deleteFolderSecrets(hashedTitle, list);
+        return _this18.deleteFolderSecrets(hashedTitle, list);
       });
     }
 
     return isFolder.then(function () {
-      return _this19.api.deleteSecret(_this19.currentUser, hashedTitle);
+      return _this18.api.deleteSecret(_this18.currentUser, hashedTitle);
     }).then(function () {
-      delete _this19.currentUser.metadatas[hashedTitle];
-      delete _this19.currentUser.keys[hashedTitle];
+      delete _this18.currentUser.metadatas[hashedTitle];
+      delete _this18.currentUser.keys[hashedTitle];
       var editFolderPromises = [];
-      var currentUsername = _this19.currentUser.username;
+      var currentUsername = _this18.currentUser.username;
       Object.keys(secretMetadatas.users[currentUsername].folders).forEach(function (hashedFolder) {
         if (hashedFolder !== 'ROOT') {
-          editFolderPromises.push(_this19.api.getSecret(hashedFolder, _this19.currentUser).then(function (encryptedSecret) {
-            return _this19.currentUser.decryptSecret(hashedFolder, encryptedSecret);
+          editFolderPromises.push(_this18.api.getSecret(hashedFolder, _this18.currentUser).then(function (encryptedSecret) {
+            return _this18.currentUser.decryptSecret(hashedFolder, encryptedSecret);
           }).then(function (secret) {
-            var folder = JSON.parse(secret);
+            var folder = secret;
             delete folder[hashedTitle];
-            return _this19.editSecret(hashedFolder, folder);
+            return _this18.editSecret(hashedFolder, folder);
           }));
         }
       });
@@ -2489,15 +2459,15 @@ var Secretin = function () {
   };
 
   Secretin.prototype.deleteFolderSecrets = function deleteFolderSecrets(hashedFolder, list) {
-    var _this20 = this;
+    var _this19 = this;
 
     list.push(hashedFolder);
     return this.api.getSecret(hashedFolder, this.currentUser).then(function (encryptedSecret) {
-      return _this20.currentUser.decryptSecret(hashedFolder, encryptedSecret);
+      return _this19.currentUser.decryptSecret(hashedFolder, encryptedSecret);
     }).then(function (secrets) {
-      return Object.keys(JSON.parse(secrets)).reduce(function (promise, hashedTitle) {
+      return Object.keys(secrets).reduce(function (promise, hashedTitle) {
         return promise.then(function () {
-          return _this20.deleteSecret(hashedTitle, list);
+          return _this19.deleteSecret(hashedTitle, list);
         });
       }, Promise.resolve());
     }).catch(function (err) {
@@ -2515,18 +2485,18 @@ var Secretin = function () {
 
   Secretin.prototype.activateTotp = function activateTotp(seed) {
     var protectedSeed = xorSeed(hexStringToUint8Array(this.currentUser.hash), seed.raw);
-    return this.api.activateTotp(bytesToHexString(protectedSeed), this.currentUser).catch(function (err) {
+    return this.api.activateTotp(protectedSeed, this.currentUser).catch(function (err) {
       var wrapper = new WrappingError(err);
       throw wrapper.error;
     });
   };
 
   Secretin.prototype.activateShortLogin = function activateShortLogin(shortpass, deviceName) {
-    var _this21 = this;
+    var _this20 = this;
 
     if (localStorageAvailable()) {
       return this.currentUser.activateShortLogin(shortpass, deviceName).then(function (toSend) {
-        return _this21.api.activateShortLogin(toSend, _this21.currentUser);
+        return _this20.api.activateShortLogin(toSend, _this20.currentUser);
       }).catch(function (err) {
         var wrapper = new WrappingError(err);
         throw wrapper.error;
@@ -2548,7 +2518,7 @@ var Secretin = function () {
   };
 
   Secretin.prototype.shortLogin = function shortLogin(shortpass) {
-    var _this22 = this;
+    var _this21 = this;
 
     var username = localStorage.getItem(Secretin.prefix + 'username');
     var deviceName = localStorage.getItem(Secretin.prefix + 'deviceName');
@@ -2557,19 +2527,19 @@ var Secretin = function () {
     this.currentUser = new User(username);
     return this.api.getProtectKeyParameters(username, deviceName).then(function (rParameters) {
       parameters = rParameters;
-      _this22.currentUser.totp = parameters.totp;
-      return _this22.currentUser.importPublicKey(parameters.publicKey);
+      _this21.currentUser.totp = parameters.totp;
+      return _this21.currentUser.importPublicKey(parameters.publicKey);
     }).then(function () {
       return derivePassword(shortpass, parameters);
     }).then(function (dKey) {
       shortpassKey = dKey.key;
-      return _this22.api.getProtectKey(username, deviceName, bytesToHexString(dKey.hash));
+      return _this21.api.getProtectKey(username, deviceName, dKey.hash);
     }).then(function (protectKey) {
-      return _this22.currentUser.shortLogin(shortpassKey, protectKey);
+      return _this21.currentUser.shortLogin(shortpassKey, protectKey);
     }).then(function () {
-      return _this22.refreshUser();
+      return _this21.refreshUser();
     }).then(function () {
-      return _this22.currentUser;
+      return _this21.currentUser;
     }).catch(function (err) {
       localStorage.removeItem(Secretin.prefix + 'username');
       localStorage.removeItem(Secretin.prefix + 'deviceName');
@@ -2670,7 +2640,7 @@ var API$1 = function () {
     var _this = this;
 
     return getSHA256(username).then(function (hashedUsername) {
-      return doPOST(_this.db + '/user/' + bytesToHexString(hashedUsername), {
+      return doPOST(_this.db + '/user/' + hashedUsername, {
         pass: pass,
         privateKey: privateKey,
         publicKey: publicKey,
@@ -2694,7 +2664,7 @@ var API$1 = function () {
     return user.sign(json).then(function (signature) {
       return doPOST(_this2.db + '/secret/' + secretObject.hashedUsername, {
         json: json,
-        sig: bytesToHexString(signature)
+        sig: signature
       });
     });
   };
@@ -2702,15 +2672,13 @@ var API$1 = function () {
   API.prototype.deleteSecret = function deleteSecret(user, hashedTitle) {
     var _this3 = this;
 
-    var hashedUsername = void 0;
     var url = void 0;
-    return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+    return getSHA256(user.username).then(function (hashedUsername) {
       url = '/secret/' + hashedUsername + '/' + hashedTitle;
       return user.sign('DELETE ' + url);
     }).then(function (signature) {
       return doDELETE('' + _this3.db + url, {
-        sig: bytesToHexString(signature)
+        sig: signature
       });
     });
   };
@@ -2727,12 +2695,12 @@ var API$1 = function () {
       title: hashedTitle
     });
     return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+      hashedUsername = rHashedUsername;
       return user.sign(json);
     }).then(function (signature) {
       return doPUT(_this4.db + '/secret/' + hashedUsername, {
         json: json,
-        sig: bytesToHexString(signature)
+        sig: signature
       });
     });
   };
@@ -2747,12 +2715,12 @@ var API$1 = function () {
       title: hashedTitle
     });
     return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+      hashedUsername = rHashedUsername;
       return user.sign(json);
     }).then(function (signature) {
       return doPOST(_this5.db + '/newKey/' + hashedUsername, {
         json: json,
-        sig: bytesToHexString(signature)
+        sig: signature
       });
     });
   };
@@ -2767,7 +2735,7 @@ var API$1 = function () {
     };
     var json = void 0;
     return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+      hashedUsername = rHashedUsername;
       var hashedFriendUseramePromises = [];
       friendNames.forEach(function (username) {
         hashedFriendUseramePromises.push(getSHA256(username));
@@ -2775,7 +2743,7 @@ var API$1 = function () {
       return Promise.all(hashedFriendUseramePromises);
     }).then(function (rHashedFriendUserames) {
       rHashedFriendUserames.forEach(function (hashedFriendUserame) {
-        hashedFriendUsernames.push(bytesToHexString(hashedFriendUserame));
+        hashedFriendUsernames.push(hashedFriendUserame);
       });
       datas.friendNames = hashedFriendUsernames;
       json = JSON.stringify(datas);
@@ -2783,7 +2751,7 @@ var API$1 = function () {
     }).then(function (signature) {
       return doPOST(_this6.db + '/unshare/' + hashedUsername, {
         json: json,
-        sig: bytesToHexString(signature)
+        sig: signature
       });
     });
   };
@@ -2796,12 +2764,12 @@ var API$1 = function () {
       secretObjects: sharedSecretObjects
     });
     return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+      hashedUsername = rHashedUsername;
       return user.sign(json);
     }).then(function (signature) {
       return doPOST(_this7.db + '/share/' + hashedUsername, {
         json: json,
-        sig: bytesToHexString(signature)
+        sig: signature
       });
     });
   };
@@ -2815,7 +2783,7 @@ var API$1 = function () {
       isHashed = isHashed.then(function () {
         return getSHA256(username);
       }).then(function (rHashedUsername) {
-        hashedUsername = bytesToHexString(rHashedUsername);
+        hashedUsername = rHashedUsername;
       });
     }
     return isHashed.then(function () {
@@ -2844,35 +2812,31 @@ var API$1 = function () {
     var _this9 = this;
 
     return getSHA256(username).then(function (hashedUsername) {
-      return doGET(_this9.db + '/user/' + bytesToHexString(hashedUsername) + '/' + hash + '?otp=' + otp);
+      return doGET(_this9.db + '/user/' + hashedUsername + '/' + hash + '?otp=' + otp);
     });
   };
 
   API.prototype.getUserWithSignature = function getUserWithSignature(user) {
     var _this10 = this;
 
-    var hashedUsername = void 0;
     var url = void 0;
-    return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+    return getSHA256(user.username).then(function (hashedUsername) {
       url = '/user/' + hashedUsername;
       return user.sign(url);
     }).then(function (signature) {
-      return doGET('' + _this10.db + url + '?sig=' + bytesToHexString(signature));
+      return doGET('' + _this10.db + url + '?sig=' + signature);
     });
   };
 
   API.prototype.getSecret = function getSecret(hashedTitle, user) {
     var _this11 = this;
 
-    var hashedUsername = void 0;
     var url = void 0;
-    return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+    return getSHA256(user.username).then(function (hashedUsername) {
       url = '/secret/' + hashedUsername + '/' + hashedTitle;
       return user.sign(url);
     }).then(function (signature) {
-      return doGET('' + _this11.db + url + '?sig=' + bytesToHexString(signature));
+      return doGET('' + _this11.db + url + '?sig=' + signature);
     });
   };
 
@@ -2881,10 +2845,10 @@ var API$1 = function () {
 
     var hashedUsername = void 0;
     return getSHA256(username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+      hashedUsername = rHashedUsername;
       return getSHA256(deviceName);
     }).then(function (deviceId) {
-      return doGET(_this12.db + '/protectKey/' + hashedUsername + '/' + bytesToHexString(deviceId) + '/' + hash);
+      return doGET(_this12.db + '/protectKey/' + hashedUsername + '/' + deviceId + '/' + hash);
     }).then(function (result) {
       if (hash === 'undefined') {
         return result;
@@ -2900,14 +2864,12 @@ var API$1 = function () {
   API.prototype.getDb = function getDb(user) {
     var _this13 = this;
 
-    var hashedUsername = void 0;
     var url = void 0;
-    return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+    return getSHA256(user.username).then(function (hashedUsername) {
       url = '/database/' + hashedUsername;
       return user.sign(url);
     }).then(function (signature) {
-      return doGET('' + _this13.db + url + '?sig=' + bytesToHexString(signature));
+      return doGET('' + _this13.db + url + '?sig=' + signature);
     });
   };
 
@@ -2917,12 +2879,12 @@ var API$1 = function () {
     var hashedUsername = void 0;
     var json = JSON.stringify(datas);
     return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+      hashedUsername = rHashedUsername;
       return user.sign(json);
     }).then(function (signature) {
       return doPUT(_this14.db + '/user/' + hashedUsername + '?type=' + type, {
         json: json,
-        sig: bytesToHexString(signature)
+        sig: signature
       });
     });
   };
@@ -2936,12 +2898,12 @@ var API$1 = function () {
       privateKey: privateKey
     });
     return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+      hashedUsername = rHashedUsername;
       return user.sign(json);
     }).then(function (signature) {
       return doPUT(_this15.db + '/user/' + hashedUsername, {
         json: json,
-        sig: bytesToHexString(signature)
+        sig: signature
       });
     });
   };
@@ -2958,12 +2920,12 @@ var API$1 = function () {
       seed: seed
     });
     return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+      hashedUsername = rHashedUsername;
       return user.sign(json);
     }).then(function (signature) {
       return doPUT(_this16.db + '/activateTotp/' + hashedUsername, {
         json: json,
-        sig: bytesToHexString(signature)
+        sig: signature
       });
     });
   };
@@ -2971,14 +2933,12 @@ var API$1 = function () {
   API.prototype.deactivateTotp = function deactivateTotp(user) {
     var _this17 = this;
 
-    var hashedUsername = void 0;
     var url = void 0;
-    return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+    return getSHA256(user.username).then(function (hashedUsername) {
       url = '/deactivateTotp/' + hashedUsername;
       return user.sign(url);
     }).then(function (signature) {
-      return doPUT('' + _this17.db + url + '?sig=' + bytesToHexString(signature), {});
+      return doPUT('' + _this17.db + url + '?sig=' + signature, {});
     });
   };
 
@@ -2990,12 +2950,12 @@ var API$1 = function () {
       shortpass: shortpass
     });
     return getSHA256(user.username).then(function (rHashedUsername) {
-      hashedUsername = bytesToHexString(rHashedUsername);
+      hashedUsername = rHashedUsername;
       return user.sign(json);
     }).then(function (signature) {
       return doPUT(_this18.db + '/activateShortLogin/' + hashedUsername, {
         json: json,
-        sig: bytesToHexString(signature)
+        sig: signature
       });
     });
   };

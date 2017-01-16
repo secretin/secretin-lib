@@ -21,12 +21,6 @@ import {
 
 import Secretin from './Secretin';
 
-import {
-  bytesToHexString,
-  bytesToASCIIString,
-} from './lib/utils';
-
-
 class User {
   constructor(username) {
     this.username = username;
@@ -97,16 +91,16 @@ class User {
     const pass = {};
     return derivePassword(password)
       .then((dKey) => {
-        pass.salt = bytesToHexString(dKey.salt);
-        this.hash = bytesToHexString(dKey.hash);
+        pass.salt = dKey.salt;
+        this.hash = dKey.hash;
         pass.hash = this.hash;
         pass.iterations = dKey.iterations;
         return exportKey(dKey.key, this.privateKey);
       })
       .then((keyObject) => ({
         privateKey: {
-          privateKey: bytesToHexString(keyObject.key),
-          iv: bytesToHexString(keyObject.iv),
+          privateKey: keyObject.key,
+          iv: keyObject.iv,
         },
         pass,
       }));
@@ -125,13 +119,13 @@ class User {
 
   exportOptions() {
     const result = {};
-    return encryptRSAOAEP(JSON.stringify(this.options), this.publicKey)
+    return encryptRSAOAEP(this.options, this.publicKey)
       .then((encryptedOptions) => {
-        result.options = bytesToHexString(encryptedOptions);
+        result.options = encryptedOptions;
         return this.sign(result.options);
       })
       .then((signature) => {
-        result.signature = bytesToHexString(signature);
+        result.signature = signature;
         return result;
       });
   }
@@ -151,7 +145,7 @@ class User {
       })
       .then((options) => {
         if (options) {
-          this.options = JSON.parse(bytesToASCIIString(options));
+          this.options = options;
         } else {
           this.options = User.defaultOptions;
         }
@@ -167,7 +161,7 @@ class User {
       return getSHA256(friend.username);
     })
     .then((hashedUsername) => {
-      result.friendName = bytesToHexString(hashedUsername);
+      result.friendName = hashedUsername;
       return result;
     });
   }
@@ -200,7 +194,7 @@ class User {
     const newMetadas = metadatas;
     return getSHA256(saltedTitle)
       .then((hashedTitle) => {
-        result.hashedTitle = bytesToHexString(hashedTitle);
+        result.hashedTitle = hashedTitle;
         newMetadas.id = result.hashedTitle;
         return this.encryptSecret(newMetadas, secret);
       })
@@ -222,18 +216,18 @@ class User {
     const result = {};
     return encryptAESGCM256(secret, key)
       .then((secretObject) => {
-        result.secret = bytesToHexString(secretObject.secret);
-        result.iv = bytesToHexString(secretObject.iv);
+        result.secret = secretObject.secret;
+        result.iv = secretObject.iv;
         result.key = secretObject.key;
         return encryptAESGCM256(metadatas, secretObject.key);
       })
       .then((secretObject) => {
-        result.metadatas = bytesToHexString(secretObject.secret);
-        result.iv_meta = bytesToHexString(secretObject.iv);
+        result.metadatas = secretObject.secret;
+        result.iv_meta = secretObject.iv;
         return getSHA256(this.username);
       })
       .then((hashedUsername) => {
-        result.hashedUsername = bytesToHexString(hashedUsername);
+        result.hashedUsername = hashedUsername;
         return result;
       });
   }
@@ -244,8 +238,7 @@ class User {
     }
     const wrappedKey = this.keys[hashedTitle].key;
     return this.unwrapKey(wrappedKey)
-      .then((key) => decryptAESGCM256(secret, key))
-      .then((decryptedSecret) => bytesToASCIIString(decryptedSecret));
+      .then((key) => decryptAESGCM256(secret, key));
   }
 
   unwrapKey(wrappedKey) {
@@ -253,8 +246,7 @@ class User {
   }
 
   wrapKey(key, publicKey) {
-    return wrapRSAOAEP(key, publicKey)
-      .then((wrappedKey) => bytesToHexString(wrappedKey));
+    return wrapRSAOAEP(key, publicKey);
   }
 
   decryptAllMetadatas(allMetadatas) {
@@ -266,7 +258,7 @@ class User {
       decryptMetadatasPromises.push(
         this.decryptSecret(hashedTitle, allMetadatas[hashedTitle])
           .then((metadatas) => {
-            this.metadatas[hashedTitle] = JSON.parse(metadatas);
+            this.metadatas[hashedTitle] = metadatas;
           })
       );
     });
@@ -283,24 +275,24 @@ class User {
         return exportKey(protectKey, this.privateKey);
       })
       .then((object) => {
-        localStorage.setItem(`${Secretin.prefix}privateKey`, bytesToHexString(object.key));
-        localStorage.setItem(`${Secretin.prefix}privateKeyIv`, bytesToHexString(object.iv));
+        localStorage.setItem(`${Secretin.prefix}privateKey`, object.key);
+        localStorage.setItem(`${Secretin.prefix}privateKeyIv`, object.iv);
         return derivePassword(shortpass);
       })
       .then((derived) => {
-        toSend.salt = bytesToHexString(derived.salt);
+        toSend.salt = derived.salt;
         toSend.iterations = derived.iterations;
-        toSend.hash = bytesToHexString(derived.hash);
+        toSend.hash = derived.hash;
         return exportKey(derived.key, protectKey);
       })
       .then((keyObject) => {
-        toSend.protectKey = bytesToHexString(keyObject.key);
-        localStorage.setItem(`${Secretin.prefix}iv`, bytesToHexString(keyObject.iv));
+        toSend.protectKey = keyObject.key;
+        localStorage.setItem(`${Secretin.prefix}iv`, keyObject.iv);
         localStorage.setItem(`${Secretin.prefix}username`, this.username);
         return getSHA256(deviceName);
       })
       .then((deviceId) => {
-        toSend.deviceId = bytesToHexString(deviceId);
+        toSend.deviceId = deviceId;
         localStorage.setItem(`${Secretin.prefix}deviceName`, deviceName);
         return toSend;
       });
