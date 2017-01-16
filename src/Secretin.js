@@ -126,11 +126,11 @@ class Secretin {
       });
   }
 
-  addFolder(title) {
-    return this.addSecret(title, {}, 'folder');
+  addFolder(title, inFolderId) {
+    return this.addSecret(title, {}, inFolderId, 'folder');
   }
 
-  addSecret(clearTitle, content, type = 'secret') {
+  addSecret(clearTitle, content, inFolderId, type = 'secret') {
     let hashedTitle;
     const now = new Date();
     const metadatas = {
@@ -145,10 +145,11 @@ class Secretin {
       metadatas.users[this.currentUser.username] = {
         username: this.currentUser.username,
         rights: 2,
-        folders: {
-          ROOT: true,
-        },
+        folders: {},
       };
+      if (typeof inFolderId === 'undefined') {
+        metadatas.users[this.currentUser.username].folders.ROOT = true;
+      }
       if (typeof this.currentUser.username === 'string') {
         this.currentUser.createSecret(metadatas, content)
           .then((secretObject) => {
@@ -161,8 +162,8 @@ class Secretin {
             return this.api.addSecret(this.currentUser, secretObject);
           })
           .then(() => {
-            if (typeof this.currentUser.currentFolder !== 'undefined') {
-              resolve(this.addSecretToFolder(hashedTitle, this.currentUser.currentFolder));
+            if (typeof inFolderId !== 'undefined') {
+              resolve(this.addSecretToFolder(hashedTitle, inFolderId));
             } else {
               resolve(hashedTitle);
             }

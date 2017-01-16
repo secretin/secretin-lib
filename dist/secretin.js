@@ -1938,14 +1938,14 @@ var Secretin = function () {
     });
   };
 
-  Secretin.prototype.addFolder = function addFolder(title) {
-    return this.addSecret(title, {}, 'folder');
+  Secretin.prototype.addFolder = function addFolder(title, inFolderId) {
+    return this.addSecret(title, {}, inFolderId, 'folder');
   };
 
-  Secretin.prototype.addSecret = function addSecret(clearTitle, content) {
+  Secretin.prototype.addSecret = function addSecret(clearTitle, content, inFolderId) {
     var _this4 = this;
 
-    var type = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'secret';
+    var type = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 'secret';
 
     var hashedTitle = void 0;
     var now = new Date();
@@ -1961,10 +1961,11 @@ var Secretin = function () {
       metadatas.users[_this4.currentUser.username] = {
         username: _this4.currentUser.username,
         rights: 2,
-        folders: {
-          ROOT: true
-        }
+        folders: {}
       };
+      if (typeof inFolderId === 'undefined') {
+        metadatas.users[_this4.currentUser.username].folders.ROOT = true;
+      }
       if (typeof _this4.currentUser.username === 'string') {
         _this4.currentUser.createSecret(metadatas, content).then(function (secretObject) {
           hashedTitle = secretObject.hashedTitle;
@@ -1975,8 +1976,8 @@ var Secretin = function () {
           _this4.currentUser.metadatas[secretObject.hashedTitle] = metadatas;
           return _this4.api.addSecret(_this4.currentUser, secretObject);
         }).then(function () {
-          if (typeof _this4.currentUser.currentFolder !== 'undefined') {
-            resolve(_this4.addSecretToFolder(hashedTitle, _this4.currentUser.currentFolder));
+          if (typeof inFolderId !== 'undefined') {
+            resolve(_this4.addSecretToFolder(hashedTitle, inFolderId));
           } else {
             resolve(hashedTitle);
           }

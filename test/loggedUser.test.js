@@ -366,16 +366,9 @@ describe('Logged user', () => {
 
   it('Can create secret in folder', () => {
     let hashedTitle;
-    this.secretin.currentUser.currentFolder = folderId;
-    return this.secretin.addSecret(newSecretTitle, newSecretContent)
-      .then(() => {
-        let id = -1;
-        Object.keys(this.secretin.currentUser.metadatas).forEach((mHashedTitle, i) => {
-          if (this.secretin.currentUser.metadatas[mHashedTitle].title === newSecretTitle) {
-            id = i;
-          }
-        });
-        hashedTitle = Object.keys(this.secretin.currentUser.metadatas)[id];
+    return this.secretin.addSecret(newSecretTitle, newSecretContent, folderId)
+      .then((rHashedTitle) => {
+        hashedTitle = rHashedTitle;
         delete this.secretin.currentUser.metadatas[hashedTitle].id;
         return this.secretin.currentUser.metadatas[hashedTitle];
       })
@@ -406,14 +399,8 @@ describe('Logged user', () => {
   it('Can create folder', () => {
     let hashedTitle;
     return this.secretin.addFolder(newFolderTitle)
-      .then(() => {
-        let id = -1;
-        Object.keys(this.secretin.currentUser.metadatas).forEach((mHashedTitle, i) => {
-          if (this.secretin.currentUser.metadatas[mHashedTitle].title === newFolderTitle) {
-            id = i;
-          }
-        });
-        hashedTitle = Object.keys(this.secretin.currentUser.metadatas)[id];
+      .then((rHashedTitle) => {
+        hashedTitle = rHashedTitle;
         delete this.secretin.currentUser.metadatas[hashedTitle].id;
         return this.secretin.currentUser.metadatas[hashedTitle];
       })
@@ -432,6 +419,38 @@ describe('Logged user', () => {
       })
       .then(() => this.secretin.getSecret(hashedTitle))
       .should.eventually.deep.equal({});
+  });
+
+  it('Can create folder in folder', () => {
+    let hashedTitle;
+    return this.secretin.addFolder(newFolderTitle, folderId)
+      .then((rHashedTitle) => {
+        hashedTitle = rHashedTitle;
+        delete this.secretin.currentUser.metadatas[hashedTitle].id;
+        return this.secretin.currentUser.metadatas[hashedTitle];
+      })
+      .should.eventually.deep.equal({
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+        users: {
+          [username]: {
+            username,
+            rights: 2,
+            folders: {
+              [folderId]: {
+                name: folderTitle,
+              },
+            },
+          },
+        },
+        title: newFolderTitle,
+        type: 'folder',
+      })
+      .then(() => this.secretin.getSecret(hashedTitle))
+      .should.eventually.deep.equal({})
+      .then(() => this.secretin.getSecret(folderId))
+      .then((folderContent) => Object.keys(folderContent).length)
+      .should.eventually.equal(3);
   });
 
   it('Can disconnect', () => {
