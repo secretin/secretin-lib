@@ -111,7 +111,7 @@ export function xorSeed(byteArray1, byteArray2) {
     for (i = 0; i < 32; i++) {
       buf[i] = byteArray1[i] ^ byteArray2[i];
     }
-    return buf;
+    return bytesToHexString(buf);
   }
   throw 'Utils.xorSeed expect 32 bytes Uint8Arrays';
 }

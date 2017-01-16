@@ -66,8 +66,8 @@ describe('Utils', () => {
     it('Utils.xorSeed is working', () => {
       const array1 = new Uint8Array(32).fill(0x61);
       const array2 = new Uint8Array(32).fill(0x71);
-      const expectedArray = new Uint8Array(32).fill(0x10);
-      Secretin.Utils.xorSeed(array1, array2).should.deep.equal(expectedArray);
+      const expectedString = '1010101010101010101010101010101010101010101010101010101010101010';
+      Secretin.Utils.xorSeed(array1, array2).should.deep.equal(expectedString);
     });
   });
 });

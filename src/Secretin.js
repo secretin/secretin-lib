@@ -8,13 +8,10 @@ import {
   NeedTOTPTokenError,
   DisconnectedError,
   DontHaveSecretError,
-  FolderNotFoundError,
-  FolderInItselfError,
   LocalStorageUnavailableError,
 } from './Errors';
 
 import {
-  bytesToHexString,
   hexStringToUint8Array,
   localStorageAvailable,
   xorSeed,
@@ -95,7 +92,7 @@ class Secretin {
         return derivePassword(password, parameters);
       })
       .then((dKey) => {
-        hash = bytesToHexString(dKey.hash);
+        hash = dKey.hash;
         key = dKey.key;
         return this.api.getUser(username, hash, otp);
       })
@@ -322,7 +319,7 @@ class Secretin {
       .then((encryptedSecret) =>
         this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
       .then((secret) => {
-        const folders = JSON.parse(secret);
+        const folders = secret;
         folders[hashedSecretTitle] = 1;
         return this.editSecret(hashedFolder, folders);
       })
@@ -336,7 +333,7 @@ class Secretin {
                   this.currentUser.decryptSecret(parentFolder, encryptedSecret)
                 )
                 .then((secret) => {
-                  const folders = JSON.parse(secret);
+                  const folders = secret;
                   delete folders[hashedSecretTitle];
                   return this.editSecret(parentFolder, folders);
                 })
@@ -366,7 +363,7 @@ class Secretin {
           .then((encryptedSecret) =>
             this.currentUser.decryptSecret(hashedTitle, encryptedSecret))
           .then((secrets) => {
-            Object.keys(JSON.parse(secrets)).forEach((hash) => {
+            Object.keys(secrets).forEach((hash) => {
               sharedSecretObjectPromises.push(this.getSharedSecretObjects(
                 hash,
                 friend,
@@ -415,28 +412,6 @@ class Secretin {
         throw wrapper.error;
       });
   }
-
-  // this one should disappear
-  shareFolder(hashedTitle, folderName) {
-    return new Promise((resolve, reject) => {
-      let hashedFolder = false;
-      Object.keys(this.currentUser.metadatas).forEach((hash) => {
-        const secretMetadatas = this.currentUser.metadatas[hash];
-        if (secretMetadatas.type === 'folder'
-            && secretMetadatas.title === folderName) {
-          hashedFolder = hash;
-        }
-      });
-      if (hashedFolder === false) {
-        reject(new FolderNotFoundError());
-      } else if (hashedTitle === hashedFolder) {
-        reject(new FolderInItselfError());
-      } else {
-        resolve(this.addSecretToFolder(hashedTitle, hashedFolder));
-      }
-    });
-  }
-  //
 
   shareSecret(hashedTitle, friendName, rights) {
     let sharedSecretObjects;
@@ -511,7 +486,7 @@ class Secretin {
       .then((encryptedSecret) =>
         this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
       .then((secrets) =>
-        Object.keys(JSON.parse(secrets)).reduce(
+        Object.keys(secrets).reduce(
           (promise, hashedTitle) =>
             promise.then(() => this.unshareSecret(hashedTitle, friendName))
           , Promise.resolve()
@@ -551,7 +526,7 @@ class Secretin {
       .then((rawSecret) =>
         this.currentUser.encryptSecret(
           this.currentUser.metadatas[hashedTitle],
-          JSON.parse(rawSecret)
+          rawSecret
         ))
       .then((secretObject) => {
         secret.secret = secretObject.secret;
@@ -617,7 +592,7 @@ class Secretin {
       .then((encryptedSecret) =>
         this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
       .then((secret) => {
-        const folder = JSON.parse(secret);
+        const folder = secret;
         delete folder[hashedTitle];
         return this.editSecret(hashedFolder, folder);
       })
@@ -631,7 +606,7 @@ class Secretin {
     return this.api.getSecret(hashedTitle, this.currentUser)
       .then((encryptedSecret) =>
         this.currentUser.decryptSecret(hashedTitle, encryptedSecret))
-      .then((secret) => JSON.parse(secret))
+      .then((secret) => secret)
       .catch((err) => {
         const wrapper = new WrappingError(err);
         throw wrapper.error;
@@ -663,7 +638,7 @@ class Secretin {
               .then((encryptedSecret) =>
                 this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
               .then((secret) => {
-                const folder = JSON.parse(secret);
+                const folder = secret;
                 delete folder[hashedTitle];
                 return this.editSecret(hashedFolder, folder);
               })
@@ -684,7 +659,7 @@ class Secretin {
       .then((encryptedSecret) =>
         this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
       .then((secrets) =>
-        Object.keys(JSON.parse(secrets)).reduce(
+        Object.keys(secrets).reduce(
           (promise, hashedTitle) =>
             promise.then(() =>
               this.deleteSecret(hashedTitle, list))
@@ -707,7 +682,7 @@ class Secretin {
 
   activateTotp(seed) {
     const protectedSeed = xorSeed(hexStringToUint8Array(this.currentUser.hash), seed.raw);
-    return this.api.activateTotp(bytesToHexString(protectedSeed), this.currentUser)
+    return this.api.activateTotp(protectedSeed, this.currentUser)
       .catch((err) => {
         const wrapper = new WrappingError(err);
         throw wrapper.error;
@@ -753,7 +728,7 @@ class Secretin {
       .then(() => derivePassword(shortpass, parameters))
       .then((dKey) => {
         shortpassKey = dKey.key;
-        return this.api.getProtectKey(username, deviceName, bytesToHexString(dKey.hash));
+        return this.api.getProtectKey(username, deviceName, dKey.hash);
       })
       .then((protectKey) => this.currentUser.shortLogin(shortpassKey, protectKey))
       .then(() => this.refreshUser())

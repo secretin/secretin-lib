@@ -1,13 +1,16 @@
 import {
   asciiToUint8Array,
   hexStringToUint8Array,
+  bytesToHexString,
+  bytesToASCIIString,
 } from './utils';
 
 
 export function getSHA256(str) {
   const algorithm = 'SHA-256';
   const data = asciiToUint8Array(str);
-  return crypto.subtle.digest(algorithm, data);
+  return crypto.subtle.digest(algorithm, data)
+  .then((hashedStr) => bytesToHexString(hashedStr));
 }
 
 export function genRSAOAEP() {
@@ -62,11 +65,11 @@ export function encryptAESGCM256(secret, key) {
         };
         const data = asciiToUint8Array(JSON.stringify(secret));
         result.key = newKey;
-        result.iv = iv;
+        result.iv = bytesToHexString(iv);
         return crypto.subtle.encrypt(algorithm, newKey, data);
       })
       .then((encryptedSecret) => {
-        result.secret = encryptedSecret;
+        result.secret = bytesToHexString(encryptedSecret);
         return result;
       });
   }
@@ -80,10 +83,10 @@ export function encryptAESGCM256(secret, key) {
     tagLength: 128,
   };
   const data = asciiToUint8Array(JSON.stringify(secret));
-  result.iv = iv;
+  result.iv = bytesToHexString(iv);
   return crypto.subtle.encrypt(algorithm, key, data)
     .then((encryptedSecret) => {
-      result.secret = encryptedSecret;
+      result.secret = bytesToHexString(encryptedSecret);
       return result;
     });
 }
@@ -95,7 +98,8 @@ export function decryptAESGCM256(secretObject, key) {
     tagLength: 128,
   };
   const data = hexStringToUint8Array(secretObject.secret);
-  return crypto.subtle.decrypt(algorithm, key, data);
+  return crypto.subtle.decrypt(algorithm, key, data)
+    .then((decryptedSecret) => JSON.parse(bytesToASCIIString(decryptedSecret)));
 }
 
 export function encryptRSAOAEP(secret, publicKey) {
@@ -103,8 +107,9 @@ export function encryptRSAOAEP(secret, publicKey) {
     name: 'RSA-OAEP',
     hash: { name: 'SHA-256' },
   };
-  const data = asciiToUint8Array(secret);
-  return crypto.subtle.encrypt(algorithm, publicKey, data);
+  const data = asciiToUint8Array(JSON.stringify(secret));
+  return crypto.subtle.encrypt(algorithm, publicKey, data)
+    .then((encryptedSecret) => bytesToHexString(encryptedSecret));
 }
 
 export function decryptRSAOAEP(secret, privateKey) {
@@ -113,7 +118,8 @@ export function decryptRSAOAEP(secret, privateKey) {
     hash: { name: 'SHA-256' },
   };
   const data = hexStringToUint8Array(secret);
-  return crypto.subtle.decrypt(algorithm, privateKey, data);
+  return crypto.subtle.decrypt(algorithm, privateKey, data)
+    .then(decryptedSecret => JSON.parse(bytesToASCIIString(decryptedSecret)));
 }
 
 export function wrapRSAOAEP(key, wrappingPublicKey) {
@@ -122,7 +128,8 @@ export function wrapRSAOAEP(key, wrappingPublicKey) {
     name: 'RSA-OAEP',
     hash: { name: 'SHA-256' },
   };
-  return crypto.subtle.wrapKey(format, key, wrappingPublicKey, wrapAlgorithm);
+  return crypto.subtle.wrapKey(format, key, wrappingPublicKey, wrapAlgorithm)
+    .then((wrappedKey) => bytesToHexString(wrappedKey));
 }
 
 export function sign(datas, key) {
@@ -130,7 +137,8 @@ export function sign(datas, key) {
     name: 'RSA-PSS',
     saltLength: 32, // In byte
   };
-  return crypto.subtle.sign(signAlgorithm, key, asciiToUint8Array(datas));
+  return crypto.subtle.sign(signAlgorithm, key, asciiToUint8Array(datas))
+    .then((signature) => bytesToHexString(signature));
 }
 
 export function verify(datas, signature, key) {
@@ -236,7 +244,7 @@ export function derivePassword(password, parameters) {
         }
       }
 
-      result.salt = saltBuf;
+      result.salt = bytesToHexString(saltBuf);
       result.iterations = iterations;
 
       const algorithm = {
@@ -262,7 +270,7 @@ export function derivePassword(password, parameters) {
     })
     .then((rawKey) => crypto.subtle.digest('SHA-256', rawKey))
     .then((hashedKey) => {
-      result.hash = hashedKey;
+      result.hash = bytesToHexString(hashedKey);
       return result;
     });
 }
@@ -276,10 +284,10 @@ export function exportKey(wrappingKey, key) {
     name: 'AES-CBC',
     iv,
   };
-  result.iv = iv;
+  result.iv = bytesToHexString(iv);
   return crypto.subtle.wrapKey(format, key, wrappingKey, wrapAlgorithm)
     .then((wrappedKey) => {
-      result.key = wrappedKey;
+      result.key = bytesToHexString(wrappedKey);
       return result;
     });
 }
