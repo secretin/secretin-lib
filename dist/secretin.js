@@ -1,7 +1,7 @@
 var Secretin = (function () {
 'use strict';
 
-var version = "1.1.1";
+var version = "1.1.2";
 
 var asyncGenerator = function () {
   function AwaitValue(value) {
@@ -2209,10 +2209,11 @@ var Secretin = function () {
     });
   };
 
-  Secretin.prototype.shareSecret = function shareSecret(hashedTitle, friendName, rights) {
+  Secretin.prototype.shareSecret = function shareSecret(hashedTitle, friendName, sRights) {
     var _this11 = this;
 
     var sharedSecretObjects = void 0;
+    var rights = parseInt(sRights, 10);
     var friend = new User(friendName);
     return this.api.getPublicKey(friend.username).then(function (publicKey) {
       return friend.importPublicKey(publicKey);
