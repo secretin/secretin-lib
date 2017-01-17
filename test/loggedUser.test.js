@@ -67,41 +67,41 @@ describe('Logged user', () => {
     availableKeyCounter = 0;
     // eslint-disable-next-line
     return resetAndGetDB()
-    .then(() => this.secretin.newUser(username, password))
-    .then(() => this.secretin.addSecret(secretTitle, secretContent))
-    .then((hashedTitle) => {
-      secretId = hashedTitle;
-      return this.secretin.addFolder(folderTitle);
-    })
-    .then((hashedTitle) => {
-      folderId = hashedTitle;
-      return this.secretin.addFolder(folderInFolderTitle);
-    })
-    .then((hashedTitle) => {
-      folderInFolderId = hashedTitle;
-      return this.secretin.addFolder(otherFolderTitle);
-    })
-    .then((hashedTitle) => {
-      otherFolderId = hashedTitle;
-      return this.secretin.addSecret(secretInFolderTitle, secretContent);
-    })
-    .then((hashedTitle) => {
-      secretInFolderId = hashedTitle;
-      return this.secretin.addSecret(
-        otherSecretInOtherFolderTitle,
-        otherSecretInOtherFolderContent
-      );
-    })
-    .then((hashedTitle) => {
-      otherSecretInOtherFolderId = hashedTitle;
-      return this.secretin.addSecretToFolder(secretInFolderId, folderId);
-    })
-    .then(() => this.secretin.addSecretToFolder(folderInFolderId, folderId))
-    .then(() => this.secretin.addSecretToFolder(otherSecretInOtherFolderId, otherFolderId))
-    .then(() => {
-      this.secretin.currentUser.disconnect();
-      return this.secretin.loginUser(username, password);
-    });
+      .then(() => this.secretin.newUser(username, password))
+      .then(() => this.secretin.addSecret(secretTitle, secretContent))
+      .then((hashedTitle) => {
+        secretId = hashedTitle;
+        return this.secretin.addFolder(folderTitle);
+      })
+      .then((hashedTitle) => {
+        folderId = hashedTitle;
+        return this.secretin.addFolder(folderInFolderTitle);
+      })
+      .then((hashedTitle) => {
+        folderInFolderId = hashedTitle;
+        return this.secretin.addFolder(otherFolderTitle);
+      })
+      .then((hashedTitle) => {
+        otherFolderId = hashedTitle;
+        return this.secretin.addSecret(secretInFolderTitle, secretContent);
+      })
+      .then((hashedTitle) => {
+        secretInFolderId = hashedTitle;
+        return this.secretin.addSecret(
+          otherSecretInOtherFolderTitle,
+          otherSecretInOtherFolderContent
+        );
+      })
+      .then((hashedTitle) => {
+        otherSecretInOtherFolderId = hashedTitle;
+        return this.secretin.addSecretToFolder(secretInFolderId, folderId);
+      })
+      .then(() => this.secretin.addSecretToFolder(folderInFolderId, folderId))
+      .then(() => this.secretin.addSecretToFolder(otherSecretInOtherFolderId, otherFolderId))
+      .then(() => {
+        this.secretin.currentUser.disconnect();
+        return this.secretin.loginUser(username, password);
+      });
   });
 
   it('Can retrieve metadatas', () => {

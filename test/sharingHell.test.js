@@ -34,6 +34,13 @@ describe('Sharing hell', () => {
     }],
   };
 
+  const user1SecretContent = {
+    fields: [{
+      label: 'g',
+      content: 'h',
+    }],
+  };
+
   const secretTitle = 'secret';
   let secretId = '';
 
@@ -55,6 +62,7 @@ describe('Sharing hell', () => {
   const secretInFolderTitle = 'secret in folder';
   let secretInFolderId = '';
 
+  const user1SecretTitle = 'user1 secret';
   /*
     Create following arborescence by user3 :
       secret (user4)
@@ -359,27 +367,27 @@ describe('Sharing hell', () => {
     };
     return this.secretin.loginUser(user3, password3)
       .then(() => this.secretin.addSecretToFolder(secretId, folderId))
-        .then(() => this.secretin.currentUser.metadatas[secretId]
-          .should.deep.equal(expectedMetadatas)
-        )
-        .then(() => {
-          this.secretin.currentUser.disconnect();
-          return this.secretin.loginUser(user1, password1);
-        })
-        .then(() => this.secretin.getSecret(secretId))
-        .then((secret) => secret.should.deep.equal(secretContent))
-        .then(() => {
-          this.secretin.currentUser.disconnect();
-          return this.secretin.loginUser(user4, password4);
-        })
-        .then(() => this.secretin.getSecret(secretId))
-        .then((secret) => secret.should.deep.equal(secretContent))
-        .then(() => {
-          this.secretin.currentUser.disconnect();
-          return this.secretin.loginUser(user2, password2);
-        })
-        .then(() => this.secretin.getSecret(secretId))
-        .then((secret) => secret.should.deep.equal(secretContent));
+      .then(() => this.secretin.currentUser.metadatas[secretId]
+        .should.deep.equal(expectedMetadatas)
+      )
+      .then(() => {
+        this.secretin.currentUser.disconnect();
+        return this.secretin.loginUser(user1, password1);
+      })
+      .then(() => this.secretin.getSecret(secretId))
+      .then((secret) => secret.should.deep.equal(secretContent))
+      .then(() => {
+        this.secretin.currentUser.disconnect();
+        return this.secretin.loginUser(user4, password4);
+      })
+      .then(() => this.secretin.getSecret(secretId))
+      .then((secret) => secret.should.deep.equal(secretContent))
+      .then(() => {
+        this.secretin.currentUser.disconnect();
+        return this.secretin.loginUser(user2, password2);
+      })
+      .then(() => this.secretin.getSecret(secretId))
+      .then((secret) => secret.should.deep.equal(secretContent));
   });
 
   it('Unshare secret with one user in folder', () => {
@@ -412,20 +420,51 @@ describe('Sharing hell', () => {
     };
     return this.secretin.loginUser(user3, password3)
       .then(() => this.secretin.unshareSecret(secretInFolderId, user1))
-        .then(() => this.secretin.currentUser.metadatas[secretInFolderId]
-          .should.deep.equal(expectedMetadatas)
-        )
-        .then(() => {
-          this.secretin.currentUser.disconnect();
-          return this.secretin.loginUser(user2, password2);
-        })
-        .then(() => this.secretin.getSecret(secretInFolderId))
-        .then((secret) => secret.should.deep.equal(secretContent))
-        .then(() => {
-          this.secretin.currentUser.disconnect();
-          return this.secretin.loginUser(user1, password1);
-        })
-        .then(() => this.secretin.getSecret(secretInFolderId))
-        .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError);
+      .then(() => this.secretin.currentUser.metadatas[secretInFolderId]
+        .should.deep.equal(expectedMetadatas)
+      )
+      .then(() => {
+        this.secretin.currentUser.disconnect();
+        return this.secretin.loginUser(user2, password2);
+      })
+      .then(() => this.secretin.getSecret(secretInFolderId))
+      .then((secret) => secret.should.deep.equal(secretContent))
+      .then(() => {
+        this.secretin.currentUser.disconnect();
+        return this.secretin.loginUser(user1, password1);
+      })
+      .then(() => this.secretin.getSecret(secretInFolderId))
+      .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError);
+  });
+
+  it('User can\'t share secret in read only folder', () => {
+    const expectedMetadatas = {
+      lastModifiedAt: now,
+      lastModifiedBy: user1,
+      title: user1SecretTitle,
+      type: 'secret',
+      users: {
+        [user1]: {
+          username: user1,
+          rights: 2,
+          folders: {
+            ROOT: true,
+          },
+        },
+      },
+    };
+    let user1SecretId;
+    return this.secretin.loginUser(user1, password1)
+      .then(() => this.secretin.addSecret(user1SecretTitle, user1SecretContent))
+      .then((rUser1SecretId) => {
+        user1SecretId = rUser1SecretId;
+        return this.secretin.addSecretToFolder(user1SecretId, folderId);
+      })
+      .should.be.rejectedWith(Secretin.Errors.CantEditSecretError)
+      .then(() => {
+        delete this.secretin.currentUser.metadatas[user1SecretId].id;
+        return this.secretin.currentUser.metadatas[user1SecretId]
+          .should.deep.equal(expectedMetadatas);
+      });
   });
 });
