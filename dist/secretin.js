@@ -1,7 +1,7 @@
 var Secretin = (function () {
 'use strict';
 
-var version = "1.0.3";
+var version = "1.1.1";
 
 var asyncGenerator = function () {
   function AwaitValue(value) {
@@ -2053,7 +2053,15 @@ var Secretin = function () {
 
     var metadatasUsers = {};
     var commonParentToClean = [];
-    return Promise.all(sharedSecretObjectsPromises).then(function (sharedSecretObjectsArray) {
+    return this.api.getSecret(hashedFolder, this.currentUser).then(function (encryptedSecret) {
+      return _this8.currentUser.decryptSecret(hashedFolder, encryptedSecret);
+    }).then(function (secret) {
+      var folders = secret;
+      folders[hashedSecretTitle] = 1;
+      return _this8.editSecret(hashedFolder, folders);
+    }).then(function () {
+      return Promise.all(sharedSecretObjectsPromises);
+    }).then(function (sharedSecretObjectsArray) {
       var fullSharedSecretObjects = [];
       sharedSecretObjectsArray.forEach(function (sharedSecretObjects) {
         sharedSecretObjects.forEach(function (sharedSecretObject) {
@@ -2121,14 +2129,6 @@ var Secretin = function () {
         resetMetaPromises.push(_this8.resetMetadatas(hashedTitle));
       });
       return Promise.all(resetMetaPromises);
-    }).then(function () {
-      return _this8.api.getSecret(hashedFolder, _this8.currentUser);
-    }).then(function (encryptedSecret) {
-      return _this8.currentUser.decryptSecret(hashedFolder, encryptedSecret);
-    }).then(function (secret) {
-      var folders = secret;
-      folders[hashedSecretTitle] = 1;
-      return _this8.editSecret(hashedFolder, folders);
     }).then(function () {
       var parentCleaningPromises = [];
       commonParentToClean.forEach(function (parentFolder) {

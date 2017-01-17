@@ -244,7 +244,15 @@ class Secretin {
 
     const metadatasUsers = {};
     const commonParentToClean = [];
-    return Promise.all(sharedSecretObjectsPromises)
+    return this.api.getSecret(hashedFolder, this.currentUser)
+      .then((encryptedSecret) =>
+        this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
+      .then((secret) => {
+        const folders = secret;
+        folders[hashedSecretTitle] = 1;
+        return this.editSecret(hashedFolder, folders);
+      })
+      .then(() => Promise.all(sharedSecretObjectsPromises))
       .then((sharedSecretObjectsArray) => {
         const fullSharedSecretObjects = [];
         sharedSecretObjectsArray.forEach((sharedSecretObjects) => {
@@ -315,14 +323,6 @@ class Secretin {
           resetMetaPromises.push(this.resetMetadatas(hashedTitle));
         });
         return Promise.all(resetMetaPromises);
-      })
-      .then(() => this.api.getSecret(hashedFolder, this.currentUser))
-      .then((encryptedSecret) =>
-        this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
-      .then((secret) => {
-        const folders = secret;
-        folders[hashedSecretTitle] = 1;
-        return this.editSecret(hashedFolder, folders);
       })
       .then(() => {
         const parentCleaningPromises = [];

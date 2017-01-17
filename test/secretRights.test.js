@@ -38,30 +38,30 @@ describe('Secret accesses', () => {
     availableKeyCounter = 0;
     // eslint-disable-next-line
     return resetAndGetDB()
-    .then(() => this.secretin.newUser(userNoAccess, passwordNoAccess))
-    .then(() => this.secretin.newUser(userRead, passwordRead))
-    .then(() => this.secretin.newUser(userReadWrite, passwordReadWrite))
-    .then(() => this.secretin.newUser(userReadWriteShare, passwordReadWriteShare))
-    .then(() => this.secretin.addSecret(secretTitle, secretContent))
-    .then((hashedTitle) => {
-      secretId = hashedTitle;
-      secretKeyReadWriteShare = this.secretin.currentUser.keys[secretId].key;
-      return this.secretin.shareSecret(secretId, userRead, 0);
-    })
-    .then(() => this.secretin.shareSecret(secretId, userReadWrite, 1))
-    .then(() => {
-      this.secretin.currentUser.disconnect();
-      return this.secretin.loginUser(userReadWrite, passwordReadWrite);
-    })
-    .then(() => {
-      secretKeyReadWrite = this.secretin.currentUser.keys[secretId].key;
-      this.secretin.currentUser.disconnect();
-      return this.secretin.loginUser(userRead, passwordRead);
-    })
-    .then(() => {
-      secretKeyRead = this.secretin.currentUser.keys[secretId].key;
-      this.secretin.currentUser.disconnect();
-    });
+      .then(() => this.secretin.newUser(userNoAccess, passwordNoAccess))
+      .then(() => this.secretin.newUser(userRead, passwordRead))
+      .then(() => this.secretin.newUser(userReadWrite, passwordReadWrite))
+      .then(() => this.secretin.newUser(userReadWriteShare, passwordReadWriteShare))
+      .then(() => this.secretin.addSecret(secretTitle, secretContent))
+      .then((hashedTitle) => {
+        secretId = hashedTitle;
+        secretKeyReadWriteShare = this.secretin.currentUser.keys[secretId].key;
+        return this.secretin.shareSecret(secretId, userRead, 0);
+      })
+      .then(() => this.secretin.shareSecret(secretId, userReadWrite, 1))
+      .then(() => {
+        this.secretin.currentUser.disconnect();
+        return this.secretin.loginUser(userReadWrite, passwordReadWrite);
+      })
+      .then(() => {
+        secretKeyReadWrite = this.secretin.currentUser.keys[secretId].key;
+        this.secretin.currentUser.disconnect();
+        return this.secretin.loginUser(userRead, passwordRead);
+      })
+      .then(() => {
+        secretKeyRead = this.secretin.currentUser.keys[secretId].key;
+        this.secretin.currentUser.disconnect();
+      });
   });
 
   describe('No access user', () => {
