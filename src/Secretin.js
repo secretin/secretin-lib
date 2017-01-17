@@ -414,8 +414,9 @@ class Secretin {
       });
   }
 
-  shareSecret(hashedTitle, friendName, rights) {
+  shareSecret(hashedTitle, friendName, sRights) {
     let sharedSecretObjects;
+    const rights = parseInt(sRights, 10);
     const friend = new User(friendName);
     return this.api.getPublicKey(friend.username)
       .then((publicKey) => friend.importPublicKey(publicKey),
