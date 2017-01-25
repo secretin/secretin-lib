@@ -245,6 +245,17 @@ class API {
         doGET(`${this.db}${url}?sig=${signature}`));
   }
 
+  getRescueCodes(user) {
+    let url;
+    return getSHA256(user.username)
+      .then((hashedUsername) => {
+        url = `/rescueCodes/${hashedUsername}`;
+        return user.sign(url);
+      })
+      .then((signature) =>
+        doGET(`${this.db}${url}?sig=${signature}`));
+  }
+
   editUser(user, datas, type) {
     let hashedUsername;
     const json = JSON.stringify(datas);
