@@ -756,6 +756,14 @@ class Secretin {
     }
     return null;
   }
+
+  getRescueCodes() {
+    return this.api.getRescueCodes(this.currentUser)
+      .catch((err) => {
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      });
+  }
 }
 
 Object.defineProperty(Secretin, 'prefix', {
