@@ -2560,6 +2560,13 @@ var Secretin = function () {
     return null;
   };
 
+  Secretin.prototype.getRescueCodes = function getRescueCodes() {
+    return this.api.getRescueCodes(this.currentUser).catch(function (err) {
+      var wrapper = new WrappingError(err);
+      throw wrapper.error;
+    });
+  };
+
   return Secretin;
 }();
 
@@ -2871,8 +2878,20 @@ var API$1 = function () {
     });
   };
 
-  API.prototype.editUser = function editUser(user, datas, type) {
+  API.prototype.getRescueCodes = function getRescueCodes(user) {
     var _this14 = this;
+
+    var url = void 0;
+    return getSHA256(user.username).then(function (hashedUsername) {
+      url = '/rescueCodes/' + hashedUsername;
+      return user.sign(url);
+    }).then(function (signature) {
+      return doGET('' + _this14.db + url + '?sig=' + signature);
+    });
+  };
+
+  API.prototype.editUser = function editUser(user, datas, type) {
+    var _this15 = this;
 
     var hashedUsername = void 0;
     var json = JSON.stringify(datas);
@@ -2880,7 +2899,7 @@ var API$1 = function () {
       hashedUsername = rHashedUsername;
       return user.sign(json);
     }).then(function (signature) {
-      return doPUT(_this14.db + '/user/' + hashedUsername + '?type=' + type, {
+      return doPUT(_this15.db + '/user/' + hashedUsername + '?type=' + type, {
         json: json,
         sig: signature
       });
@@ -2888,7 +2907,7 @@ var API$1 = function () {
   };
 
   API.prototype.changePassword = function changePassword(user, privateKey, pass) {
-    var _this15 = this;
+    var _this16 = this;
 
     var hashedUsername = void 0;
     var json = JSON.stringify({
@@ -2899,7 +2918,7 @@ var API$1 = function () {
       hashedUsername = rHashedUsername;
       return user.sign(json);
     }).then(function (signature) {
-      return doPUT(_this15.db + '/user/' + hashedUsername, {
+      return doPUT(_this16.db + '/user/' + hashedUsername, {
         json: json,
         sig: signature
       });
@@ -2911,7 +2930,7 @@ var API$1 = function () {
   };
 
   API.prototype.activateTotp = function activateTotp(seed, user) {
-    var _this16 = this;
+    var _this17 = this;
 
     var hashedUsername = void 0;
     var json = JSON.stringify({
@@ -2921,7 +2940,7 @@ var API$1 = function () {
       hashedUsername = rHashedUsername;
       return user.sign(json);
     }).then(function (signature) {
-      return doPUT(_this16.db + '/activateTotp/' + hashedUsername, {
+      return doPUT(_this17.db + '/activateTotp/' + hashedUsername, {
         json: json,
         sig: signature
       });
@@ -2929,19 +2948,19 @@ var API$1 = function () {
   };
 
   API.prototype.deactivateTotp = function deactivateTotp(user) {
-    var _this17 = this;
+    var _this18 = this;
 
     var url = void 0;
     return getSHA256(user.username).then(function (hashedUsername) {
       url = '/deactivateTotp/' + hashedUsername;
       return user.sign(url);
     }).then(function (signature) {
-      return doPUT('' + _this17.db + url + '?sig=' + signature, {});
+      return doPUT('' + _this18.db + url + '?sig=' + signature, {});
     });
   };
 
   API.prototype.activateShortLogin = function activateShortLogin(shortpass, user) {
-    var _this18 = this;
+    var _this19 = this;
 
     var hashedUsername = void 0;
     var json = JSON.stringify({
@@ -2951,7 +2970,7 @@ var API$1 = function () {
       hashedUsername = rHashedUsername;
       return user.sign(json);
     }).then(function (signature) {
-      return doPUT(_this18.db + '/activateShortLogin/' + hashedUsername, {
+      return doPUT(_this19.db + '/activateShortLogin/' + hashedUsername, {
         json: json,
         sig: signature
       });
