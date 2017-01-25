@@ -1,7 +1,7 @@
 var Secretin = (function () {
 'use strict';
 
-var version = "1.1.2";
+var version = "1.2.0";
 
 var asyncGenerator = function () {
   function AwaitValue(value) {
