@@ -63,6 +63,7 @@ describe('Logged user', () => {
 
   // eslint-disable-next-line
   beforeEach(() => {
+    localStorage.removeItem(`${Secretin.prefix}cache`);
     // eslint-disable-next-line
     availableKeyCounter = 0;
     // eslint-disable-next-line
@@ -205,6 +206,53 @@ describe('Logged user', () => {
     };
     return this.secretin.currentUser.metadatas.should.deep.equal(expectedMetadatas);
   });
+
+  if (__karma__.config.args[0] === 'server') {
+    it('Can get database', () => {
+      const expected = {
+        [secretId]: '1',
+        [folderId]: '3',
+        [otherFolderId]: '2',
+        [secretInFolderId]: '2',
+        [otherSecretInOtherFolderId]: '2',
+        [folderInFolderId]: '2',
+      };
+
+      const expected2 = {
+        [secretId]: '2',
+        [folderId]: '3',
+        [otherFolderId]: '2',
+        [secretInFolderId]: '2',
+        [otherSecretInOtherFolderId]: '2',
+        [folderInFolderId]: '2',
+      };
+
+      const cacheKey = `${Secretin.prefix}cache_${this.secretin.currentUser.username}`;
+      return this.secretin.getDb()
+        .then((DbCacheStr) => {
+          const DbCache = JSON.parse(DbCacheStr);
+          const revs = {};
+          Object.keys(DbCache.secrets).forEach((key) => {
+            revs[key] = DbCache.secrets[key].rev[0];
+          });
+          return revs;
+        })
+        .should.eventually.deep.equal(expected)
+        .then(() => this.secretin.editSecret(secretId, newSecretContent)
+        .then(() => this.secretin.getSecret(secretId))
+        .then(() => this.secretin.getDb())
+        .then(() => localStorage.getItem(cacheKey))
+        .then((DbCacheStr) => {
+          const DbCache = JSON.parse(DbCacheStr);
+          const revs = {};
+          Object.keys(DbCache.secrets).forEach((key) => {
+            revs[key] = DbCache.secrets[key].rev[0];
+          });
+          return revs;
+        })
+        .should.eventually.deep.equal(expected2));
+    });
+  }
 
   it('Can refresh infos', () =>
     this.secretin.refreshUser()
