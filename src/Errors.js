@@ -156,6 +156,13 @@ export class FriendNotFoundError extends Error {
   }
 }
 
+export class OfflineError extends Error {
+  constructor() {
+    super();
+    this.message = 'Offline';
+  }
+}
+
 export class WrappingError {
   constructor(error) {
     if (error.constructor !== String) {
@@ -202,6 +209,8 @@ export class WrappingError {
       this.error = new NotSharedWithUserError();
     } else if (error === 'Friend not found') {
       this.error = new FriendNotFoundError();
+    } else if (error === 'Offline') {
+      this.error = new OfflineError();
     } else {
       this.error = new Error(error);
     }
@@ -232,6 +241,7 @@ const Errors = {
   CantGenerateNewKeyError,
   NotSharedWithUserError,
   FriendNotFoundError,
+  OfflineError,
 };
 
 export default Errors;

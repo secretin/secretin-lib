@@ -415,6 +415,10 @@ class API {
       });
   }
 
+  isOnline() {
+    return new Promise((resolve) => resolve(false));
+  }
+
 }
 
 export default API;

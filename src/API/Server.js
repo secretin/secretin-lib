@@ -234,15 +234,19 @@ class API {
     return this.getProtectKey(username, deviceName, 'undefined');
   }
 
-  getDb(user) {
+  getDb(user, revs) {
     let url;
+    const json = JSON.stringify(revs);
     return getSHA256(user.username)
       .then((hashedUsername) => {
         url = `/database/${hashedUsername}`;
-        return user.sign(url);
+        return user.sign(json);
       })
       .then((signature) =>
-        doGET(`${this.db}${url}?sig=${signature}`));
+        doPOST(`${this.db}${url}`, {
+          json,
+          sig: signature,
+        }));
   }
 
   getRescueCodes(user) {
@@ -334,6 +338,10 @@ class API {
           json,
           sig: signature,
         }));
+  }
+
+  isOnline() {
+    return doGET(`${this.db}/ping`);
   }
 }
 
