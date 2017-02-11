@@ -226,6 +226,8 @@ describe('Logged user', () => {
         [otherSecretInOtherFolderId]: '2',
         [folderInFolderId]: '2',
       };
+
+      const cacheKey = `${Secretin.prefix}cache_${this.secretin.currentUser.username}`;
       return this.secretin.getDb()
         .then((DbCacheStr) => {
           const DbCache = JSON.parse(DbCacheStr);
@@ -239,7 +241,7 @@ describe('Logged user', () => {
         .then(() => this.secretin.editSecret(secretId, newSecretContent)
         .then(() => this.secretin.getSecret(secretId))
         .then(() => this.secretin.getDb())
-        .then(() => localStorage.getItem(`${Secretin.prefix}cache`))
+        .then(() => localStorage.getItem(cacheKey))
         .then((DbCacheStr) => {
           const DbCache = JSON.parse(DbCacheStr);
           const revs = {};
