@@ -4,7 +4,7 @@
 	(global.Secretin = factory());
 }(this, (function () { 'use strict';
 
-var version = "1.3.0";
+var version = "1.3.1";
 
 var asyncGenerator = function () {
   function AwaitValue(value) {
@@ -1869,7 +1869,25 @@ var Secretin = function () {
     this.api = new API$$(db);
     this.editableDB = true;
     this.currentUser = {};
+    this.listeners = {
+      connectionChange: []
+    };
   }
+
+  Secretin.prototype.addEventListener = function addEventListener(event, callback) {
+    this.listeners[event].push(callback);
+  };
+
+  Secretin.prototype.removeEventListener = function removeEventListener(event, callback) {
+    var callbackIndex = this.listeners[event].indexOf(callback);
+    this.listeners[event].splice(callbackIndex, 1);
+  };
+
+  Secretin.prototype.dispatchEvent = function dispatchEvent(event, eventArgs) {
+    this.listeners[event].map(function (callback) {
+      return callback(eventArgs);
+    });
+  };
 
   Secretin.prototype.offlineDB = function offlineDB(username) {
     var cacheKey = Secretin.prefix + 'cache_' + (username || this.currentUser.username);
@@ -1878,8 +1896,7 @@ var Secretin = function () {
     this.oldApi = this.api;
     this.api = new API(DbCache);
     this.editableDB = false;
-    var event = new CustomEvent('connectionChange', { detail: 'offline' });
-    document.dispatchEvent(event);
+    this.dispatchEvent('connectionChange', { connection: 'offline' });
     this.testOnline();
   };
 
@@ -1890,8 +1907,7 @@ var Secretin = function () {
       _this.oldApi.isOnline().then(function () {
         _this.api = _this.oldApi;
         _this.editableDB = true;
-        var event = new CustomEvent('connectionChange', { detail: 'online' });
-        document.dispatchEvent(event);
+        _this.dispatchEvent('connectionChange', { connection: 'online' });
       }).catch(function (err) {
         if (err === 'Offline') {
           _this.testOnline();

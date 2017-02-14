@@ -25,6 +25,22 @@ class Secretin {
     this.api = new API(db);
     this.editableDB = true;
     this.currentUser = {};
+    this.listeners = {
+      connectionChange: [],
+    };
+  }
+
+  addEventListener(event, callback) {
+    this.listeners[event].push(callback);
+  }
+
+  removeEventListener(event, callback) {
+    const callbackIndex = this.listeners[event].indexOf(callback);
+    this.listeners[event].splice(callbackIndex, 1);
+  }
+
+  dispatchEvent(event, eventArgs) {
+    this.listeners[event].map(callback => callback(eventArgs));
   }
 
   offlineDB(username) {
@@ -34,8 +50,7 @@ class Secretin {
     this.oldApi = this.api;
     this.api = new APIStandalone(DbCache);
     this.editableDB = false;
-    const event = new CustomEvent('connectionChange', { detail: 'offline' });
-    document.dispatchEvent(event);
+    this.dispatchEvent('connectionChange', { connection: 'offline' });
     this.testOnline();
   }
 
@@ -45,8 +60,7 @@ class Secretin {
         .then(() => {
           this.api = this.oldApi;
           this.editableDB = true;
-          const event = new CustomEvent('connectionChange', { detail: 'online' });
-          document.dispatchEvent(event);
+          this.dispatchEvent('connectionChange', { connection: 'online' });
         })
         .catch((err) => {
           if (err === 'Offline') {
