@@ -59,6 +59,7 @@ class API {
             iv: secretObject.iv,
             iv_meta: secretObject.iv_meta,
             users: [secretObject.hashedUsername],
+            rev: 'Standalone',
           };
           this.db.users[secretObject.hashedUsername].keys[secretObject.hashedTitle] = {
             key: secretObject.wrappedKey,
@@ -112,6 +113,7 @@ class API {
             this.db.secrets[hashedTitle].secret = secretObject.secret;
             this.db.secrets[hashedTitle].iv_meta = secretObject.iv_meta;
             this.db.secrets[hashedTitle].metadatas = secretObject.metadatas;
+            this.db.secrets[hashedTitle].rev = 'Standalone';
             return Promise.resolve();
           }
           return Promise.reject('Secret not found');
@@ -377,6 +379,10 @@ class API {
       });
       resolve(result);
     });
+  }
+
+  getProtectKeyParameters() {
+    return Promise.reject('Not available in standalone mode');
   }
 
   getDb() {

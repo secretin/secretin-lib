@@ -163,6 +163,13 @@ export class OfflineError extends Error {
   }
 }
 
+export class NotAvailableError extends Error {
+  constructor() {
+    super();
+    this.message = 'Not available in standalone mode';
+  }
+}
+
 export class WrappingError {
   constructor(error) {
     if (error.constructor !== String) {
@@ -211,6 +218,8 @@ export class WrappingError {
       this.error = new FriendNotFoundError();
     } else if (error === 'Offline') {
       this.error = new OfflineError();
+    } else if (error === 'Not available in standalone mode') {
+      this.error = new NotAvailableError();
     } else {
       this.error = new Error(error);
     }
@@ -242,6 +251,7 @@ const Errors = {
   NotSharedWithUserError,
   FriendNotFoundError,
   OfflineError,
+  NotAvailableError,
 };
 
 export default Errors;
