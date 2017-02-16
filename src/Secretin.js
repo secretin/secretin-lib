@@ -1,5 +1,7 @@
 import {
   derivePassword,
+  encryptRSAOAEP,
+  decryptRSAOAEP,
 } from './lib/crypto';
 
 import {
@@ -9,6 +11,7 @@ import {
   DontHaveSecretError,
   OfflineError,
   LocalStorageUnavailableError,
+  NotAvailableError,
 } from './Errors';
 
 import {
@@ -44,14 +47,16 @@ class Secretin {
   }
 
   offlineDB(username) {
-    const cacheKey = `${Secretin.prefix}cache_${username || this.currentUser.username}`;
-    const DbCacheStr = localStorage.getItem(cacheKey);
-    const DbCache = DbCacheStr ? JSON.parse(DbCacheStr) : { users: {}, secrets: {} };
-    this.oldApi = this.api;
-    this.api = new APIStandalone(DbCache);
-    this.editableDB = false;
-    this.dispatchEvent('connectionChange', { connection: 'offline' });
-    this.testOnline();
+    if (this.editableDB) {
+      const cacheKey = `${Secretin.prefix}cache_${username || this.currentUser.username}`;
+      const DbCacheStr = localStorage.getItem(cacheKey);
+      const DbCache = DbCacheStr ? JSON.parse(DbCacheStr) : { users: {}, secrets: {} };
+      this.oldApi = this.api;
+      this.api = new APIStandalone(DbCache);
+      this.editableDB = false;
+      this.dispatchEvent('connectionChange', { connection: 'offline' });
+      this.testOnline();
+    }
   }
 
   testOnline() {
@@ -61,6 +66,9 @@ class Secretin {
           this.api = this.oldApi;
           this.editableDB = true;
           this.dispatchEvent('connectionChange', { connection: 'online' });
+          if (typeof this.currentUser.username !== 'undefined') {
+            this.getDb().then(() => this.doCacheActions());
+          }
         })
         .catch((err) => {
           if (err === 'Offline') {
@@ -70,6 +78,54 @@ class Secretin {
           }
         });
     }, 10000);
+  }
+
+  pushCacheAction(action, args) {
+    const cacheActionsKey = `${Secretin.prefix}cacheActions_${this.currentUser.username}`;
+    const cacheActionsStr = localStorage.getItem(cacheActionsKey);
+    const cacheActions = cacheActionsStr ? JSON.parse(cacheActionsStr) : [];
+    cacheActions.push({
+      action,
+      args,
+    });
+
+    localStorage.setItem(cacheActionsKey, JSON.stringify(cacheActions));
+  }
+
+  doCacheActions() {
+    const cacheActionsKey = `${Secretin.prefix}cacheActions_${this.currentUser.username}`;
+    let cacheActionsStr = localStorage.getItem(cacheActionsKey);
+    const cacheActions = cacheActionsStr ? JSON.parse(cacheActionsStr) : [];
+    let updatedCacheActions;
+    return cacheActions.reduce((promise, cacheAction) => {
+      if (cacheAction.action === 'addSecret') {
+        return promise.then(() =>
+          this.api.addSecret(this.currentUser, cacheAction.args[0])
+            .then(() => {
+              cacheActionsStr = localStorage.getItem(cacheActionsKey);
+              updatedCacheActions = JSON.parse(cacheActionsStr);
+              updatedCacheActions.shift();
+              return localStorage.setItem(cacheActionsKey, JSON.stringify(updatedCacheActions));
+            })
+        );
+      } else if (cacheAction.action === 'editSecret') {
+        return promise.then(() =>
+          decryptRSAOAEP(cacheAction.args[2], this.currentUser.privateKey)
+            .then((metadatas) => {
+              this.currentUser.metadatas[cacheAction.args[0]] = metadatas;
+              return decryptRSAOAEP(cacheAction.args[1], this.currentUser.privateKey);
+            })
+            .then(content => this.editSecret(cacheAction.args[0], content))
+            .then(() => {
+              cacheActionsStr = localStorage.getItem(cacheActionsKey);
+              updatedCacheActions = JSON.parse(cacheActionsStr);
+              updatedCacheActions.shift();
+              return localStorage.setItem(cacheActionsKey, JSON.stringify(updatedCacheActions));
+            })
+        );
+      }
+      return promise;
+    }, Promise.resolve());
   }
 
   newUser(username, password) {
@@ -160,10 +216,16 @@ class Secretin {
       .then(() => {
         if (typeof window.process !== 'undefined') {
           // Electron
-          this.getDb(username);
+          return this.getDb().then(() => {
+            if (this.editableDB) {
+              return this.doCacheActions();
+            }
+            return Promise.resolve();
+          });
         }
-        return this.currentUser;
+        return Promise.resolve();
       })
+      .then(() => this.currentUser)
       .catch((err) => {
         if (err === 'Offline') {
           this.offlineDB(username);
@@ -199,9 +261,6 @@ class Secretin {
   }
 
   addSecret(clearTitle, content, inFolderId, type = 'secret') {
-    if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
-    }
     let hashedTitle;
     const now = new Date();
     const metadatas = {
@@ -228,10 +287,13 @@ class Secretin {
           key: secretObject.wrappedKey,
           rights: metadatas.users[this.currentUser.username].rights,
         };
-        this.currentUser.metadatas[secretObject.hashedTitle] = metadatas;
+        if (!this.editableDB) {
+          this.pushCacheAction('addSecret', [secretObject]);
+        }
         return this.api.addSecret(this.currentUser, secretObject);
       })
       .then(() => {
+        this.currentUser.metadatas[hashedTitle] = metadatas;
         if (typeof inFolderId !== 'undefined') {
           return this.addSecretToFolder(hashedTitle, inFolderId);
         }
@@ -247,6 +309,7 @@ class Secretin {
       .catch((err) => {
         if (err === 'Offline') {
           this.offlineDB();
+          return this.addSecret(clearTitle, content, inFolderId, type);
         }
         const wrapper = new WrappingError(err);
         throw wrapper.error;
@@ -282,11 +345,26 @@ class Secretin {
   }
 
   editSecret(hashedTitle, content) {
-    if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
-    }
     return this.currentUser.editSecret(hashedTitle, content)
-      .then((secretObject) => this.api.editSecret(this.currentUser, secretObject, hashedTitle))
+      .then((secretObject) => {
+        if (!this.editableDB) {
+          if (Object.keys(this.currentUser.metadatas[hashedTitle].users).length > 1) {
+            return Promise.reject(new OfflineError());
+          }
+          const args = [hashedTitle];
+          encryptRSAOAEP(content, this.currentUser.publicKey)
+            .then((encryptedContent) => {
+              args.push(encryptedContent);
+              return encryptRSAOAEP(
+                this.currentUser.metadatas[hashedTitle], this.currentUser.publicKey);
+            })
+            .then((encryptedMetadatas) => {
+              args.push(encryptedMetadatas);
+              return this.pushCacheAction('editSecret', args);
+            });
+        }
+        return this.api.editSecret(this.currentUser, secretObject, hashedTitle);
+      })
       .then((res) => {
         if (typeof window.process !== 'undefined') {
           // Electron
@@ -297,6 +375,7 @@ class Secretin {
       .catch((err) => {
         if (err === 'Offline') {
           this.offlineDB();
+          return this.editSecret(hashedTitle, content);
         }
         const wrapper = new WrappingError(err);
         throw wrapper.error;
@@ -342,9 +421,6 @@ class Secretin {
   }
 
   addSecretToFolder(hashedSecretTitle, hashedFolder) {
-    if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
-    }
     let sharedSecretObjectsPromises = [];
     const folderMetadatas = this.currentUser.metadatas[hashedFolder];
     const secretMetadatas = this.currentUser.metadatas[hashedSecretTitle];
@@ -395,7 +471,13 @@ class Secretin {
             }
           });
         });
-        return this.api.shareSecret(this.currentUser, fullSharedSecretObjects);
+        if (fullSharedSecretObjects.length > 0) {
+          if (!this.editableDB) {
+            return Promise.reject(new OfflineError());
+          }
+          return this.api.shareSecret(this.currentUser, fullSharedSecretObjects);
+        }
+        return Promise.resolve();
       })
       .then(() => {
         const resetMetaPromises = [];
@@ -477,6 +559,7 @@ class Secretin {
       .catch((err) => {
         if (err === 'Offline') {
           this.offlineDB();
+          return this.addSecretToFolder(hashedSecretTitle, hashedFolder);
         }
         const wrapper = new WrappingError(err);
         throw wrapper.error;
@@ -540,9 +623,6 @@ class Secretin {
   }
 
   resetMetadatas(hashedTitle) {
-    if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
-    }
     const secretMetadatas = this.currentUser.metadatas[hashedTitle];
     const now = new Date();
     secretMetadatas.lastModifiedAt = now;
@@ -778,9 +858,6 @@ class Secretin {
   }
 
   removeSecretFromFolder(hashedTitle, hashedFolder) {
-    if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
-    }
     const secretMetadatas = this.currentUser.metadatas[hashedTitle];
     const usersToDelete = [];
     Object.keys(secretMetadatas.users).forEach((username) => {
@@ -788,7 +865,17 @@ class Secretin {
         usersToDelete.push(username);
       }
     });
-    return this.api.unshareSecret(this.currentUser, usersToDelete, hashedTitle)
+
+    return Promise.resolve()
+      .then(() => {
+        if (usersToDelete.length > 1) {
+          if (!this.editableDB) {
+            return Promise.reject(new OfflineError());
+          }
+          return this.api.unshareSecret(this.currentUser, usersToDelete, hashedTitle);
+        }
+        return Promise.resolve();
+      })
       .then(() => {
         usersToDelete.forEach((username) => {
           delete secretMetadatas.users[username].folders[hashedFolder];
@@ -800,7 +887,10 @@ class Secretin {
             }
           }
         });
-        return this.renewKey(hashedTitle);
+        if (usersToDelete.length > 1) {
+          return this.renewKey(hashedTitle);
+        }
+        return Promise.resolve();
       })
       .then(() => this.resetMetadatas(hashedTitle))
       .then(() => this.api.getSecret(hashedFolder, this.currentUser))
@@ -821,6 +911,7 @@ class Secretin {
       .catch((err) => {
         if (err === 'Offline') {
           this.offlineDB();
+          return this.removeSecretFromFolder(hashedTitle, hashedFolder);
         }
         const wrapper = new WrappingError(err);
         throw wrapper.error;
@@ -1008,9 +1099,6 @@ class Secretin {
   }
 
   shortLogin(shortpass) {
-    if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
-    }
     const username = localStorage.getItem(`${Secretin.prefix}username`);
     const deviceName = localStorage.getItem(`${Secretin.prefix}deviceName`);
     let shortpassKey;
@@ -1029,23 +1117,42 @@ class Secretin {
       })
       .then((protectKey) => this.currentUser.shortLogin(shortpassKey, protectKey))
       .then(() => this.refreshUser())
+      .then(() => {
+        if (typeof window.process !== 'undefined') {
+          // Electron
+          return this.getDb().then(() => {
+            if (this.editableDB) {
+              return this.doCacheActions();
+            }
+            return Promise.resolve();
+          });
+        }
+        return Promise.resolve();
+      })
       .then(() => this.currentUser)
       .catch((err) => {
         if (err === 'Offline') {
           this.offlineDB();
+          return this.shortLogin(shortpass);
         }
-        localStorage.removeItem(`${Secretin.prefix}username`);
-        localStorage.removeItem(`${Secretin.prefix}deviceName`);
-        localStorage.removeItem(`${Secretin.prefix}privateKey`);
-        localStorage.removeItem(`${Secretin.prefix}privateKeyIv`);
-        localStorage.removeItem(`${Secretin.prefix}iv`);
+        if (err !== 'Not available in standalone mode' && !(err instanceof NotAvailableError)) {
+          localStorage.removeItem(`${Secretin.prefix}username`);
+          localStorage.removeItem(`${Secretin.prefix}deviceName`);
+          localStorage.removeItem(`${Secretin.prefix}privateKey`);
+          localStorage.removeItem(`${Secretin.prefix}privateKeyIv`);
+          localStorage.removeItem(`${Secretin.prefix}iv`);
+        }
         const wrapper = new WrappingError(err);
         throw wrapper.error;
       });
   }
 
   canITryShortLogin() {
-    return (localStorageAvailable() && localStorage.getItem(`${Secretin.prefix}username`) !== null);
+    return (
+      this.editableDB &&
+      localStorageAvailable() &&
+      localStorage.getItem(`${Secretin.prefix}username`) !== null
+    );
   }
 
   getSavedUsername() {
@@ -1067,11 +1174,8 @@ class Secretin {
       });
   }
 
-  getDb(username) {
-    if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
-    }
-    const cacheKey = `${Secretin.prefix}cache_${username || this.currentUser.username}`;
+  getDb() {
+    const cacheKey = `${Secretin.prefix}cache_${this.currentUser.username}`;
     const DbCacheStr = localStorage.getItem(cacheKey);
     const DbCache = DbCacheStr ? JSON.parse(DbCacheStr) : { users: {}, secrets: {} };
     const revs = {};
@@ -1094,6 +1198,7 @@ class Secretin {
       .catch((err) => {
         if (err === 'Offline') {
           this.offlineDB();
+          return this.getDb();
         }
         const wrapper = new WrappingError(err);
         throw wrapper.error;

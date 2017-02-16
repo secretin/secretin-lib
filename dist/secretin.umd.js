@@ -4,7 +4,7 @@
 	(global.Secretin = factory());
 }(this, (function () { 'use strict';
 
-var version = "1.3.1";
+var version = "1.4.0";
 
 var asyncGenerator = function () {
   function AwaitValue(value) {
@@ -1033,6 +1033,21 @@ var OfflineError = function (_Error22) {
   return OfflineError;
 }(Error);
 
+var NotAvailableError = function (_Error23) {
+  inherits(NotAvailableError, _Error23);
+
+  function NotAvailableError() {
+    classCallCheck(this, NotAvailableError);
+
+    var _this23 = possibleConstructorReturn(this, _Error23.call(this));
+
+    _this23.message = 'Not available in standalone mode';
+    return _this23;
+  }
+
+  return NotAvailableError;
+}(Error);
+
 var WrappingError = function WrappingError(error) {
   classCallCheck(this, WrappingError);
 
@@ -1082,6 +1097,8 @@ var WrappingError = function WrappingError(error) {
     this.error = new FriendNotFoundError();
   } else if (error === 'Offline') {
     this.error = new OfflineError();
+  } else if (error === 'Not available in standalone mode') {
+    this.error = new NotAvailableError();
   } else {
     this.error = new Error(error);
   }
@@ -1111,7 +1128,8 @@ var Errors = {
   CantGenerateNewKeyError: CantGenerateNewKeyError,
   NotSharedWithUserError: NotSharedWithUserError,
   FriendNotFoundError: FriendNotFoundError,
-  OfflineError: OfflineError
+  OfflineError: OfflineError,
+  NotAvailableError: NotAvailableError
 };
 
 var API = function () {
@@ -1172,7 +1190,8 @@ var API = function () {
             metadatas: secretObject.metadatas,
             iv: secretObject.iv,
             iv_meta: secretObject.iv_meta,
-            users: [secretObject.hashedUsername]
+            users: [secretObject.hashedUsername],
+            rev: 'Standalone'
           };
           _this2.db.users[secretObject.hashedUsername].keys[secretObject.hashedTitle] = {
             key: secretObject.wrappedKey,
@@ -1226,6 +1245,7 @@ var API = function () {
           _this4.db.secrets[hashedTitle].secret = secretObject.secret;
           _this4.db.secrets[hashedTitle].iv_meta = secretObject.iv_meta;
           _this4.db.secrets[hashedTitle].metadatas = secretObject.metadatas;
+          _this4.db.secrets[hashedTitle].rev = 'Standalone';
           return Promise.resolve();
         }
         return Promise.reject('Secret not found');
@@ -1503,6 +1523,10 @@ var API = function () {
       });
       resolve(result);
     });
+  };
+
+  API.prototype.getProtectKeyParameters = function getProtectKeyParameters() {
+    return Promise.reject('Not available in standalone mode');
   };
 
   API.prototype.getDb = function getDb() {
@@ -1890,14 +1914,16 @@ var Secretin = function () {
   };
 
   Secretin.prototype.offlineDB = function offlineDB(username) {
-    var cacheKey = Secretin.prefix + 'cache_' + (username || this.currentUser.username);
-    var DbCacheStr = localStorage.getItem(cacheKey);
-    var DbCache = DbCacheStr ? JSON.parse(DbCacheStr) : { users: {}, secrets: {} };
-    this.oldApi = this.api;
-    this.api = new API(DbCache);
-    this.editableDB = false;
-    this.dispatchEvent('connectionChange', { connection: 'offline' });
-    this.testOnline();
+    if (this.editableDB) {
+      var cacheKey = Secretin.prefix + 'cache_' + (username || this.currentUser.username);
+      var DbCacheStr = localStorage.getItem(cacheKey);
+      var DbCache = DbCacheStr ? JSON.parse(DbCacheStr) : { users: {}, secrets: {} };
+      this.oldApi = this.api;
+      this.api = new API(DbCache);
+      this.editableDB = false;
+      this.dispatchEvent('connectionChange', { connection: 'offline' });
+      this.testOnline();
+    }
   };
 
   Secretin.prototype.testOnline = function testOnline() {
@@ -1908,6 +1934,11 @@ var Secretin = function () {
         _this.api = _this.oldApi;
         _this.editableDB = true;
         _this.dispatchEvent('connectionChange', { connection: 'online' });
+        if (typeof _this.currentUser.username !== 'undefined') {
+          _this.getDb().then(function () {
+            return _this.doCacheActions();
+          });
+        }
       }).catch(function (err) {
         if (err === 'Offline') {
           _this.testOnline();
@@ -1918,8 +1949,56 @@ var Secretin = function () {
     }, 10000);
   };
 
-  Secretin.prototype.newUser = function newUser(username, password) {
+  Secretin.prototype.pushCacheAction = function pushCacheAction(action, args) {
+    var cacheActionsKey = Secretin.prefix + 'cacheActions_' + this.currentUser.username;
+    var cacheActionsStr = localStorage.getItem(cacheActionsKey);
+    var cacheActions = cacheActionsStr ? JSON.parse(cacheActionsStr) : [];
+    cacheActions.push({
+      action: action,
+      args: args
+    });
+
+    localStorage.setItem(cacheActionsKey, JSON.stringify(cacheActions));
+  };
+
+  Secretin.prototype.doCacheActions = function doCacheActions() {
     var _this2 = this;
+
+    var cacheActionsKey = Secretin.prefix + 'cacheActions_' + this.currentUser.username;
+    var cacheActionsStr = localStorage.getItem(cacheActionsKey);
+    var cacheActions = cacheActionsStr ? JSON.parse(cacheActionsStr) : [];
+    var updatedCacheActions = void 0;
+    return cacheActions.reduce(function (promise, cacheAction) {
+      if (cacheAction.action === 'addSecret') {
+        return promise.then(function () {
+          return _this2.api.addSecret(_this2.currentUser, cacheAction.args[0]).then(function () {
+            cacheActionsStr = localStorage.getItem(cacheActionsKey);
+            updatedCacheActions = JSON.parse(cacheActionsStr);
+            updatedCacheActions.shift();
+            return localStorage.setItem(cacheActionsKey, JSON.stringify(updatedCacheActions));
+          });
+        });
+      } else if (cacheAction.action === 'editSecret') {
+        return promise.then(function () {
+          return decryptRSAOAEP(cacheAction.args[2], _this2.currentUser.privateKey).then(function (metadatas) {
+            _this2.currentUser.metadatas[cacheAction.args[0]] = metadatas;
+            return decryptRSAOAEP(cacheAction.args[1], _this2.currentUser.privateKey);
+          }).then(function (content) {
+            return _this2.editSecret(cacheAction.args[0], content);
+          }).then(function () {
+            cacheActionsStr = localStorage.getItem(cacheActionsKey);
+            updatedCacheActions = JSON.parse(cacheActionsStr);
+            updatedCacheActions.shift();
+            return localStorage.setItem(cacheActionsKey, JSON.stringify(updatedCacheActions));
+          });
+        });
+      }
+      return promise;
+    }, Promise.resolve());
+  };
+
+  Secretin.prototype.newUser = function newUser(username, password) {
+    var _this3 = this;
 
     if (!this.editableDB) {
       return Promise.reject(new OfflineError());
@@ -1931,34 +2010,34 @@ var Secretin = function () {
     return this.api.userExists(username).then(function (exists) {
       return new Promise(function (resolve, reject) {
         if (!exists) {
-          resolve(_this2.currentUser.generateMasterKey());
+          resolve(_this3.currentUser.generateMasterKey());
         } else {
           reject(new UsernameAlreadyExistsError());
         }
       });
     }).then(function () {
-      return _this2.currentUser.exportPrivateKey(password);
+      return _this3.currentUser.exportPrivateKey(password);
     }).then(function (objectPrivateKey) {
       privateKey = objectPrivateKey.privateKey;
       pass = objectPrivateKey.pass;
       pass.totp = false;
       pass.shortpass = false;
 
-      return _this2.currentUser.exportOptions();
+      return _this3.currentUser.exportOptions();
     }).then(function (rOptions) {
       options = rOptions;
-      return _this2.currentUser.exportPublicKey();
+      return _this3.currentUser.exportPublicKey();
     }).then(function (publicKey) {
-      return _this2.api.addUser(_this2.currentUser.username, privateKey, publicKey, pass, options);
+      return _this3.api.addUser(_this3.currentUser.username, privateKey, publicKey, pass, options);
     }).then(function () {
       if (typeof window.process !== 'undefined') {
         // Electron
-        _this2.getDb();
+        _this3.getDb();
       }
-      return _this2.currentUser;
+      return _this3.currentUser;
     }).catch(function (err) {
       if (err === 'Offline') {
-        _this2.offlineDB();
+        _this3.offlineDB();
       }
       var wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -1966,7 +2045,7 @@ var Secretin = function () {
   };
 
   Secretin.prototype.loginUser = function loginUser(username, password, otp) {
-    var _this3 = this;
+    var _this4 = this;
 
     var key = void 0;
     var hash = void 0;
@@ -1981,30 +2060,37 @@ var Secretin = function () {
     }).then(function (dKey) {
       hash = dKey.hash;
       key = dKey.key;
-      return _this3.api.getUser(username, hash, otp);
+      return _this4.api.getUser(username, hash, otp);
     }).then(function (user) {
-      _this3.currentUser = new User(username);
-      _this3.currentUser.totp = parameters.totp;
-      _this3.currentUser.hash = hash;
+      _this4.currentUser = new User(username);
+      _this4.currentUser.totp = parameters.totp;
+      _this4.currentUser.hash = hash;
       remoteUser = user;
-      _this3.currentUser.keys = remoteUser.keys;
-      return _this3.currentUser.importPublicKey(remoteUser.publicKey);
+      _this4.currentUser.keys = remoteUser.keys;
+      return _this4.currentUser.importPublicKey(remoteUser.publicKey);
     }).then(function () {
-      return _this3.currentUser.importPrivateKey(key, remoteUser.privateKey);
+      return _this4.currentUser.importPrivateKey(key, remoteUser.privateKey);
     }).then(function () {
-      return _this3.currentUser.decryptAllMetadatas(remoteUser.metadatas);
+      return _this4.currentUser.decryptAllMetadatas(remoteUser.metadatas);
     }).then(function () {
-      return _this3.currentUser.importOptions(remoteUser.options);
+      return _this4.currentUser.importOptions(remoteUser.options);
     }).then(function () {
       if (typeof window.process !== 'undefined') {
         // Electron
-        _this3.getDb(username);
+        return _this4.getDb().then(function () {
+          if (_this4.editableDB) {
+            return _this4.doCacheActions();
+          }
+          return Promise.resolve();
+        });
       }
-      return _this3.currentUser;
+      return Promise.resolve();
+    }).then(function () {
+      return _this4.currentUser;
     }).catch(function (err) {
       if (err === 'Offline') {
-        _this3.offlineDB(username);
-        return _this3.loginUser(username, password, otp);
+        _this4.offlineDB(username);
+        return _this4.loginUser(username, password, otp);
       }
       var wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -2012,19 +2098,19 @@ var Secretin = function () {
   };
 
   Secretin.prototype.refreshUser = function refreshUser() {
-    var _this4 = this;
+    var _this5 = this;
 
     return this.api.getUserWithSignature(this.currentUser).then(function (user) {
-      _this4.currentUser.keys = user.keys;
+      _this5.currentUser.keys = user.keys;
       if (typeof window.process !== 'undefined') {
         // Electron
-        _this4.getDb();
+        _this5.getDb();
       }
-      return _this4.currentUser.decryptAllMetadatas(user.metadatas);
+      return _this5.currentUser.decryptAllMetadatas(user.metadatas);
     }).catch(function (err) {
       if (err === 'Offline') {
-        _this4.offlineDB();
-        return _this4.refreshUser();
+        _this5.offlineDB();
+        return _this5.refreshUser();
       }
       var wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -2036,13 +2122,10 @@ var Secretin = function () {
   };
 
   Secretin.prototype.addSecret = function addSecret(clearTitle, content, inFolderId) {
-    var _this5 = this;
+    var _this6 = this;
 
     var type = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 'secret';
 
-    if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
-    }
     var hashedTitle = void 0;
     var now = new Date();
     var metadatas = {
@@ -2064,40 +2147,20 @@ var Secretin = function () {
 
     return this.currentUser.createSecret(metadatas, content).then(function (secretObject) {
       hashedTitle = secretObject.hashedTitle;
-      _this5.currentUser.keys[secretObject.hashedTitle] = {
+      _this6.currentUser.keys[secretObject.hashedTitle] = {
         key: secretObject.wrappedKey,
-        rights: metadatas.users[_this5.currentUser.username].rights
+        rights: metadatas.users[_this6.currentUser.username].rights
       };
-      _this5.currentUser.metadatas[secretObject.hashedTitle] = metadatas;
-      return _this5.api.addSecret(_this5.currentUser, secretObject);
+      if (!_this6.editableDB) {
+        _this6.pushCacheAction('addSecret', [secretObject]);
+      }
+      return _this6.api.addSecret(_this6.currentUser, secretObject);
     }).then(function () {
+      _this6.currentUser.metadatas[hashedTitle] = metadatas;
       if (typeof inFolderId !== 'undefined') {
-        return _this5.addSecretToFolder(hashedTitle, inFolderId);
+        return _this6.addSecretToFolder(hashedTitle, inFolderId);
       }
       return Promise.resolve(hashedTitle);
-    }).then(function (res) {
-      if (typeof window.process !== 'undefined') {
-        // Electron
-        _this5.getDb();
-      }
-      return res;
-    }).catch(function (err) {
-      if (err === 'Offline') {
-        _this5.offlineDB();
-      }
-      var wrapper = new WrappingError(err);
-      throw wrapper.error;
-    });
-  };
-
-  Secretin.prototype.changePassword = function changePassword(password) {
-    var _this6 = this;
-
-    if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
-    }
-    return this.currentUser.exportPrivateKey(password).then(function (objectPrivateKey) {
-      return _this6.api.editUser(_this6.currentUser, objectPrivateKey, 'password');
     }).then(function (res) {
       if (typeof window.process !== 'undefined') {
         // Electron
@@ -2107,20 +2170,21 @@ var Secretin = function () {
     }).catch(function (err) {
       if (err === 'Offline') {
         _this6.offlineDB();
+        return _this6.addSecret(clearTitle, content, inFolderId, type);
       }
       var wrapper = new WrappingError(err);
       throw wrapper.error;
     });
   };
 
-  Secretin.prototype.editSecret = function editSecret(hashedTitle, content) {
+  Secretin.prototype.changePassword = function changePassword(password) {
     var _this7 = this;
 
     if (!this.editableDB) {
       return Promise.reject(new OfflineError());
     }
-    return this.currentUser.editSecret(hashedTitle, content).then(function (secretObject) {
-      return _this7.api.editSecret(_this7.currentUser, secretObject, hashedTitle);
+    return this.currentUser.exportPrivateKey(password).then(function (objectPrivateKey) {
+      return _this7.api.editUser(_this7.currentUser, objectPrivateKey, 'password');
     }).then(function (res) {
       if (typeof window.process !== 'undefined') {
         // Electron
@@ -2130,6 +2194,46 @@ var Secretin = function () {
     }).catch(function (err) {
       if (err === 'Offline') {
         _this7.offlineDB();
+      }
+      var wrapper = new WrappingError(err);
+      throw wrapper.error;
+    });
+  };
+
+  Secretin.prototype.editSecret = function editSecret(hashedTitle, content) {
+    var _this8 = this;
+
+    return this.currentUser.editSecret(hashedTitle, content).then(function (secretObject) {
+      if (!_this8.editableDB) {
+        var _ret = function () {
+          if (Object.keys(_this8.currentUser.metadatas[hashedTitle].users).length > 1) {
+            return {
+              v: Promise.reject(new OfflineError())
+            };
+          }
+          var args = [hashedTitle];
+          encryptRSAOAEP(content, _this8.currentUser.publicKey).then(function (encryptedContent) {
+            args.push(encryptedContent);
+            return encryptRSAOAEP(_this8.currentUser.metadatas[hashedTitle], _this8.currentUser.publicKey);
+          }).then(function (encryptedMetadatas) {
+            args.push(encryptedMetadatas);
+            return _this8.pushCacheAction('editSecret', args);
+          });
+        }();
+
+        if (typeof _ret === "object") return _ret.v;
+      }
+      return _this8.api.editSecret(_this8.currentUser, secretObject, hashedTitle);
+    }).then(function (res) {
+      if (typeof window.process !== 'undefined') {
+        // Electron
+        _this8.getDb();
+      }
+      return res;
+    }).catch(function (err) {
+      if (err === 'Offline') {
+        _this8.offlineDB();
+        return _this8.editSecret(hashedTitle, content);
       }
       var wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -2153,22 +2257,22 @@ var Secretin = function () {
   };
 
   Secretin.prototype.resetOptions = function resetOptions() {
-    var _this8 = this;
+    var _this9 = this;
 
     if (!this.editableDB) {
       return Promise.reject(new OfflineError());
     }
     return this.currentUser.exportOptions().then(function (encryptedOptions) {
-      return _this8.api.editUser(_this8.currentUser, encryptedOptions, 'options');
+      return _this9.api.editUser(_this9.currentUser, encryptedOptions, 'options');
     }).then(function (res) {
       if (typeof window.process !== 'undefined') {
         // Electron
-        _this8.getDb();
+        _this9.getDb();
       }
       return res;
     }).catch(function (err) {
       if (err === 'Offline') {
-        _this8.offlineDB();
+        _this9.offlineDB();
       }
       var wrapper = new WrappingError(err);
       return wrapper.error;
@@ -2176,21 +2280,18 @@ var Secretin = function () {
   };
 
   Secretin.prototype.addSecretToFolder = function addSecretToFolder(hashedSecretTitle, hashedFolder) {
-    var _this9 = this;
+    var _this10 = this;
 
-    if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
-    }
     var sharedSecretObjectsPromises = [];
     var folderMetadatas = this.currentUser.metadatas[hashedFolder];
     var secretMetadatas = this.currentUser.metadatas[hashedSecretTitle];
     Object.keys(folderMetadatas.users).forEach(function (friendName) {
       sharedSecretObjectsPromises = sharedSecretObjectsPromises.concat(function () {
         var friend = new User(friendName);
-        return _this9.api.getPublicKey(friend.username).then(function (publicKey) {
+        return _this10.api.getPublicKey(friend.username).then(function (publicKey) {
           return friend.importPublicKey(publicKey);
         }).then(function () {
-          return _this9.getSharedSecretObjects(hashedSecretTitle, friend, folderMetadatas.users[friend.username].rights, [], true);
+          return _this10.getSharedSecretObjects(hashedSecretTitle, friend, folderMetadatas.users[friend.username].rights, [], true);
         });
       }());
     });
@@ -2198,11 +2299,11 @@ var Secretin = function () {
     var metadatasUsers = {};
     var commonParentToClean = [];
     return this.api.getSecret(hashedFolder, this.currentUser).then(function (encryptedSecret) {
-      return _this9.currentUser.decryptSecret(hashedFolder, encryptedSecret);
+      return _this10.currentUser.decryptSecret(hashedFolder, encryptedSecret);
     }).then(function (secret) {
       var folders = secret;
       folders[hashedSecretTitle] = 1;
-      return _this9.editSecret(hashedFolder, folders);
+      return _this10.editSecret(hashedFolder, folders);
     }).then(function () {
       return Promise.all(sharedSecretObjectsPromises);
     }).then(function (sharedSecretObjectsArray) {
@@ -2218,13 +2319,19 @@ var Secretin = function () {
             folder: newSharedSecretObject.inFolder
           });
           delete newSharedSecretObject.inFolder;
-          if (_this9.currentUser.username !== newSharedSecretObject.username) {
+          if (_this10.currentUser.username !== newSharedSecretObject.username) {
             delete newSharedSecretObject.username;
             fullSharedSecretObjects.push(newSharedSecretObject);
           }
         });
       });
-      return _this9.api.shareSecret(_this9.currentUser, fullSharedSecretObjects);
+      if (fullSharedSecretObjects.length > 0) {
+        if (!_this10.editableDB) {
+          return Promise.reject(new OfflineError());
+        }
+        return _this10.api.shareSecret(_this10.currentUser, fullSharedSecretObjects);
+      }
+      return Promise.resolve();
     }).then(function () {
       var resetMetaPromises = [];
       Object.keys(folderMetadatas.users).forEach(function (username) {
@@ -2237,7 +2344,7 @@ var Secretin = function () {
 
       Object.keys(metadatasUsers).forEach(function (hashedTitle) {
         metadatasUsers[hashedTitle].forEach(function (infos) {
-          var currentSecret = _this9.currentUser.metadatas[hashedTitle];
+          var currentSecret = _this10.currentUser.metadatas[hashedTitle];
           var metaUser = {
             username: infos.friendName,
             rights: folderMetadatas.users[infos.friendName].rights
@@ -2250,7 +2357,7 @@ var Secretin = function () {
           }
 
           if (typeof infos.folder !== 'undefined') {
-            var parentMetadatas = _this9.currentUser.metadatas[infos.folder];
+            var parentMetadatas = _this10.currentUser.metadatas[infos.folder];
             metaUser.folders[infos.folder] = {
               name: parentMetadatas.title
             };
@@ -2264,25 +2371,25 @@ var Secretin = function () {
             delete metaUser.folders[parentFolder];
           });
 
-          if (infos.friendName === _this9.currentUser.username) {
+          if (infos.friendName === _this10.currentUser.username) {
             metaUser.rights = 2;
           }
-          _this9.currentUser.metadatas[hashedTitle].users[infos.friendName] = metaUser;
+          _this10.currentUser.metadatas[hashedTitle].users[infos.friendName] = metaUser;
         });
 
-        resetMetaPromises.push(_this9.resetMetadatas(hashedTitle));
+        resetMetaPromises.push(_this10.resetMetadatas(hashedTitle));
       });
       return Promise.all(resetMetaPromises);
     }).then(function () {
       var parentCleaningPromises = [];
       commonParentToClean.forEach(function (parentFolder) {
         if (parentFolder !== 'ROOT') {
-          parentCleaningPromises.push(_this9.api.getSecret(parentFolder, _this9.currentUser).then(function (encryptedSecret) {
-            return _this9.currentUser.decryptSecret(parentFolder, encryptedSecret);
+          parentCleaningPromises.push(_this10.api.getSecret(parentFolder, _this10.currentUser).then(function (encryptedSecret) {
+            return _this10.currentUser.decryptSecret(parentFolder, encryptedSecret);
           }).then(function (secret) {
             var folders = secret;
             delete folders[hashedSecretTitle];
-            return _this9.editSecret(parentFolder, folders);
+            return _this10.editSecret(parentFolder, folders);
           }));
         }
       });
@@ -2292,12 +2399,13 @@ var Secretin = function () {
     }).then(function (res) {
       if (typeof window.process !== 'undefined') {
         // Electron
-        _this9.getDb();
+        _this10.getDb();
       }
       return res;
     }).catch(function (err) {
       if (err === 'Offline') {
-        _this9.offlineDB();
+        _this10.offlineDB();
+        return _this10.addSecretToFolder(hashedSecretTitle, hashedFolder);
       }
       var wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -2305,7 +2413,7 @@ var Secretin = function () {
   };
 
   Secretin.prototype.getSharedSecretObjects = function getSharedSecretObjects(hashedTitle, friend, rights, fullSharedSecretObjects) {
-    var _this10 = this;
+    var _this11 = this;
 
     var addUsername = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : false;
     var hashedFolder = arguments[5];
@@ -2318,19 +2426,19 @@ var Secretin = function () {
     } else {
       if (secretMetadatas.type === 'folder') {
         isFolder = isFolder.then(function () {
-          return _this10.api.getSecret(hashedTitle, _this10.currentUser);
+          return _this11.api.getSecret(hashedTitle, _this11.currentUser);
         }).then(function (encryptedSecret) {
-          return _this10.currentUser.decryptSecret(hashedTitle, encryptedSecret);
+          return _this11.currentUser.decryptSecret(hashedTitle, encryptedSecret);
         }).then(function (secrets) {
           Object.keys(secrets).forEach(function (hash) {
-            sharedSecretObjectPromises.push(_this10.getSharedSecretObjects(hash, friend, rights, fullSharedSecretObjects, addUsername, hashedTitle));
+            sharedSecretObjectPromises.push(_this11.getSharedSecretObjects(hash, friend, rights, fullSharedSecretObjects, addUsername, hashedTitle));
           });
           return Promise.all(sharedSecretObjectPromises);
         });
       }
 
       return isFolder.then(function () {
-        return _this10.currentUser.shareSecret(friend, _this10.currentUser.keys[hashedTitle].key, hashedTitle);
+        return _this11.currentUser.shareSecret(friend, _this11.currentUser.keys[hashedTitle].key, hashedTitle);
       }).then(function (secretObject) {
         var newSecretObject = secretObject;
         newSecretObject.rights = rights;
@@ -2342,7 +2450,7 @@ var Secretin = function () {
         return fullSharedSecretObjects;
       }).catch(function (err) {
         if (err === 'Offline') {
-          _this10.offlineDB();
+          _this11.offlineDB();
           throw err;
         } else {
           var wrapper = new WrappingError(err);
@@ -2353,72 +2461,14 @@ var Secretin = function () {
   };
 
   Secretin.prototype.resetMetadatas = function resetMetadatas(hashedTitle) {
-    var _this11 = this;
+    var _this12 = this;
 
-    if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
-    }
     var secretMetadatas = this.currentUser.metadatas[hashedTitle];
     var now = new Date();
     secretMetadatas.lastModifiedAt = now;
     secretMetadatas.lastModifiedBy = this.currentUser.username;
     return this.getSecret(hashedTitle).then(function (secret) {
-      return _this11.editSecret(hashedTitle, secret);
-    }).then(function (res) {
-      if (typeof window.process !== 'undefined') {
-        // Electron
-        _this11.getDb();
-      }
-      return res;
-    }).catch(function (err) {
-      if (err === 'Offline') {
-        _this11.offlineDB();
-      }
-      var wrapper = new WrappingError(err);
-      throw wrapper.error;
-    });
-  };
-
-  Secretin.prototype.shareSecret = function shareSecret(hashedTitle, friendName, sRights) {
-    var _this12 = this;
-
-    if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
-    }
-    var sharedSecretObjects = void 0;
-    var rights = parseInt(sRights, 10);
-    var friend = new User(friendName);
-    return this.api.getPublicKey(friend.username).then(function (publicKey) {
-      return friend.importPublicKey(publicKey);
-    }, function () {
-      return Promise.reject('Friend not found');
-    }).then(function () {
-      return _this12.getSharedSecretObjects(hashedTitle, friend, rights, []);
-    }).then(function (rSharedSecretObjects) {
-      sharedSecretObjects = rSharedSecretObjects;
-      return _this12.api.shareSecret(_this12.currentUser, sharedSecretObjects);
-    }).then(function () {
-      var resetMetaPromises = [];
-      sharedSecretObjects.forEach(function (sharedSecretObject) {
-        var secretMetadatas = _this12.currentUser.metadatas[sharedSecretObject.hashedTitle];
-        secretMetadatas.users[friend.username] = {
-          username: friend.username,
-          rights: rights,
-          folders: {}
-        };
-        if (typeof sharedSecretObject.inFolder !== 'undefined') {
-          var parentMetadatas = _this12.currentUser.metadatas[sharedSecretObject.inFolder];
-          secretMetadatas.users[friend.username].folders[sharedSecretObject.inFolder] = {
-            name: parentMetadatas.title
-          };
-        } else {
-          secretMetadatas.users[friend.username].folders.ROOT = true;
-        }
-        resetMetaPromises.push(_this12.resetMetadatas(sharedSecretObject.hashedTitle));
-      });
-      return Promise.all(resetMetaPromises);
-    }).then(function () {
-      return _this12.currentUser.metadatas[hashedTitle];
+      return _this12.editSecret(hashedTitle, secret);
     }).then(function (res) {
       if (typeof window.process !== 'undefined') {
         // Electron
@@ -2434,34 +2484,44 @@ var Secretin = function () {
     });
   };
 
-  Secretin.prototype.unshareSecret = function unshareSecret(hashedTitle, friendName) {
+  Secretin.prototype.shareSecret = function shareSecret(hashedTitle, friendName, sRights) {
     var _this13 = this;
 
     if (!this.editableDB) {
       return Promise.reject(new OfflineError());
     }
-    var isFolder = Promise.resolve();
-    var secretMetadatas = this.currentUser.metadatas[hashedTitle];
-    if (typeof secretMetadatas === 'undefined') {
-      return Promise.reject(new DontHaveSecretError());
-    }
-    if (secretMetadatas.type === 'folder') {
-      isFolder = isFolder.then(function () {
-        return _this13.unshareFolderSecrets(hashedTitle, friendName);
-      });
-    }
-
-    return isFolder.then(function () {
-      return _this13.api.unshareSecret(_this13.currentUser, [friendName], hashedTitle);
-    }).then(function (result) {
-      if (result !== 'Secret unshared') {
-        var wrapper = new WrappingError(result);
-        throw wrapper.error;
-      }
-      delete secretMetadatas.users[friendName];
-      return _this13.resetMetadatas(hashedTitle);
+    var sharedSecretObjects = void 0;
+    var rights = parseInt(sRights, 10);
+    var friend = new User(friendName);
+    return this.api.getPublicKey(friend.username).then(function (publicKey) {
+      return friend.importPublicKey(publicKey);
+    }, function () {
+      return Promise.reject('Friend not found');
     }).then(function () {
-      return _this13.renewKey(hashedTitle);
+      return _this13.getSharedSecretObjects(hashedTitle, friend, rights, []);
+    }).then(function (rSharedSecretObjects) {
+      sharedSecretObjects = rSharedSecretObjects;
+      return _this13.api.shareSecret(_this13.currentUser, sharedSecretObjects);
+    }).then(function () {
+      var resetMetaPromises = [];
+      sharedSecretObjects.forEach(function (sharedSecretObject) {
+        var secretMetadatas = _this13.currentUser.metadatas[sharedSecretObject.hashedTitle];
+        secretMetadatas.users[friend.username] = {
+          username: friend.username,
+          rights: rights,
+          folders: {}
+        };
+        if (typeof sharedSecretObject.inFolder !== 'undefined') {
+          var parentMetadatas = _this13.currentUser.metadatas[sharedSecretObject.inFolder];
+          secretMetadatas.users[friend.username].folders[sharedSecretObject.inFolder] = {
+            name: parentMetadatas.title
+          };
+        } else {
+          secretMetadatas.users[friend.username].folders.ROOT = true;
+        }
+        resetMetaPromises.push(_this13.resetMetadatas(sharedSecretObject.hashedTitle));
+      });
+      return Promise.all(resetMetaPromises);
     }).then(function () {
       return _this13.currentUser.metadatas[hashedTitle];
     }).then(function (res) {
@@ -2479,20 +2539,36 @@ var Secretin = function () {
     });
   };
 
-  Secretin.prototype.unshareFolderSecrets = function unshareFolderSecrets(hashedFolder, friendName) {
+  Secretin.prototype.unshareSecret = function unshareSecret(hashedTitle, friendName) {
     var _this14 = this;
 
     if (!this.editableDB) {
       return Promise.reject(new OfflineError());
     }
-    return this.api.getSecret(hashedFolder, this.currentUser).then(function (encryptedSecret) {
-      return _this14.currentUser.decryptSecret(hashedFolder, encryptedSecret);
-    }).then(function (secrets) {
-      return Object.keys(secrets).reduce(function (promise, hashedTitle) {
-        return promise.then(function () {
-          return _this14.unshareSecret(hashedTitle, friendName);
-        });
-      }, Promise.resolve());
+    var isFolder = Promise.resolve();
+    var secretMetadatas = this.currentUser.metadatas[hashedTitle];
+    if (typeof secretMetadatas === 'undefined') {
+      return Promise.reject(new DontHaveSecretError());
+    }
+    if (secretMetadatas.type === 'folder') {
+      isFolder = isFolder.then(function () {
+        return _this14.unshareFolderSecrets(hashedTitle, friendName);
+      });
+    }
+
+    return isFolder.then(function () {
+      return _this14.api.unshareSecret(_this14.currentUser, [friendName], hashedTitle);
+    }).then(function (result) {
+      if (result !== 'Secret unshared') {
+        var wrapper = new WrappingError(result);
+        throw wrapper.error;
+      }
+      delete secretMetadatas.users[friendName];
+      return _this14.resetMetadatas(hashedTitle);
+    }).then(function () {
+      return _this14.renewKey(hashedTitle);
+    }).then(function () {
+      return _this14.currentUser.metadatas[hashedTitle];
     }).then(function (res) {
       if (typeof window.process !== 'undefined') {
         // Electron
@@ -2508,8 +2584,37 @@ var Secretin = function () {
     });
   };
 
-  Secretin.prototype.wrapKeyForFriend = function wrapKeyForFriend(hashedUsername, key) {
+  Secretin.prototype.unshareFolderSecrets = function unshareFolderSecrets(hashedFolder, friendName) {
     var _this15 = this;
+
+    if (!this.editableDB) {
+      return Promise.reject(new OfflineError());
+    }
+    return this.api.getSecret(hashedFolder, this.currentUser).then(function (encryptedSecret) {
+      return _this15.currentUser.decryptSecret(hashedFolder, encryptedSecret);
+    }).then(function (secrets) {
+      return Object.keys(secrets).reduce(function (promise, hashedTitle) {
+        return promise.then(function () {
+          return _this15.unshareSecret(hashedTitle, friendName);
+        });
+      }, Promise.resolve());
+    }).then(function (res) {
+      if (typeof window.process !== 'undefined') {
+        // Electron
+        _this15.getDb();
+      }
+      return res;
+    }).catch(function (err) {
+      if (err === 'Offline') {
+        _this15.offlineDB();
+      }
+      var wrapper = new WrappingError(err);
+      throw wrapper.error;
+    });
+  };
+
+  Secretin.prototype.wrapKeyForFriend = function wrapKeyForFriend(hashedUsername, key) {
+    var _this16 = this;
 
     if (!this.editableDB) {
       return Promise.reject(new OfflineError());
@@ -2519,12 +2624,12 @@ var Secretin = function () {
       friend = new User(hashedUsername);
       return friend.importPublicKey(publicKey);
     }).then(function () {
-      return _this15.currentUser.wrapKey(key, friend.publicKey);
+      return _this16.currentUser.wrapKey(key, friend.publicKey);
     }).then(function (friendWrappedKey) {
       return { user: hashedUsername, key: friendWrappedKey };
     }).catch(function (err) {
       if (err === 'Offline') {
-        _this15.offlineDB();
+        _this16.offlineDB();
         throw err;
       }
       var wrapper = new WrappingError(err);
@@ -2533,7 +2638,7 @@ var Secretin = function () {
   };
 
   Secretin.prototype.renewKey = function renewKey(hashedTitle) {
-    var _this16 = this;
+    var _this17 = this;
 
     if (!this.editableDB) {
       return Promise.reject(new OfflineError());
@@ -2544,9 +2649,9 @@ var Secretin = function () {
     var wrappedKeys = void 0;
     return this.api.getSecret(hashedTitle, this.currentUser).then(function (eSecret) {
       encryptedSecret = eSecret;
-      return _this16.currentUser.decryptSecret(hashedTitle, encryptedSecret);
+      return _this17.currentUser.decryptSecret(hashedTitle, encryptedSecret);
     }).then(function (rawSecret) {
-      return _this16.currentUser.encryptSecret(_this16.currentUser.metadatas[hashedTitle], rawSecret);
+      return _this17.currentUser.encryptSecret(_this17.currentUser.metadatas[hashedTitle], rawSecret);
     }).then(function (secretObject) {
       secret.secret = secretObject.secret;
       secret.iv = secretObject.iv;
@@ -2556,74 +2661,24 @@ var Secretin = function () {
       var wrappedKeysPromises = [];
       encryptedSecret.users.forEach(function (hashedUsername) {
         if (hashedCurrentUsername === hashedUsername) {
-          wrappedKeysPromises.push(_this16.currentUser.wrapKey(secretObject.key, _this16.currentUser.publicKey).then(function (wrappedKey) {
+          wrappedKeysPromises.push(_this17.currentUser.wrapKey(secretObject.key, _this17.currentUser.publicKey).then(function (wrappedKey) {
             return { user: hashedCurrentUsername, key: wrappedKey };
           }));
         } else {
-          wrappedKeysPromises.push(_this16.wrapKeyForFriend(hashedUsername, secretObject.key));
+          wrappedKeysPromises.push(_this17.wrapKeyForFriend(hashedUsername, secretObject.key));
         }
       });
 
       return Promise.all(wrappedKeysPromises);
     }).then(function (rWrappedKeys) {
       wrappedKeys = rWrappedKeys;
-      return _this16.api.newKey(_this16.currentUser, hashedTitle, secret, wrappedKeys);
+      return _this17.api.newKey(_this17.currentUser, hashedTitle, secret, wrappedKeys);
     }).then(function () {
       wrappedKeys.forEach(function (wrappedKey) {
         if (wrappedKey.user === hashedCurrentUsername) {
-          _this16.currentUser.keys[hashedTitle].key = wrappedKey.key;
+          _this17.currentUser.keys[hashedTitle].key = wrappedKey.key;
         }
       });
-    }).then(function (res) {
-      if (typeof window.process !== 'undefined') {
-        // Electron
-        _this16.getDb();
-      }
-      return res;
-    }).catch(function (err) {
-      if (err === 'Offline') {
-        _this16.offlineDB();
-      }
-      var wrapper = new WrappingError(err);
-      throw wrapper.error;
-    });
-  };
-
-  Secretin.prototype.removeSecretFromFolder = function removeSecretFromFolder(hashedTitle, hashedFolder) {
-    var _this17 = this;
-
-    if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
-    }
-    var secretMetadatas = this.currentUser.metadatas[hashedTitle];
-    var usersToDelete = [];
-    Object.keys(secretMetadatas.users).forEach(function (username) {
-      if (typeof secretMetadatas.users[username].folders[hashedFolder] !== 'undefined') {
-        usersToDelete.push(username);
-      }
-    });
-    return this.api.unshareSecret(this.currentUser, usersToDelete, hashedTitle).then(function () {
-      usersToDelete.forEach(function (username) {
-        delete secretMetadatas.users[username].folders[hashedFolder];
-        if (Object.keys(secretMetadatas.users[username].folders).length === 0) {
-          if (_this17.currentUser.username === username) {
-            secretMetadatas.users[username].folders.ROOT = true;
-          } else {
-            delete secretMetadatas.users[username];
-          }
-        }
-      });
-      return _this17.renewKey(hashedTitle);
-    }).then(function () {
-      return _this17.resetMetadatas(hashedTitle);
-    }).then(function () {
-      return _this17.api.getSecret(hashedFolder, _this17.currentUser);
-    }).then(function (encryptedSecret) {
-      return _this17.currentUser.decryptSecret(hashedFolder, encryptedSecret);
-    }).then(function (secret) {
-      var folder = secret;
-      delete folder[hashedTitle];
-      return _this17.editSecret(hashedFolder, folder);
     }).then(function (res) {
       if (typeof window.process !== 'undefined') {
         // Electron
@@ -2639,17 +2694,77 @@ var Secretin = function () {
     });
   };
 
-  Secretin.prototype.getSecret = function getSecret(hashedTitle) {
+  Secretin.prototype.removeSecretFromFolder = function removeSecretFromFolder(hashedTitle, hashedFolder) {
     var _this18 = this;
 
+    var secretMetadatas = this.currentUser.metadatas[hashedTitle];
+    var usersToDelete = [];
+    Object.keys(secretMetadatas.users).forEach(function (username) {
+      if (typeof secretMetadatas.users[username].folders[hashedFolder] !== 'undefined') {
+        usersToDelete.push(username);
+      }
+    });
+
+    return Promise.resolve().then(function () {
+      if (usersToDelete.length > 1) {
+        if (!_this18.editableDB) {
+          return Promise.reject(new OfflineError());
+        }
+        return _this18.api.unshareSecret(_this18.currentUser, usersToDelete, hashedTitle);
+      }
+      return Promise.resolve();
+    }).then(function () {
+      usersToDelete.forEach(function (username) {
+        delete secretMetadatas.users[username].folders[hashedFolder];
+        if (Object.keys(secretMetadatas.users[username].folders).length === 0) {
+          if (_this18.currentUser.username === username) {
+            secretMetadatas.users[username].folders.ROOT = true;
+          } else {
+            delete secretMetadatas.users[username];
+          }
+        }
+      });
+      if (usersToDelete.length > 1) {
+        return _this18.renewKey(hashedTitle);
+      }
+      return Promise.resolve();
+    }).then(function () {
+      return _this18.resetMetadatas(hashedTitle);
+    }).then(function () {
+      return _this18.api.getSecret(hashedFolder, _this18.currentUser);
+    }).then(function (encryptedSecret) {
+      return _this18.currentUser.decryptSecret(hashedFolder, encryptedSecret);
+    }).then(function (secret) {
+      var folder = secret;
+      delete folder[hashedTitle];
+      return _this18.editSecret(hashedFolder, folder);
+    }).then(function (res) {
+      if (typeof window.process !== 'undefined') {
+        // Electron
+        _this18.getDb();
+      }
+      return res;
+    }).catch(function (err) {
+      if (err === 'Offline') {
+        _this18.offlineDB();
+        return _this18.removeSecretFromFolder(hashedTitle, hashedFolder);
+      }
+      var wrapper = new WrappingError(err);
+      throw wrapper.error;
+    });
+  };
+
+  Secretin.prototype.getSecret = function getSecret(hashedTitle) {
+    var _this19 = this;
+
     return this.api.getSecret(hashedTitle, this.currentUser).then(function (encryptedSecret) {
-      return _this18.currentUser.decryptSecret(hashedTitle, encryptedSecret);
+      return _this19.currentUser.decryptSecret(hashedTitle, encryptedSecret);
     }).then(function (secret) {
       return secret;
     }).catch(function (err) {
       if (err === 'Offline') {
-        _this18.offlineDB();
-        return _this18.getSecret(hashedTitle);
+        _this19.offlineDB();
+        return _this19.getSecret(hashedTitle);
       }
       var wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -2657,7 +2772,7 @@ var Secretin = function () {
   };
 
   Secretin.prototype.deleteSecret = function deleteSecret(hashedTitle) {
-    var _this19 = this;
+    var _this20 = this;
 
     var list = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
 
@@ -2671,59 +2786,29 @@ var Secretin = function () {
     }
     if (secretMetadatas.type === 'folder' && list.indexOf(hashedTitle) === -1) {
       isFolder = isFolder.then(function () {
-        return _this19.deleteFolderSecrets(hashedTitle, list);
+        return _this20.deleteFolderSecrets(hashedTitle, list);
       });
     }
 
     return isFolder.then(function () {
-      return _this19.api.deleteSecret(_this19.currentUser, hashedTitle);
+      return _this20.api.deleteSecret(_this20.currentUser, hashedTitle);
     }).then(function () {
-      delete _this19.currentUser.metadatas[hashedTitle];
-      delete _this19.currentUser.keys[hashedTitle];
+      delete _this20.currentUser.metadatas[hashedTitle];
+      delete _this20.currentUser.keys[hashedTitle];
       var editFolderPromises = [];
-      var currentUsername = _this19.currentUser.username;
+      var currentUsername = _this20.currentUser.username;
       Object.keys(secretMetadatas.users[currentUsername].folders).forEach(function (hashedFolder) {
         if (hashedFolder !== 'ROOT') {
-          editFolderPromises.push(_this19.api.getSecret(hashedFolder, _this19.currentUser).then(function (encryptedSecret) {
-            return _this19.currentUser.decryptSecret(hashedFolder, encryptedSecret);
+          editFolderPromises.push(_this20.api.getSecret(hashedFolder, _this20.currentUser).then(function (encryptedSecret) {
+            return _this20.currentUser.decryptSecret(hashedFolder, encryptedSecret);
           }).then(function (secret) {
             var folder = secret;
             delete folder[hashedTitle];
-            return _this19.editSecret(hashedFolder, folder);
+            return _this20.editSecret(hashedFolder, folder);
           }));
         }
       });
       return Promise.all(editFolderPromises);
-    }).then(function (res) {
-      if (typeof window.process !== 'undefined') {
-        // Electron
-        _this19.getDb();
-      }
-      return res;
-    }).catch(function (err) {
-      if (err === 'Offline') {
-        _this19.offlineDB();
-      }
-      var wrapper = new WrappingError(err);
-      throw wrapper.error;
-    });
-  };
-
-  Secretin.prototype.deleteFolderSecrets = function deleteFolderSecrets(hashedFolder, list) {
-    var _this20 = this;
-
-    if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
-    }
-    list.push(hashedFolder);
-    return this.api.getSecret(hashedFolder, this.currentUser).then(function (encryptedSecret) {
-      return _this20.currentUser.decryptSecret(hashedFolder, encryptedSecret);
-    }).then(function (secrets) {
-      return Object.keys(secrets).reduce(function (promise, hashedTitle) {
-        return promise.then(function () {
-          return _this20.deleteSecret(hashedTitle, list);
-        });
-      }, Promise.resolve());
     }).then(function (res) {
       if (typeof window.process !== 'undefined') {
         // Electron
@@ -2739,13 +2824,22 @@ var Secretin = function () {
     });
   };
 
-  Secretin.prototype.deactivateTotp = function deactivateTotp() {
+  Secretin.prototype.deleteFolderSecrets = function deleteFolderSecrets(hashedFolder, list) {
     var _this21 = this;
 
     if (!this.editableDB) {
       return Promise.reject(new OfflineError());
     }
-    return this.api.deactivateTotp(this.currentUser).then(function (res) {
+    list.push(hashedFolder);
+    return this.api.getSecret(hashedFolder, this.currentUser).then(function (encryptedSecret) {
+      return _this21.currentUser.decryptSecret(hashedFolder, encryptedSecret);
+    }).then(function (secrets) {
+      return Object.keys(secrets).reduce(function (promise, hashedTitle) {
+        return promise.then(function () {
+          return _this21.deleteSecret(hashedTitle, list);
+        });
+      }, Promise.resolve());
+    }).then(function (res) {
       if (typeof window.process !== 'undefined') {
         // Electron
         _this21.getDb();
@@ -2760,14 +2854,13 @@ var Secretin = function () {
     });
   };
 
-  Secretin.prototype.activateTotp = function activateTotp(seed) {
+  Secretin.prototype.deactivateTotp = function deactivateTotp() {
     var _this22 = this;
 
     if (!this.editableDB) {
       return Promise.reject(new OfflineError());
     }
-    var protectedSeed = xorSeed(hexStringToUint8Array(this.currentUser.hash), seed.raw);
-    return this.api.activateTotp(protectedSeed, this.currentUser).then(function (res) {
+    return this.api.deactivateTotp(this.currentUser).then(function (res) {
       if (typeof window.process !== 'undefined') {
         // Electron
         _this22.getDb();
@@ -2782,24 +2875,46 @@ var Secretin = function () {
     });
   };
 
-  Secretin.prototype.activateShortLogin = function activateShortLogin(shortpass, deviceName) {
+  Secretin.prototype.activateTotp = function activateTotp(seed) {
     var _this23 = this;
+
+    if (!this.editableDB) {
+      return Promise.reject(new OfflineError());
+    }
+    var protectedSeed = xorSeed(hexStringToUint8Array(this.currentUser.hash), seed.raw);
+    return this.api.activateTotp(protectedSeed, this.currentUser).then(function (res) {
+      if (typeof window.process !== 'undefined') {
+        // Electron
+        _this23.getDb();
+      }
+      return res;
+    }).catch(function (err) {
+      if (err === 'Offline') {
+        _this23.offlineDB();
+      }
+      var wrapper = new WrappingError(err);
+      throw wrapper.error;
+    });
+  };
+
+  Secretin.prototype.activateShortLogin = function activateShortLogin(shortpass, deviceName) {
+    var _this24 = this;
 
     if (!this.editableDB) {
       return Promise.reject(new OfflineError());
     }
     if (localStorageAvailable()) {
       return this.currentUser.activateShortLogin(shortpass, deviceName).then(function (toSend) {
-        return _this23.api.activateShortLogin(toSend, _this23.currentUser);
+        return _this24.api.activateShortLogin(toSend, _this24.currentUser);
       }).then(function (res) {
         if (typeof window.process !== 'undefined') {
           // Electron
-          _this23.getDb();
+          _this24.getDb();
         }
         return res;
       }).catch(function (err) {
         if (err === 'Offline') {
-          _this23.offlineDB();
+          _this24.offlineDB();
         }
         var wrapper = new WrappingError(err);
         throw wrapper.error;
@@ -2821,11 +2936,8 @@ var Secretin = function () {
   };
 
   Secretin.prototype.shortLogin = function shortLogin(shortpass) {
-    var _this24 = this;
+    var _this25 = this;
 
-    if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
-    }
     var username = localStorage.getItem(Secretin.prefix + 'username');
     var deviceName = localStorage.getItem(Secretin.prefix + 'deviceName');
     var shortpassKey = void 0;
@@ -2833,35 +2945,49 @@ var Secretin = function () {
     this.currentUser = new User(username);
     return this.api.getProtectKeyParameters(username, deviceName).then(function (rParameters) {
       parameters = rParameters;
-      _this24.currentUser.totp = parameters.totp;
-      return _this24.currentUser.importPublicKey(parameters.publicKey);
+      _this25.currentUser.totp = parameters.totp;
+      return _this25.currentUser.importPublicKey(parameters.publicKey);
     }).then(function () {
       return derivePassword(shortpass, parameters);
     }).then(function (dKey) {
       shortpassKey = dKey.key;
-      return _this24.api.getProtectKey(username, deviceName, dKey.hash);
+      return _this25.api.getProtectKey(username, deviceName, dKey.hash);
     }).then(function (protectKey) {
-      return _this24.currentUser.shortLogin(shortpassKey, protectKey);
+      return _this25.currentUser.shortLogin(shortpassKey, protectKey);
     }).then(function () {
-      return _this24.refreshUser();
+      return _this25.refreshUser();
     }).then(function () {
-      return _this24.currentUser;
+      if (typeof window.process !== 'undefined') {
+        // Electron
+        return _this25.getDb().then(function () {
+          if (_this25.editableDB) {
+            return _this25.doCacheActions();
+          }
+          return Promise.resolve();
+        });
+      }
+      return Promise.resolve();
+    }).then(function () {
+      return _this25.currentUser;
     }).catch(function (err) {
       if (err === 'Offline') {
-        _this24.offlineDB();
+        _this25.offlineDB();
+        return _this25.shortLogin(shortpass);
       }
-      localStorage.removeItem(Secretin.prefix + 'username');
-      localStorage.removeItem(Secretin.prefix + 'deviceName');
-      localStorage.removeItem(Secretin.prefix + 'privateKey');
-      localStorage.removeItem(Secretin.prefix + 'privateKeyIv');
-      localStorage.removeItem(Secretin.prefix + 'iv');
+      if (err !== 'Not available in standalone mode' && !(err instanceof NotAvailableError)) {
+        localStorage.removeItem(Secretin.prefix + 'username');
+        localStorage.removeItem(Secretin.prefix + 'deviceName');
+        localStorage.removeItem(Secretin.prefix + 'privateKey');
+        localStorage.removeItem(Secretin.prefix + 'privateKeyIv');
+        localStorage.removeItem(Secretin.prefix + 'iv');
+      }
       var wrapper = new WrappingError(err);
       throw wrapper.error;
     });
   };
 
   Secretin.prototype.canITryShortLogin = function canITryShortLogin() {
-    return localStorageAvailable() && localStorage.getItem(Secretin.prefix + 'username') !== null;
+    return this.editableDB && localStorageAvailable() && localStorage.getItem(Secretin.prefix + 'username') !== null;
   };
 
   Secretin.prototype.getSavedUsername = function getSavedUsername() {
@@ -2872,25 +2998,22 @@ var Secretin = function () {
   };
 
   Secretin.prototype.getRescueCodes = function getRescueCodes() {
-    var _this25 = this;
+    var _this26 = this;
 
     return this.api.getRescueCodes(this.currentUser).catch(function (err) {
       if (err === 'Offline') {
-        _this25.offlineDB();
-        return _this25.getRescueCodes();
+        _this26.offlineDB();
+        return _this26.getRescueCodes();
       }
       var wrapper = new WrappingError(err);
       throw wrapper.error;
     });
   };
 
-  Secretin.prototype.getDb = function getDb(username) {
-    var _this26 = this;
+  Secretin.prototype.getDb = function getDb() {
+    var _this27 = this;
 
-    if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
-    }
-    var cacheKey = Secretin.prefix + 'cache_' + (username || this.currentUser.username);
+    var cacheKey = Secretin.prefix + 'cache_' + this.currentUser.username;
     var DbCacheStr = localStorage.getItem(cacheKey);
     var DbCache = DbCacheStr ? JSON.parse(DbCacheStr) : { users: {}, secrets: {} };
     var revs = {};
@@ -2910,7 +3033,8 @@ var Secretin = function () {
       return newDbCacheStr;
     }).catch(function (err) {
       if (err === 'Offline') {
-        _this26.offlineDB();
+        _this27.offlineDB();
+        return _this27.getDb();
       }
       var wrapper = new WrappingError(err);
       throw wrapper.error;
