@@ -14,6 +14,7 @@
   "globals": {
     "crypto": true,
     "Secretin": true,
+    "SecretinBrowserAdapter": true,
     "__karma__": true,
     "module": true,
     "process": true,
