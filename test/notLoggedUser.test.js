@@ -1,4 +1,4 @@
-describe('Not logged user', () => {
+xdescribe('Not logged user', () => {
   const username = 'user';
   const password = 'password';
   const wrongUsername = 'wrongUser';

@@ -1,4 +1,4 @@
-describe('Password generation', () => {
+xdescribe('Password generation', () => {
   const pw = Secretin.Utils.PasswordGenerator;
 
   describe('hasNumber', () => {
