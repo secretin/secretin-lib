@@ -1,10 +1,4 @@
 import {
-  derivePassword,
-  encryptRSAOAEP,
-  decryptRSAOAEP,
-} from './lib/crypto';
-
-import {
   WrappingError,
   UsernameAlreadyExistsError,
   NeedTOTPTokenError,
@@ -24,8 +18,9 @@ import APIStandalone from './API/Standalone';
 import User from './User';
 
 class Secretin {
-  constructor(API = APIStandalone, db) {
-    this.api = new API(db);
+  constructor(cryptoAdapter, API = APIStandalone, db) {
+    this.cryptoAdapter = cryptoAdapter;
+    this.api = new API(db, this.cryptoAdapter.getSHA256);
     this.editableDB = true;
     this.currentUser = {};
     this.listeners = {
@@ -52,7 +47,7 @@ class Secretin {
       const DbCacheStr = localStorage.getItem(cacheKey);
       const DbCache = DbCacheStr ? JSON.parse(DbCacheStr) : { users: {}, secrets: {} };
       this.oldApi = this.api;
-      this.api = new APIStandalone(DbCache);
+      this.api = new APIStandalone(DbCache, this.cryptoAdapter.getSHA256);
       this.editableDB = false;
       this.dispatchEvent('connectionChange', { connection: 'offline' });
       this.testOnline();
@@ -110,10 +105,13 @@ class Secretin {
         );
       } else if (cacheAction.action === 'editSecret') {
         return promise.then(() =>
-          decryptRSAOAEP(cacheAction.args[2], this.currentUser.privateKey)
+          this.cryptoAdapter.decryptRSAOAEP(cacheAction.args[2], this.currentUser.privateKey)
             .then((metadatas) => {
               this.currentUser.metadatas[cacheAction.args[0]] = metadatas;
-              return decryptRSAOAEP(cacheAction.args[1], this.currentUser.privateKey);
+              return this.cryptoAdapter.decryptRSAOAEP(
+                cacheAction.args[1],
+                this.currentUser.privateKey
+              );
             })
             .then(content => this.editSecret(cacheAction.args[0], content))
             .then(() => {
@@ -135,7 +133,7 @@ class Secretin {
     let privateKey;
     let pass;
     let options;
-    this.currentUser = new User(username);
+    this.currentUser = new User(username, this.cryptoAdapter);
     return this.api.userExists(username)
       .then((exists) =>
         new Promise((resolve, reject) => {
@@ -195,7 +193,7 @@ class Secretin {
         if (parameters.totp && (typeof otp === 'undefined' || otp === '')) {
           throw new NeedTOTPTokenError();
         }
-        return derivePassword(password, parameters);
+        return this.cryptoAdapter.derivePassword(password, parameters);
       })
       .then((dKey) => {
         hash = dKey.hash;
@@ -203,7 +201,7 @@ class Secretin {
         return this.api.getUser(username, hash, otp);
       })
       .then((user) => {
-        this.currentUser = new User(username);
+        this.currentUser = new User(username, this.cryptoAdapter);
         this.currentUser.totp = parameters.totp;
         this.currentUser.hash = hash;
         remoteUser = user;
@@ -352,10 +350,10 @@ class Secretin {
             return Promise.reject(new OfflineError());
           }
           const args = [hashedTitle];
-          encryptRSAOAEP(content, this.currentUser.publicKey)
+          this.cryptoAdapter.encryptRSAOAEP(content, this.currentUser.publicKey)
             .then((encryptedContent) => {
               args.push(encryptedContent);
-              return encryptRSAOAEP(
+              return this.cryptoAdapter.encryptRSAOAEP(
                 this.currentUser.metadatas[hashedTitle], this.currentUser.publicKey);
             })
             .then((encryptedMetadatas) => {
@@ -427,7 +425,7 @@ class Secretin {
     Object.keys(folderMetadatas.users).forEach((friendName) => {
       sharedSecretObjectsPromises = sharedSecretObjectsPromises.concat(
         (() => {
-          const friend = new User(friendName);
+          const friend = new User(friendName, this.cryptoAdapter);
           return this.api.getPublicKey(friend.username)
             .then((publicKey) => friend.importPublicKey(publicKey))
             .then(() => this.getSharedSecretObjects(
@@ -651,7 +649,7 @@ class Secretin {
     }
     let sharedSecretObjects;
     const rights = parseInt(sRights, 10);
-    const friend = new User(friendName);
+    const friend = new User(friendName, this.cryptoAdapter);
     return this.api.getPublicKey(friend.username)
       .then((publicKey) => friend.importPublicKey(publicKey),
             () => Promise.reject('Friend not found'))
@@ -777,7 +775,7 @@ class Secretin {
     let friend;
     return this.api.getPublicKey(hashedUsername, true)
       .then((publicKey) => {
-        friend = new User(hashedUsername);
+        friend = new User(hashedUsername, this.cryptoAdapter);
         return friend.importPublicKey(publicKey);
       })
       .then(() => this.currentUser.wrapKey(key, friend.publicKey))
@@ -1103,14 +1101,14 @@ class Secretin {
     const deviceName = localStorage.getItem(`${Secretin.prefix}deviceName`);
     let shortpassKey;
     let parameters;
-    this.currentUser = new User(username);
+    this.currentUser = new User(username, this.cryptoAdapter);
     return this.api.getProtectKeyParameters(username, deviceName)
       .then((rParameters) => {
         parameters = rParameters;
         this.currentUser.totp = parameters.totp;
         return this.currentUser.importPublicKey(parameters.publicKey);
       })
-      .then(() => derivePassword(shortpass, parameters))
+      .then(() => this.cryptoAdapter.derivePassword(shortpass, parameters))
       .then((dKey) => {
         shortpassKey = dKey.key;
         return this.api.getProtectKey(username, deviceName, dKey.hash);

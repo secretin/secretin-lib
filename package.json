@@ -4,12 +4,13 @@
   "description": "Open source secret manager with groups managment based on webapi crypto https://developer.mozilla.org/en-US/docs/Web/API/Crypto",
   "main": "dist/secretin.umd.js",
   "scripts": {
-    "start": "npm run watch",
-    "build": "npm run lint && rollup -c config/rollup.config.js",
+    "start": "yarn run watch",
+    "build": "yarn run lint && rollup -c config/rollup.config.js && yarn run build-adapters",
+    "build-adapters": "rollup -c config/rollup.browserAdapter.config.js",
     "watch": "rollup -c config/rollup.config.js --watch",
     "lint": "eslint src/ test/",
     "karma": "./node_modules/karma/bin/karma start karma.conf.js",
-    "test": "npm run build && npm run karma"
+    "test": "yarn run build && yarn run karma"
   },
   "repository": {
     "type": "git",

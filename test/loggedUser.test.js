@@ -533,7 +533,8 @@ describe('Logged user', () => {
         'keys',
         'hash',
         'metadatas',
-        'options'
+        'options',
+        'cryptoAdapter'
       )
       .then((currentUser) => currentUser.privateKey)
       .should.eventually.be.instanceOf(CryptoKey)

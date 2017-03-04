@@ -10,7 +10,7 @@ function resetAndGetDB() {
       xhr.open('GET', `${server}/reset`);
       xhr.onload = () => {
         if (xhr.status === 200) {
-          this.secretin = new Secretin(Secretin.API.Server, server);
+          this.secretin = new Secretin(SecretinBrowserAdapter, Secretin.API.Server, server);
           resolve();
         } else {
           reject(xhr.statusText);
@@ -20,7 +20,7 @@ function resetAndGetDB() {
     });
   }
   return new Promise((resolve) => {
-    this.secretin = new Secretin();
+    this.secretin = new Secretin(SecretinBrowserAdapter);
     resolve();
   });
 }

@@ -3,7 +3,7 @@ import {
   hexStringToUint8Array,
   bytesToHexString,
   bytesToASCIIString,
-} from './utils';
+} from '../../lib/utils';
 
 
 export function getSHA256(str) {

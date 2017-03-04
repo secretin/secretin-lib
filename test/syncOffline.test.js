@@ -10,7 +10,7 @@ if (__karma__.config.args[0] === 'server') {
         .then(() => this.secretin.getDb())
         .then(() => {
           this.secretin.currentUser.disconnect();
-          this.secretin = new Secretin(Secretin.API.Server, 'http://doesntexist.secret-in.me');
+          this.secretin = new Secretin(SecretinBrowserAdapter, Secretin.API.Server, 'http://doesntexist.secret-in.me');
           return this.secretin.loginUser(username, password);
         })
         .should.eventually.have.all.keys(
