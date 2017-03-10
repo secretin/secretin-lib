@@ -1,5 +1,8 @@
-(function (exports) {
+(function (exports,crypto$1,forge) {
 'use strict';
+
+crypto$1 = 'default' in crypto$1 ? crypto$1['default'] : crypto$1;
+forge = 'default' in forge ? forge['default'] : forge;
 
 var asyncGenerator = function () {
   function AwaitValue(value) {
@@ -369,297 +372,302 @@ var Utils = {
 };
 
 function getSHA256(str) {
-  var algorithm = 'SHA-256';
+  var hash = crypto$1.createHash('sha256');
   var data = asciiToUint8Array(str);
-  return crypto.subtle.digest(algorithm, data).then(function (hashedStr) {
-    return bytesToHexString(hashedStr);
-  });
+  hash.update(data);
+  return Promise.resolve(hash.digest('hex'));
 }
 
 function genRSAOAEP() {
-  var algorithm = {
-    name: 'RSA-OAEP',
-    modulusLength: 4096,
-    publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
-    hash: { name: 'SHA-256' }
-  };
-  var extractable = true;
-  var keyUsages = ['wrapKey', 'unwrapKey', 'encrypt', 'decrypt'];
-  return crypto.subtle.generateKey(algorithm, extractable, keyUsages);
+  return new Promise(function (resolve, reject) {
+    forge.pki.rsa.generateKeyPair(4096, 0x10001, function (err, keypair) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(keypair);
+      }
+    });
+  });
 }
 
 function generateWrappingKey() {
-  var algorithm = {
-    name: 'AES-CBC',
-    length: 256
-  };
-
-  var extractable = true;
-  var keyUsages = ['wrapKey', 'unwrapKey'];
-
-  return crypto.subtle.generateKey(algorithm, extractable, keyUsages);
+  var key = forge.random.getBytesSync(32);
+  return Promise.resolve(key);
 }
 
 function encryptAESGCM256(secret, key) {
   var result = {};
-  var algorithm = {};
   if (typeof key === 'undefined') {
-    algorithm = {
-      name: 'AES-GCM',
-      length: 256
-    };
-    var extractable = true;
-    var keyUsages = ['encrypt'];
-    return crypto.subtle.generateKey(algorithm, extractable, keyUsages).then(function (newKey) {
-      var iv = new Uint8Array(12);
-      crypto.getRandomValues(iv);
-      algorithm = {
-        name: 'AES-GCM',
-        iv: iv,
-        tagLength: 128
-      };
-      var data = asciiToUint8Array(JSON.stringify(secret));
-      result.key = newKey;
-      result.iv = bytesToHexString(iv);
-      return crypto.subtle.encrypt(algorithm, newKey, data);
-    }).then(function (encryptedSecret) {
-      result.secret = bytesToHexString(encryptedSecret);
-      return result;
-    });
+    var newKey = forge.random.getBytesSync(32);
+    result.key = newKey;
+  } else {
+    result.key = key;
   }
 
-  result.key = key;
-  var iv = new Uint8Array(12);
-  crypto.getRandomValues(iv);
-  algorithm = {
-    name: 'AES-GCM',
+  var iv = forge.random.getBytesSync(12);
+  result.iv = asciiToHexString(iv);
+
+  var cipher = forge.cipher.createCipher('AES-GCM', result.key);
+  cipher.start({
     iv: iv,
     tagLength: 128
-  };
-  var data = asciiToUint8Array(JSON.stringify(secret));
-  result.iv = bytesToHexString(iv);
-  return crypto.subtle.encrypt(algorithm, key, data).then(function (encryptedSecret) {
-    result.secret = bytesToHexString(encryptedSecret);
-    return result;
   });
+  cipher.update(forge.util.createBuffer(JSON.stringify(secret)));
+  cipher.finish();
+
+  var data = asciiToHexString(cipher.output.getBytes());
+  var tag = asciiToHexString(cipher.mode.tag.getBytes());
+  result.secret = data;
+  result.secret += tag;
+  return Promise.resolve(result);
 }
 
 function decryptAESGCM256(secretObject, key) {
-  var algorithm = {
-    name: 'AES-GCM',
-    iv: hexStringToUint8Array(secretObject.iv),
-    tagLength: 128
-  };
-  var data = hexStringToUint8Array(secretObject.secret);
-  return crypto.subtle.decrypt(algorithm, key, data).then(function (decryptedSecret) {
-    return JSON.parse(bytesToASCIIString(decryptedSecret));
+  var decipher = forge.cipher.createDecipher('AES-GCM', key);
+  var secret = hexStringToAscii(secretObject.secret);
+  var data = secret.substr(0, secret.length - 16);
+  var tag = secret.substr(data.length, 16);
+  decipher.start({
+    iv: hexStringToAscii(secretObject.iv),
+    tag: tag
   });
+  decipher.update(forge.util.createBuffer(data));
+  var pass = decipher.finish();
+  if (pass) {
+    return Promise.resolve(JSON.parse(decipher.output.getBytes()));
+  }
+  return Promise.reject('AES-GCM decryption error');
 }
 
 function encryptRSAOAEP(secret, publicKey) {
-  var algorithm = {
-    name: 'RSA-OAEP',
-    hash: { name: 'SHA-256' }
-  };
-  var data = asciiToUint8Array(JSON.stringify(secret));
-  return crypto.subtle.encrypt(algorithm, publicKey, data).then(function (encryptedSecret) {
-    return bytesToHexString(encryptedSecret);
+  var encrypted = publicKey.encrypt(JSON.stringify(secret), 'RSA-OAEP', {
+    md: forge.md.sha256.create()
   });
+  return Promise.resolve(asciiToHexString(encrypted));
 }
 
 function decryptRSAOAEP(secret, privateKey) {
-  var algorithm = {
-    name: 'RSA-OAEP',
-    hash: { name: 'SHA-256' }
-  };
-  var data = hexStringToUint8Array(secret);
-  return crypto.subtle.decrypt(algorithm, privateKey, data).then(function (decryptedSecret) {
-    return JSON.parse(bytesToASCIIString(decryptedSecret));
+  var decrypted = privateKey.decrypt(hexStringToAscii(secret), 'RSA-OAEP', {
+    md: forge.md.sha256.create()
   });
+  return Promise.resolve(JSON.parse(decrypted));
 }
 
-function wrapRSAOAEP(key, wrappingPublicKey) {
-  var format = 'raw';
-  var wrapAlgorithm = {
-    name: 'RSA-OAEP',
-    hash: { name: 'SHA-256' }
-  };
-  return crypto.subtle.wrapKey(format, key, wrappingPublicKey, wrapAlgorithm).then(function (wrappedKey) {
-    return bytesToHexString(wrappedKey);
+function wrapRSAOAEP(key, publicKey) {
+  var encrypted = publicKey.encrypt(key, 'RSA-OAEP', {
+    md: forge.md.sha256.create()
   });
+  return Promise.resolve(asciiToHexString(encrypted));
 }
 
 function sign(datas, key) {
-  var signAlgorithm = {
-    name: 'RSA-PSS',
-    saltLength: 32 };
-  return crypto.subtle.sign(signAlgorithm, key, asciiToUint8Array(datas)).then(function (signature) {
-    return bytesToHexString(signature);
+  var pss = forge.pss.create({
+    md: forge.md.sha256.create(),
+    mgf: forge.mgf.mgf1.create(forge.md.sha256.create()),
+    saltLength: 32
   });
+
+  var md = forge.md.sha256.create();
+  md.update(datas, 'utf8');
+
+  var signature = key.sign(md, pss);
+
+  return Promise.resolve(asciiToHexString(signature));
 }
 
 function verify(datas, signature, key) {
-  var signAlgorithm = {
-    name: 'RSA-PSS',
-    saltLength: 32 };
-  return crypto.subtle.verify(signAlgorithm, key, hexStringToUint8Array(signature), asciiToUint8Array(datas));
+  var pss = forge.pss.create({
+    md: forge.md.sha256.create(),
+    mgf: forge.mgf.mgf1.create(forge.md.sha256.create()),
+    saltLength: 32
+  });
+
+  var md = forge.md.sha256.create();
+  md.update(datas, 'utf8');
+
+  var valid = key.verify(md.digest().getBytes(), hexStringToAscii(signature), pss);
+  return Promise.resolve(valid);
 }
 
-function unwrapRSAOAEP(wrappedKeyHex, unwrappingPrivateKey) {
-  var format = 'raw';
-  var wrappedKey = hexStringToUint8Array(wrappedKeyHex);
-  var unwrapAlgorithm = {
-    name: 'RSA-OAEP',
-    hash: { name: 'SHA-256' }
-  };
-  var unwrappedKeyAlgorithm = {
-    name: 'AES-GCM',
-    length: 256
-  };
-  var extractable = true;
-  var usages = ['decrypt', 'encrypt'];
+function unwrapRSAOAEP(wrappedKeyHex, privateKey) {
+  var decrypted = privateKey.decrypt(hexStringToAscii(wrappedKeyHex), 'RSA-OAEP', {
+    md: forge.md.sha256.create()
+  });
+  return Promise.resolve(decrypted);
+}
 
-  return crypto.subtle.unwrapKey(format, wrappedKey, unwrappingPrivateKey, unwrapAlgorithm, unwrappedKeyAlgorithm, extractable, usages);
+function bigIntToBase64Url(fbin) {
+  var hex = fbin.toRadix(16);
+  if (hex.length % 2) {
+    hex = '0' + hex;
+  }
+  var buf = new Buffer(hex, 'hex');
+  var b64 = buf.toString('base64');
+  var b64Url = b64.replace(/[+]/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return b64Url;
 }
 
 function exportClearKey(key) {
-  var format = 'jwk';
-  return crypto.subtle.exportKey(format, key);
+  var e = bigIntToBase64Url(key.e);
+  var n = bigIntToBase64Url(key.n);
+  var jwk = {
+    alg: 'RSA-OAEP-256',
+    e: e,
+    ext: true,
+    key_ops: ['encrypt', 'wrapKey'],
+    kty: 'RSA',
+    n: n
+  };
+  return Promise.resolve(jwk);
 }
 
-function convertOAEPToPSS(key, keyUsage) {
-  return exportClearKey(key).then(function (OAEPKey) {
-    var format = 'jwk';
-    var algorithm = {
-      name: 'RSA-PSS',
-      hash: { name: 'SHA-256' }
-    };
-    var extractable = false;
-    var keyUsages = [keyUsage];
-
-    var PSSKey = OAEPKey;
-    PSSKey.alg = 'PS256';
-    PSSKey.key_ops = keyUsages;
-
-    return crypto.subtle.importKey(format, PSSKey, algorithm, extractable, keyUsages);
-  });
+function convertOAEPToPSS(key) {
+  return Promise.resolve(key);
 }
 
 function importPublicKey(jwkPublicKey) {
-  var format = 'jwk';
-  var algorithm = {
-    name: 'RSA-OAEP',
-    hash: { name: 'SHA-256' }
-  };
-  var extractable = true;
-  var keyUsages = ['wrapKey', 'encrypt'];
-  return crypto.subtle.importKey(format, jwkPublicKey, algorithm, extractable, keyUsages);
+  var n = new Buffer(jwkPublicKey.n, 'base64');
+  var e = new Buffer(jwkPublicKey.e, 'base64');
+
+  var publicKey = forge.pki.setRsaPublicKey(new forge.jsbn.BigInteger(n.toString('hex'), 16), new forge.jsbn.BigInteger(e.toString('hex'), 16));
+  return Promise.resolve(publicKey);
 }
 
 function derivePassword(password, parameters) {
   var result = {};
 
-  var passwordBuf = asciiToUint8Array(password);
-  var extractable = false;
-  var usages = ['deriveKey', 'deriveBits'];
-
-  return crypto.subtle.importKey('raw', passwordBuf, { name: 'PBKDF2' }, extractable, usages).then(function (key) {
-    var saltBuf = void 0;
-    var iterations = void 0;
-    if (typeof parameters === 'undefined') {
-      saltBuf = new Uint8Array(32);
-      crypto.getRandomValues(saltBuf);
-      var iterationsBuf = new Uint8Array(1);
-      crypto.getRandomValues(iterationsBuf);
-      iterations = 100000 + iterationsBuf[0];
+  var saltBuf = void 0;
+  var iterations = void 0;
+  if (typeof parameters === 'undefined') {
+    saltBuf = asciiToUint8Array(forge.random.getBytesSync(32));
+    var iterationsBuf = forge.random.getBytesSync(1);
+    iterations = 100000 + iterationsBuf.charCodeAt(0);
+  } else {
+    saltBuf = hexStringToUint8Array(parameters.salt);
+    if (typeof parameters.iterations === 'undefined') {
+      iterations = 10000; // retrocompatibility
     } else {
-      saltBuf = hexStringToUint8Array(parameters.salt);
-      if (typeof parameters.iterations === 'undefined') {
-        iterations = 10000; // retrocompatibility
-      } else {
-        iterations = parameters.iterations;
-      }
+      iterations = parameters.iterations;
     }
+  }
 
-    result.salt = bytesToHexString(saltBuf);
-    result.iterations = iterations;
+  result.salt = bytesToHexString(saltBuf);
+  result.iterations = iterations;
 
-    var algorithm = {
-      name: 'PBKDF2',
-      salt: saltBuf,
-      iterations: iterations,
-      hash: { name: 'SHA-256' }
-    };
+  var derivedKey = crypto$1.pbkdf2Sync(password, saltBuf, iterations, 32, 'sha256');
 
-    var deriveKeyAlgorithm = {
-      name: 'AES-CBC',
-      length: 256
-    };
+  result.key = bytesToASCIIString(derivedKey);
 
-    extractable = true;
-    usages = ['wrapKey', 'unwrapKey'];
-
-    return crypto.subtle.deriveKey(algorithm, key, deriveKeyAlgorithm, extractable, usages);
-  }).then(function (dKey) {
-    result.key = dKey;
-    return crypto.subtle.exportKey('raw', dKey);
-  }).then(function (rawKey) {
-    return crypto.subtle.digest('SHA-256', rawKey);
-  }).then(function (hashedKey) {
-    result.hash = bytesToHexString(hashedKey);
+  return getSHA256(result.key).then(function (hash) {
+    result.hash = hash;
     return result;
   });
 }
 
 function exportKey(wrappingKey, key) {
   var result = {};
-  var format = 'jwk';
-  var iv = new Uint8Array(16);
-  crypto.getRandomValues(iv);
-  var wrapAlgorithm = {
-    name: 'AES-CBC',
+
+  var iv = forge.random.getBytesSync(16);
+  result.iv = asciiToHexString(iv);
+
+  var jwk = void 0;
+
+  if (typeof key.d !== 'undefined') {
+    var d = bigIntToBase64Url(key.d);
+    var dp = bigIntToBase64Url(key.dP);
+    var dq = bigIntToBase64Url(key.dQ);
+    var e = bigIntToBase64Url(key.e);
+    var n = bigIntToBase64Url(key.n);
+    var p = bigIntToBase64Url(key.p);
+    var q = bigIntToBase64Url(key.q);
+    var qi = bigIntToBase64Url(key.qInv);
+
+    jwk = {
+      alg: 'RSA-OAEP-256',
+      d: d,
+      dp: dp,
+      dq: dq,
+      e: e,
+      ext: true,
+      key_ops: ['decrypt', 'unwrapKey'],
+      kty: 'RSA',
+      n: n,
+      p: p,
+      q: q,
+      qi: qi
+    };
+  } else {
+    var b64Key = new Buffer(key, 'binary').toString('base64');
+    var b64UrlKey = b64Key.replace(/[+]/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    jwk = {
+      alg: 'A256CBC',
+      ext: true,
+      k: b64UrlKey,
+      key_ops: ['wrapKey', 'unwrapKey'],
+      kty: 'oct'
+    };
+  }
+  var cipher = forge.cipher.createCipher('AES-CBC', wrappingKey);
+  cipher.start({
     iv: iv
-  };
-  result.iv = bytesToHexString(iv);
-  return crypto.subtle.wrapKey(format, key, wrappingKey, wrapAlgorithm).then(function (wrappedKey) {
-    result.key = bytesToHexString(wrappedKey);
-    return result;
   });
+
+  cipher.update(forge.util.createBuffer(JSON.stringify(jwk)));
+  cipher.finish();
+
+  result.key = asciiToHexString(cipher.output.getBytes());
+  return Promise.resolve(result);
 }
 
 function importPrivateKey(key, privateKeyObject) {
-  var format = 'jwk';
-  var wrappedPrivateKey = hexStringToUint8Array(privateKeyObject.privateKey);
-  var unwrapAlgorithm = {
-    name: 'AES-CBC',
-    iv: hexStringToUint8Array(privateKeyObject.iv)
-  };
-  var unwrappedKeyAlgorithm = {
-    name: 'RSA-OAEP',
-    hash: { name: 'sha-256' }
-  };
-  var extractable = true;
-  var keyUsages = ['unwrapKey', 'decrypt'];
+  try {
+    var wrappedPrivateKey = hexStringToAscii(privateKeyObject.privateKey);
+    var iv = hexStringToAscii(privateKeyObject.iv);
 
-  return crypto.subtle.unwrapKey(format, wrappedPrivateKey, key, unwrapAlgorithm, unwrappedKeyAlgorithm, extractable, keyUsages).catch(function () {
+    var decipher = forge.cipher.createDecipher('AES-CBC', key);
+    decipher.start({ iv: iv });
+    decipher.update(forge.util.createBuffer(wrappedPrivateKey));
+    decipher.finish();
+    var jwkPrivateKeyString = decipher.output.getBytes();
+
+    var jwkPrivateKey = JSON.parse(jwkPrivateKeyString);
+
+    var n = new Buffer(jwkPrivateKey.n, 'base64');
+    var e = new Buffer(jwkPrivateKey.e, 'base64');
+    var d = new Buffer(jwkPrivateKey.d, 'base64');
+    var p = new Buffer(jwkPrivateKey.p, 'base64');
+    var q = new Buffer(jwkPrivateKey.q, 'base64');
+    var dP = new Buffer(jwkPrivateKey.dp, 'base64');
+    var dQ = new Buffer(jwkPrivateKey.dq, 'base64');
+    var qInv = new Buffer(jwkPrivateKey.qi, 'base64');
+
+    var privateKey = forge.pki.setRsaPrivateKey(new forge.jsbn.BigInteger(n.toString('hex'), 16), new forge.jsbn.BigInteger(e.toString('hex'), 16), new forge.jsbn.BigInteger(d.toString('hex'), 16), new forge.jsbn.BigInteger(p.toString('hex'), 16), new forge.jsbn.BigInteger(q.toString('hex'), 16), new forge.jsbn.BigInteger(dP.toString('hex'), 16), new forge.jsbn.BigInteger(dQ.toString('hex'), 16), new forge.jsbn.BigInteger(qInv.toString('hex'), 16));
+    return Promise.resolve(privateKey);
+  } catch (e) {
     return Promise.reject('Invalid Password');
-  });
+  }
 }
 
 function importKey(key, keyObject) {
-  var format = 'jwk';
-  var wrappedKey = hexStringToUint8Array(keyObject.key);
-  var unwrapAlgorithm = {
-    name: 'AES-CBC',
-    iv: hexStringToUint8Array(keyObject.iv)
-  };
-  var unwrappedKeyAlgorithm = unwrapAlgorithm;
-  var extractable = true;
-  var keyUsages = ['wrapKey', 'unwrapKey'];
+  try {
+    var wrappedKey = hexStringToUint8Array(keyObject.key);
+    var iv = hexStringToAscii(keyObject.iv);
 
-  return crypto.subtle.unwrapKey(format, wrappedKey, key, unwrapAlgorithm, unwrappedKeyAlgorithm, extractable, keyUsages).catch(function () {
+    var decipher = forge.cipher.createDecipher('AES-CBC', key);
+    decipher.start({ iv: iv });
+    decipher.update(forge.util.createBuffer(wrappedKey));
+    decipher.finish();
+
+    var jwkKeyString = decipher.output.getBytes();
+
+    var jwkKey = JSON.parse(jwkKeyString);
+
+    var importedKey = new Buffer(jwkKey.k, 'base64');
+
+    return Promise.resolve(importedKey.toString('binary'));
+  } catch (e) {
     return Promise.reject('Invalid Password');
-  });
+  }
 }
 
 exports.getSHA256 = getSHA256;
@@ -681,4 +689,4 @@ exports.exportKey = exportKey;
 exports.importPrivateKey = importPrivateKey;
 exports.importKey = importKey;
 
-}((this.SecretinBrowserAdapter = this.SecretinBrowserAdapter || {})));
+}((this.SecretinNodeAdapter = this.SecretinNodeAdapter || {}),crypto,forge));

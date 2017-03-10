@@ -747,6 +747,21 @@ function asciiToUint8Array(str) {
   return new Uint8Array(chars);
 }
 
+function asciiToHexString(str) {
+  return str.split('').map(function (c) {
+    return ('0' + c.charCodeAt(0).toString(16)).slice(-2);
+  }).join('');
+}
+
+function hexStringToAscii(hexx) {
+  var hex = hexx.toString();
+  var str = '';
+  for (var i = 0; i < hex.length; i += 2) {
+    str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+  }
+  return str;
+}
+
 function bytesToASCIIString(bytes) {
   return String.fromCharCode.apply(null, new Uint8Array(bytes));
 }
@@ -832,7 +847,9 @@ var Utils = {
   bytesToASCIIString: bytesToASCIIString,
   xorSeed: xorSeed,
   escapeRegExp: escapeRegExp,
-  PasswordGenerator: PasswordGenerator
+  PasswordGenerator: PasswordGenerator,
+  asciiToHexString: asciiToHexString,
+  hexStringToAscii: hexStringToAscii
 };
 
 var API = function () {

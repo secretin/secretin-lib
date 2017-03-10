@@ -9,6 +9,6 @@ export default {
   plugins: [eslint(), json(), babel()],
   targets: [
     { dest: 'dist/adapters/browser.js', format: 'iife' },
-    { dest: 'dist/adapters/browser.js', format: 'umd' },
+    { dest: 'dist/adapters/browser.umd.js', format: 'umd' },
   ],
 };
