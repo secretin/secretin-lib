@@ -5,7 +5,7 @@
   "main": "dist/secretin.umd.js",
   "scripts": {
     "start": "yarn run watch",
-    "build": "yarn add node-forge -P && yarn run lint && rollup -c config/rollup.config.js && yarn run build-adapters",
+    "build": "yarn run lint && rollup -c config/rollup.config.js && yarn run build-adapters",
     "build-adapters": "yarn run build-browser-adapter && yarn run build-node-adapter",
     "build-browser-adapter": "rollup -c config/rollup.browserAdapter.config.js",
     "build-node-adapter": "rollup -c config/rollup.nodeAdapter.config.js",
