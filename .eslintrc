@@ -12,6 +12,8 @@
     "mocha": true
   },
   "globals": {
+    "require": true,
+    "Buffer": true,
     "crypto": true,
     "Secretin": true,
     "SecretinBrowserAdapter": true,
