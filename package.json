@@ -5,12 +5,15 @@
   "main": "dist/secretin.umd.js",
   "scripts": {
     "start": "yarn run watch",
-    "build": "yarn run lint && rollup -c config/rollup.config.js && yarn run build-adapters",
-    "build-adapters": "rollup -c config/rollup.browserAdapter.config.js && rollup -c config/rollup.nodeAdapter.config.js",
+    "build": "yarn add node-forge -P && yarn run lint && rollup -c config/rollup.config.js && yarn run build-adapters",
+    "build-adapters": "yarn run build-browser-adapter && yarn run build-node-adapter",
+    "build-browser-adapter": "rollup -c config/rollup.browserAdapter.config.js",
+    "build-node-adapter": "rollup -c config/rollup.nodeAdapter.config.js",
     "watch": "rollup -c config/rollup.config.js --watch",
     "lint": "eslint src/ test/",
     "karma": "./node_modules/karma/bin/karma start karma.conf.js",
-    "test": "yarn run build && singleRun=true yarn run karma && yarn run adapter-node-test && singleRun=true yarn run adapter-browser-test",
+    "test": "yarn run build && singleRun=true yarn run karma && yarn run test-adapters",
+    "test-adapters": "yarn run adapter-node-test && singleRun=true yarn run adapter-browser-test",
     "adapter-node-test": "node_modules/mocha/bin/mocha adapters_test/node/input.test.js",
     "adapter-node-output": "node adapters_test/node/output.js",
     "adapter-browser-test": "./node_modules/karma/bin/karma start adapters_test/browser/karma.conf.js",
@@ -56,5 +59,6 @@
   },
   "peerDependencies": {
     "node-forge": "^0.7.0"
-  }
+  },
+  "dependencies": {}
 }
