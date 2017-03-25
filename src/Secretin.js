@@ -237,15 +237,18 @@ class Secretin {
   }
 
   refreshUser() {
+    let remoteUser;
     return this.api.getUserWithSignature(this.currentUser)
       .then((user) => {
-        this.currentUser.keys = user.keys;
+        remoteUser = user;
+        this.currentUser.keys = remoteUser.keys;
         if (typeof window.process !== 'undefined') {
           // Electron
           this.getDb();
         }
-        return this.currentUser.decryptAllMetadatas(user.metadatas);
+        return this.currentUser.decryptAllMetadatas(remoteUser.metadatas);
       })
+      .then(() => this.currentUser.importOptions(remoteUser.options))
       .catch((err) => {
         if (err === 'Offline') {
           this.offlineDB();
