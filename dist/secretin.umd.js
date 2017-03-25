@@ -1410,23 +1410,17 @@ var API = function () {
       return getSHA256(hash);
     }).then(function (hashedHash) {
       if (hashedHash === user.pass.hash) {
-        var _ret = function () {
-          var metadatas = {};
-          var hashedTitles = Object.keys(user.keys);
-          hashedTitles.forEach(function (hashedTitle) {
-            var secret = _this8.db.secrets[hashedTitle];
-            metadatas[hashedTitle] = {
-              iv: secret.iv_meta,
-              secret: secret.metadatas
-            };
-          });
-          user.metadatas = metadatas;
-          return {
-            v: user
+        var metadatas = {};
+        var hashedTitles = Object.keys(user.keys);
+        hashedTitles.forEach(function (hashedTitle) {
+          var secret = _this8.db.secrets[hashedTitle];
+          metadatas[hashedTitle] = {
+            iv: secret.iv_meta,
+            secret: secret.metadatas
           };
-        }();
-
-        if (typeof _ret === "object") return _ret.v;
+        });
+        user.metadatas = metadatas;
+        return user;
       }
       var fakePrivateKey = new Uint8Array(3232);
       var fakeIV = new Uint8Array(16);
@@ -1475,20 +1469,18 @@ var API = function () {
         if (typeof _this9.db.users[hashedUsername] === 'undefined') {
           reject('User not found');
         } else {
-          (function () {
-            var userObject = JSON.parse(JSON.stringify(_this9.db.users[hashedUsername]));
-            var metadatas = {};
-            var hashedTitles = Object.keys(user.keys);
-            hashedTitles.forEach(function (hashedTitle) {
-              var secret = _this9.db.secrets[hashedTitle];
-              metadatas[hashedTitle] = {
-                iv: secret.iv_meta,
-                secret: secret.metadatas
-              };
-            });
-            userObject.metadatas = metadatas;
-            resolve(userObject);
-          })();
+          var userObject = JSON.parse(JSON.stringify(_this9.db.users[hashedUsername]));
+          var metadatas = {};
+          var hashedTitles = Object.keys(user.keys);
+          hashedTitles.forEach(function (hashedTitle) {
+            var secret = _this9.db.secrets[hashedTitle];
+            metadatas[hashedTitle] = {
+              iv: secret.iv_meta,
+              secret: secret.metadatas
+            };
+          });
+          userObject.metadatas = metadatas;
+          resolve(userObject);
         }
       });
     });
@@ -2100,13 +2092,17 @@ var Secretin = function () {
   Secretin.prototype.refreshUser = function refreshUser() {
     var _this5 = this;
 
+    var remoteUser = void 0;
     return this.api.getUserWithSignature(this.currentUser).then(function (user) {
-      _this5.currentUser.keys = user.keys;
+      remoteUser = user;
+      _this5.currentUser.keys = remoteUser.keys;
       if (typeof window.process !== 'undefined') {
         // Electron
         _this5.getDb();
       }
-      return _this5.currentUser.decryptAllMetadatas(user.metadatas);
+      return _this5.currentUser.decryptAllMetadatas(remoteUser.metadatas);
+    }).then(function () {
+      return _this5.currentUser.importOptions(remoteUser.options);
     }).catch(function (err) {
       if (err === 'Offline') {
         _this5.offlineDB();
@@ -2205,23 +2201,17 @@ var Secretin = function () {
 
     return this.currentUser.editSecret(hashedTitle, content).then(function (secretObject) {
       if (!_this8.editableDB) {
-        var _ret = function () {
-          if (Object.keys(_this8.currentUser.metadatas[hashedTitle].users).length > 1) {
-            return {
-              v: Promise.reject(new OfflineError())
-            };
-          }
-          var args = [hashedTitle];
-          encryptRSAOAEP(content, _this8.currentUser.publicKey).then(function (encryptedContent) {
-            args.push(encryptedContent);
-            return encryptRSAOAEP(_this8.currentUser.metadatas[hashedTitle], _this8.currentUser.publicKey);
-          }).then(function (encryptedMetadatas) {
-            args.push(encryptedMetadatas);
-            return _this8.pushCacheAction('editSecret', args);
-          });
-        }();
-
-        if (typeof _ret === "object") return _ret.v;
+        if (Object.keys(_this8.currentUser.metadatas[hashedTitle].users).length > 1) {
+          return Promise.reject(new OfflineError());
+        }
+        var args = [hashedTitle];
+        encryptRSAOAEP(content, _this8.currentUser.publicKey).then(function (encryptedContent) {
+          args.push(encryptedContent);
+          return encryptRSAOAEP(_this8.currentUser.metadatas[hashedTitle], _this8.currentUser.publicKey);
+        }).then(function (encryptedMetadatas) {
+          args.push(encryptedMetadatas);
+          return _this8.pushCacheAction('editSecret', args);
+        });
       }
       return _this8.api.editSecret(_this8.currentUser, secretObject, hashedTitle);
     }).then(function (res) {
