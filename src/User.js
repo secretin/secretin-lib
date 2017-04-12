@@ -117,17 +117,34 @@ class User {
       });
   }
 
-  exportOptions() {
+  exportPrivateData(data) {
     const result = {};
-    return encryptRSAOAEP(this.options, this.publicKey)
+    return encryptRSAOAEP(data, this.publicKey)
       .then((encryptedOptions) => {
-        result.options = encryptedOptions;
-        return this.sign(result.options);
+        result.data = encryptedOptions;
+        return this.sign(result.data);
       })
       .then((signature) => {
         result.signature = signature;
         return result;
       });
+  }
+
+  importPrivateData(data, signature) {
+    return this.verify(data, signature)
+      .then((verified) => {
+        if (verified) {
+          return decryptRSAOAEP(data, this.privateKey);
+        }
+        return null;
+      });
+  }
+
+  exportOptions() {
+    return this.exportPrivateData(this.options)
+      .then(result =>
+        ({ options: result.data, signature: result.signature })
+      );
   }
 
   importOptions(optionsObject) {
@@ -136,13 +153,7 @@ class User {
       this.options = User.defaultOptions;
       return Promise.resolve(null);
     }
-    return this.verify(optionsObject.options, optionsObject.signature)
-      .then((verified) => {
-        if (verified) {
-          return decryptRSAOAEP(optionsObject.options, this.privateKey);
-        }
-        return null;
-      })
+    return this.importPrivateData(optionsObject.options, optionsObject.signature)
       .then((options) => {
         if (options) {
           this.options = options;
