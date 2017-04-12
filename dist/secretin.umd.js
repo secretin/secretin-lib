@@ -1669,47 +1669,59 @@ var User = function () {
     });
   };
 
-  User.prototype.exportOptions = function exportOptions() {
+  User.prototype.exportPrivateData = function exportPrivateData(data) {
     var _this5 = this;
 
     var result = {};
-    return encryptRSAOAEP(this.options, this.publicKey).then(function (encryptedOptions) {
-      result.options = encryptedOptions;
-      return _this5.sign(result.options);
+    return encryptRSAOAEP(data, this.publicKey).then(function (encryptedOptions) {
+      result.data = encryptedOptions;
+      return _this5.sign(result.data);
     }).then(function (signature) {
       result.signature = signature;
       return result;
     });
   };
 
-  User.prototype.importOptions = function importOptions(optionsObject) {
+  User.prototype.importPrivateData = function importPrivateData(data, signature) {
     var _this6 = this;
+
+    return this.verify(data, signature).then(function (verified) {
+      if (verified) {
+        return decryptRSAOAEP(data, _this6.privateKey);
+      }
+      return null;
+    });
+  };
+
+  User.prototype.exportOptions = function exportOptions() {
+    return this.exportPrivateData(this.options).then(function (result) {
+      return { options: result.data, signature: result.signature };
+    });
+  };
+
+  User.prototype.importOptions = function importOptions(optionsObject) {
+    var _this7 = this;
 
     // Retro compatibility
     if (typeof optionsObject === 'undefined') {
       this.options = User.defaultOptions;
       return Promise.resolve(null);
     }
-    return this.verify(optionsObject.options, optionsObject.signature).then(function (verified) {
-      if (verified) {
-        return decryptRSAOAEP(optionsObject.options, _this6.privateKey);
-      }
-      return null;
-    }).then(function (options) {
+    return this.importPrivateData(optionsObject.options, optionsObject.signature).then(function (options) {
       if (options) {
-        _this6.options = options;
+        _this7.options = options;
       } else {
-        _this6.options = User.defaultOptions;
+        _this7.options = User.defaultOptions;
       }
     });
   };
 
   User.prototype.shareSecret = function shareSecret(friend, wrappedKey, hashedTitle) {
-    var _this7 = this;
+    var _this8 = this;
 
     var result = { hashedTitle: hashedTitle };
     return this.unwrapKey(wrappedKey).then(function (key) {
-      return _this7.wrapKey(key, friend.publicKey);
+      return _this8.wrapKey(key, friend.publicKey);
     }).then(function (friendWrappedKey) {
       result.wrappedKey = friendWrappedKey;
       return getSHA256(friend.username);
@@ -1720,7 +1732,7 @@ var User = function () {
   };
 
   User.prototype.editSecret = function editSecret(hashedTitle, secret) {
-    var _this8 = this;
+    var _this9 = this;
 
     var metadatas = this.metadatas[hashedTitle];
     if (typeof metadatas === 'undefined') {
@@ -1732,7 +1744,7 @@ var User = function () {
     var wrappedKey = this.keys[hashedTitle].key;
     var result = {};
     return this.unwrapKey(wrappedKey).then(function (key) {
-      return _this8.encryptSecret(metadatas, secret, key);
+      return _this9.encryptSecret(metadatas, secret, key);
     }).then(function (secretObject) {
       result.secret = secretObject.secret;
       result.iv = secretObject.iv;
@@ -1743,7 +1755,7 @@ var User = function () {
   };
 
   User.prototype.createSecret = function createSecret(metadatas, secret) {
-    var _this9 = this;
+    var _this10 = this;
 
     var now = Date.now();
     var saltedTitle = now + '|' + metadatas.title;
@@ -1752,14 +1764,14 @@ var User = function () {
     return getSHA256(saltedTitle).then(function (hashedTitle) {
       result.hashedTitle = hashedTitle;
       newMetadas.id = result.hashedTitle;
-      return _this9.encryptSecret(newMetadas, secret);
+      return _this10.encryptSecret(newMetadas, secret);
     }).then(function (secretObject) {
       result.secret = secretObject.secret;
       result.iv = secretObject.iv;
       result.metadatas = secretObject.metadatas;
       result.iv_meta = secretObject.iv_meta;
       result.hashedUsername = secretObject.hashedUsername;
-      return _this9.wrapKey(secretObject.key, _this9.publicKey);
+      return _this10.wrapKey(secretObject.key, _this10.publicKey);
     }).then(function (wrappedKey) {
       result.wrappedKey = wrappedKey;
       return result;
@@ -1767,7 +1779,7 @@ var User = function () {
   };
 
   User.prototype.encryptSecret = function encryptSecret(metadatas, secret, key) {
-    var _this10 = this;
+    var _this11 = this;
 
     var result = {};
     return encryptAESGCM256(secret, key).then(function (secretObject) {
@@ -1778,7 +1790,7 @@ var User = function () {
     }).then(function (secretObject) {
       result.metadatas = secretObject.secret;
       result.iv_meta = secretObject.iv;
-      return getSHA256(_this10.username);
+      return getSHA256(_this11.username);
     }).then(function (hashedUsername) {
       result.hashedUsername = hashedUsername;
       return result;
@@ -1804,15 +1816,15 @@ var User = function () {
   };
 
   User.prototype.decryptAllMetadatas = function decryptAllMetadatas(allMetadatas) {
-    var _this11 = this;
+    var _this12 = this;
 
     var decryptMetadatasPromises = [];
     var hashedTitles = Object.keys(this.keys);
 
     this.metadatas = {};
     hashedTitles.forEach(function (hashedTitle) {
-      decryptMetadatasPromises.push(_this11.decryptSecret(hashedTitle, allMetadatas[hashedTitle]).then(function (metadatas) {
-        _this11.metadatas[hashedTitle] = metadatas;
+      decryptMetadatasPromises.push(_this12.decryptSecret(hashedTitle, allMetadatas[hashedTitle]).then(function (metadatas) {
+        _this12.metadatas[hashedTitle] = metadatas;
       }));
     });
 
@@ -1820,13 +1832,13 @@ var User = function () {
   };
 
   User.prototype.activateShortLogin = function activateShortLogin(shortpass, deviceName) {
-    var _this12 = this;
+    var _this13 = this;
 
     var protectKey = void 0;
     var toSend = {};
     return generateWrappingKey().then(function (key) {
       protectKey = key;
-      return exportKey(protectKey, _this12.privateKey);
+      return exportKey(protectKey, _this13.privateKey);
     }).then(function (object) {
       localStorage.setItem(Secretin.prefix + 'privateKey', object.key);
       localStorage.setItem(Secretin.prefix + 'privateKeyIv', object.iv);
@@ -1839,7 +1851,7 @@ var User = function () {
     }).then(function (keyObject) {
       toSend.protectKey = keyObject.key;
       localStorage.setItem(Secretin.prefix + 'iv', keyObject.iv);
-      localStorage.setItem(Secretin.prefix + 'username', _this12.username);
+      localStorage.setItem(Secretin.prefix + 'username', _this13.username);
       return getSHA256(deviceName);
     }).then(function (deviceId) {
       toSend.deviceId = deviceId;
@@ -1849,7 +1861,7 @@ var User = function () {
   };
 
   User.prototype.shortLogin = function shortLogin(shortpass, wrappedProtectKey) {
-    var _this13 = this;
+    var _this14 = this;
 
     var keyObject = {
       key: wrappedProtectKey,
@@ -1860,7 +1872,7 @@ var User = function () {
         privateKey: localStorage.getItem(Secretin.prefix + 'privateKey'),
         iv: localStorage.getItem(Secretin.prefix + 'privateKeyIv')
       };
-      return _this13.importPrivateKey(protectKey, privateKeyObject);
+      return _this14.importPrivateKey(protectKey, privateKeyObject);
     });
   };
 
@@ -2066,6 +2078,19 @@ var Secretin = function () {
       return _this4.currentUser.decryptAllMetadatas(remoteUser.metadatas);
     }).then(function () {
       return _this4.currentUser.importOptions(remoteUser.options);
+    }).then(function () {
+      var shortpass = localStorage.getItem(Secretin.prefix + 'shortpass');
+      var signature = localStorage.getItem(Secretin.prefix + 'shortpassSignature');
+      if (shortpass && signature) {
+        return _this4.currentUser.importPrivateData(shortpass, signature);
+      }
+      return Promise.resolve(null);
+    }).then(function (shortpass) {
+      if (shortpass) {
+        var deviceName = localStorage.getItem(Secretin.prefix + 'deviceName');
+        return _this4.activateShortLogin(shortpass, deviceName);
+      }
+      return Promise.resolve();
     }).then(function () {
       if (typeof window.process !== 'undefined') {
         // Electron
@@ -2896,12 +2921,15 @@ var Secretin = function () {
     if (localStorageAvailable()) {
       return this.currentUser.activateShortLogin(shortpass, deviceName).then(function (toSend) {
         return _this24.api.activateShortLogin(toSend, _this24.currentUser);
-      }).then(function (res) {
+      }).then(function () {
         if (typeof window.process !== 'undefined') {
           // Electron
           _this24.getDb();
         }
-        return res;
+        return _this24.currentUser.exportPrivateData(shortpass);
+      }).then(function (result) {
+        localStorage.setItem(Secretin.prefix + 'shortpass', result.data);
+        localStorage.setItem(Secretin.prefix + 'shortpassSignature', result.signature);
       }).catch(function (err) {
         if (err === 'Offline') {
           _this24.offlineDB();
@@ -2920,6 +2948,8 @@ var Secretin = function () {
       localStorage.removeItem(Secretin.prefix + 'privateKey');
       localStorage.removeItem(Secretin.prefix + 'privateKeyIv');
       localStorage.removeItem(Secretin.prefix + 'iv');
+      localStorage.removeItem(Secretin.prefix + 'shortpass');
+      localStorage.removeItem(Secretin.prefix + 'shortpassSignature');
       return Promise.resolve();
     }
     return Promise.reject(new LocalStorageUnavailableError());
@@ -2966,7 +2996,6 @@ var Secretin = function () {
       }
       if (err !== 'Not available in standalone mode' && !(err instanceof NotAvailableError)) {
         localStorage.removeItem(Secretin.prefix + 'username');
-        localStorage.removeItem(Secretin.prefix + 'deviceName');
         localStorage.removeItem(Secretin.prefix + 'privateKey');
         localStorage.removeItem(Secretin.prefix + 'privateKeyIv');
         localStorage.removeItem(Secretin.prefix + 'iv');
