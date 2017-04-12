@@ -214,6 +214,21 @@ class Secretin {
       .then(() => this.currentUser.decryptAllMetadatas(remoteUser.metadatas))
       .then(() => this.currentUser.importOptions(remoteUser.options))
       .then(() => {
+        const shortpass = localStorage.getItem(`${Secretin.prefix}shortpass`);
+        const signature = localStorage.getItem(`${Secretin.prefix}shortpassSignature`);
+        if (shortpass && signature) {
+          return this.currentUser.importPrivateData(shortpass, signature);
+        }
+        return Promise.resolve(null);
+      })
+      .then((shortpass) => {
+        if (shortpass) {
+          const deviceName = localStorage.getItem(`${Secretin.prefix}deviceName`);
+          return this.activateShortLogin(shortpass, deviceName);
+        }
+        return Promise.resolve();
+      })
+      .then(() => {
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb().then(() => {
@@ -1071,12 +1086,16 @@ class Secretin {
     if (localStorageAvailable()) {
       return this.currentUser.activateShortLogin(shortpass, deviceName)
         .then((toSend) => this.api.activateShortLogin(toSend, this.currentUser))
-        .then((res) => {
+        .then(() => {
           if (typeof window.process !== 'undefined') {
             // Electron
             this.getDb();
           }
-          return res;
+          return this.currentUser.exportPrivateData(shortpass);
+        })
+        .then((result) => {
+          localStorage.setItem(`${Secretin.prefix}shortpass`, result.data);
+          localStorage.setItem(`${Secretin.prefix}shortpassSignature`, result.signature);
         })
         .catch((err) => {
           if (err === 'Offline') {
@@ -1096,6 +1115,8 @@ class Secretin {
       localStorage.removeItem(`${Secretin.prefix}privateKey`);
       localStorage.removeItem(`${Secretin.prefix}privateKeyIv`);
       localStorage.removeItem(`${Secretin.prefix}iv`);
+      localStorage.removeItem(`${Secretin.prefix}shortpass`);
+      localStorage.removeItem(`${Secretin.prefix}shortpassSignature`);
       return Promise.resolve();
     }
     return Promise.reject(new LocalStorageUnavailableError());
@@ -1140,7 +1161,6 @@ class Secretin {
         }
         if (err !== 'Not available in standalone mode' && !(err instanceof NotAvailableError)) {
           localStorage.removeItem(`${Secretin.prefix}username`);
-          localStorage.removeItem(`${Secretin.prefix}deviceName`);
           localStorage.removeItem(`${Secretin.prefix}privateKey`);
           localStorage.removeItem(`${Secretin.prefix}privateKeyIv`);
           localStorage.removeItem(`${Secretin.prefix}iv`);
