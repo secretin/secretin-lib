@@ -285,7 +285,7 @@ class Secretin {
       .catch(err => {
         if (err === 'Offline') {
           this.offlineDB(username);
-          return this.loginUser(username, password, otp);
+          return this.loginUser(username, password, otp, progress);
         }
         const wrapper = new WrappingError(err);
         throw wrapper.error;
