@@ -5,12 +5,12 @@ import {
   bytesToASCIIString,
 } from './utils';
 
-
 export function getSHA256(str) {
   const algorithm = 'SHA-256';
   const data = asciiToUint8Array(str);
-  return crypto.subtle.digest(algorithm, data)
-  .then((hashedStr) => bytesToHexString(hashedStr));
+  return crypto.subtle
+    .digest(algorithm, data)
+    .then(hashedStr => bytesToHexString(hashedStr));
 }
 
 export function genRSAOAEP() {
@@ -21,12 +21,7 @@ export function genRSAOAEP() {
     hash: { name: 'SHA-256' },
   };
   const extractable = true;
-  const keyUsages = [
-    'wrapKey',
-    'unwrapKey',
-    'encrypt',
-    'decrypt',
-  ];
+  const keyUsages = ['wrapKey', 'unwrapKey', 'encrypt', 'decrypt'];
   return crypto.subtle.generateKey(algorithm, extractable, keyUsages);
 }
 
@@ -51,11 +46,10 @@ export function encryptAESGCM256(secret, key) {
       length: 256,
     };
     const extractable = true;
-    const keyUsages = [
-      'encrypt',
-    ];
-    return crypto.subtle.generateKey(algorithm, extractable, keyUsages)
-      .then((newKey) => {
+    const keyUsages = ['encrypt'];
+    return crypto.subtle
+      .generateKey(algorithm, extractable, keyUsages)
+      .then(newKey => {
         const iv = new Uint8Array(12);
         crypto.getRandomValues(iv);
         algorithm = {
@@ -68,7 +62,7 @@ export function encryptAESGCM256(secret, key) {
         result.iv = bytesToHexString(iv);
         return crypto.subtle.encrypt(algorithm, newKey, data);
       })
-      .then((encryptedSecret) => {
+      .then(encryptedSecret => {
         result.secret = bytesToHexString(encryptedSecret);
         return result;
       });
@@ -84,11 +78,10 @@ export function encryptAESGCM256(secret, key) {
   };
   const data = asciiToUint8Array(JSON.stringify(secret));
   result.iv = bytesToHexString(iv);
-  return crypto.subtle.encrypt(algorithm, key, data)
-    .then((encryptedSecret) => {
-      result.secret = bytesToHexString(encryptedSecret);
-      return result;
-    });
+  return crypto.subtle.encrypt(algorithm, key, data).then(encryptedSecret => {
+    result.secret = bytesToHexString(encryptedSecret);
+    return result;
+  });
 }
 
 export function decryptAESGCM256(secretObject, key) {
@@ -98,8 +91,9 @@ export function decryptAESGCM256(secretObject, key) {
     tagLength: 128,
   };
   const data = hexStringToUint8Array(secretObject.secret);
-  return crypto.subtle.decrypt(algorithm, key, data)
-    .then((decryptedSecret) => JSON.parse(bytesToASCIIString(decryptedSecret)));
+  return crypto.subtle
+    .decrypt(algorithm, key, data)
+    .then(decryptedSecret => JSON.parse(bytesToASCIIString(decryptedSecret)));
 }
 
 export function encryptRSAOAEP(secret, publicKey) {
@@ -108,8 +102,9 @@ export function encryptRSAOAEP(secret, publicKey) {
     hash: { name: 'SHA-256' },
   };
   const data = asciiToUint8Array(JSON.stringify(secret));
-  return crypto.subtle.encrypt(algorithm, publicKey, data)
-    .then((encryptedSecret) => bytesToHexString(encryptedSecret));
+  return crypto.subtle
+    .encrypt(algorithm, publicKey, data)
+    .then(encryptedSecret => bytesToHexString(encryptedSecret));
 }
 
 export function decryptRSAOAEP(secret, privateKey) {
@@ -118,7 +113,8 @@ export function decryptRSAOAEP(secret, privateKey) {
     hash: { name: 'SHA-256' },
   };
   const data = hexStringToUint8Array(secret);
-  return crypto.subtle.decrypt(algorithm, privateKey, data)
+  return crypto.subtle
+    .decrypt(algorithm, privateKey, data)
     .then(decryptedSecret => JSON.parse(bytesToASCIIString(decryptedSecret)));
 }
 
@@ -128,8 +124,9 @@ export function wrapRSAOAEP(key, wrappingPublicKey) {
     name: 'RSA-OAEP',
     hash: { name: 'SHA-256' },
   };
-  return crypto.subtle.wrapKey(format, key, wrappingPublicKey, wrapAlgorithm)
-    .then((wrappedKey) => bytesToHexString(wrappedKey));
+  return crypto.subtle
+    .wrapKey(format, key, wrappingPublicKey, wrapAlgorithm)
+    .then(wrappedKey => bytesToHexString(wrappedKey));
 }
 
 export function sign(datas, key) {
@@ -137,8 +134,9 @@ export function sign(datas, key) {
     name: 'RSA-PSS',
     saltLength: 32, // In byte
   };
-  return crypto.subtle.sign(signAlgorithm, key, asciiToUint8Array(datas))
-    .then((signature) => bytesToHexString(signature));
+  return crypto.subtle
+    .sign(signAlgorithm, key, asciiToUint8Array(datas))
+    .then(signature => bytesToHexString(signature));
 }
 
 export function verify(datas, signature, key) {
@@ -185,22 +183,27 @@ export function exportClearKey(key) {
 }
 
 export function convertOAEPToPSS(key, keyUsage) {
-  return exportClearKey(key)
-    .then((OAEPKey) => {
-      const format = 'jwk';
-      const algorithm = {
-        name: 'RSA-PSS',
-        hash: { name: 'SHA-256' },
-      };
-      const extractable = false;
-      const keyUsages = [keyUsage];
+  return exportClearKey(key).then(OAEPKey => {
+    const format = 'jwk';
+    const algorithm = {
+      name: 'RSA-PSS',
+      hash: { name: 'SHA-256' },
+    };
+    const extractable = false;
+    const keyUsages = [keyUsage];
 
-      const PSSKey = OAEPKey;
-      PSSKey.alg = 'PS256';
-      PSSKey.key_ops = keyUsages;
+    const PSSKey = OAEPKey;
+    PSSKey.alg = 'PS256';
+    PSSKey.key_ops = keyUsages;
 
-      return crypto.subtle.importKey(format, PSSKey, algorithm, extractable, keyUsages);
-    });
+    return crypto.subtle.importKey(
+      format,
+      PSSKey,
+      algorithm,
+      extractable,
+      keyUsages
+    );
+  });
 }
 
 export function importPublicKey(jwkPublicKey) {
@@ -210,10 +213,14 @@ export function importPublicKey(jwkPublicKey) {
     hash: { name: 'SHA-256' },
   };
   const extractable = true;
-  const keyUsages = [
-    'wrapKey', 'encrypt',
-  ];
-  return crypto.subtle.importKey(format, jwkPublicKey, algorithm, extractable, keyUsages);
+  const keyUsages = ['wrapKey', 'encrypt'];
+  return crypto.subtle.importKey(
+    format,
+    jwkPublicKey,
+    algorithm,
+    extractable,
+    keyUsages
+  );
 }
 
 export function derivePassword(password, parameters) {
@@ -223,10 +230,9 @@ export function derivePassword(password, parameters) {
   let extractable = false;
   let usages = ['deriveKey', 'deriveBits'];
 
-  return crypto.subtle.importKey(
-    'raw', passwordBuf, { name: 'PBKDF2' }, extractable, usages
-  )
-    .then((key) => {
+  return crypto.subtle
+    .importKey('raw', passwordBuf, { name: 'PBKDF2' }, extractable, usages)
+    .then(key => {
       let saltBuf;
       let iterations;
       if (typeof parameters === 'undefined') {
@@ -262,14 +268,20 @@ export function derivePassword(password, parameters) {
       extractable = true;
       usages = ['wrapKey', 'unwrapKey'];
 
-      return crypto.subtle.deriveKey(algorithm, key, deriveKeyAlgorithm, extractable, usages);
+      return crypto.subtle.deriveKey(
+        algorithm,
+        key,
+        deriveKeyAlgorithm,
+        extractable,
+        usages
+      );
     })
-    .then((dKey) => {
+    .then(dKey => {
       result.key = dKey;
       return crypto.subtle.exportKey('raw', dKey);
     })
-    .then((rawKey) => crypto.subtle.digest('SHA-256', rawKey))
-    .then((hashedKey) => {
+    .then(rawKey => crypto.subtle.digest('SHA-256', rawKey))
+    .then(hashedKey => {
       result.hash = bytesToHexString(hashedKey);
       return result;
     });
@@ -285,8 +297,9 @@ export function exportKey(wrappingKey, key) {
     iv,
   };
   result.iv = bytesToHexString(iv);
-  return crypto.subtle.wrapKey(format, key, wrappingKey, wrapAlgorithm)
-    .then((wrappedKey) => {
+  return crypto.subtle
+    .wrapKey(format, key, wrappingKey, wrapAlgorithm)
+    .then(wrappedKey => {
       result.key = bytesToHexString(wrappedKey);
       return result;
     });
@@ -306,9 +319,16 @@ export function importPrivateKey(key, privateKeyObject) {
   const extractable = true;
   const keyUsages = ['unwrapKey', 'decrypt'];
 
-  return crypto.subtle.unwrapKey(
-    format, wrappedPrivateKey, key, unwrapAlgorithm, unwrappedKeyAlgorithm, extractable, keyUsages
-  )
+  return crypto.subtle
+    .unwrapKey(
+      format,
+      wrappedPrivateKey,
+      key,
+      unwrapAlgorithm,
+      unwrappedKeyAlgorithm,
+      extractable,
+      keyUsages
+    )
     .catch(() => Promise.reject('Invalid Password'));
 }
 
@@ -323,8 +343,15 @@ export function importKey(key, keyObject) {
   const extractable = true;
   const keyUsages = ['wrapKey', 'unwrapKey'];
 
-  return crypto.subtle.unwrapKey(
-    format, wrappedKey, key, unwrapAlgorithm, unwrappedKeyAlgorithm, extractable, keyUsages
-  )
+  return crypto.subtle
+    .unwrapKey(
+      format,
+      wrappedKey,
+      key,
+      unwrapAlgorithm,
+      unwrappedKeyAlgorithm,
+      extractable,
+      keyUsages
+    )
     .catch(() => Promise.reject('Invalid Password'));
 }

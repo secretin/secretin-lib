@@ -54,7 +54,7 @@ export class InvalidSignatureError extends Error {
 export class DontHaveSecretError extends Error {
   constructor() {
     super();
-    this.message = 'You don\'t have this secret';
+    this.message = "You don't have this secret";
   }
 }
 
@@ -68,7 +68,7 @@ export class FolderNotFoundError extends Error {
 export class FolderInItselfError extends Error {
   constructor() {
     super();
-    this.message = 'You can\'t put this folder in itself.';
+    this.message = "You can't put this folder in itself.";
   }
 }
 
@@ -89,35 +89,35 @@ export class InvalidPasswordError extends Error {
 export class CantEditSecretError extends Error {
   constructor() {
     super();
-    this.message = 'You can\'t edit this secret';
+    this.message = "You can't edit this secret";
   }
 }
 
 export class CantShareSecretError extends Error {
   constructor() {
     super();
-    this.message = 'You can\'t share this secret';
+    this.message = "You can't share this secret";
   }
 }
 
 export class CantUnshareSecretError extends Error {
   constructor() {
     super();
-    this.message = 'You can\'t unshare this secret';
+    this.message = "You can't unshare this secret";
   }
 }
 
 export class CantUnshareWithYourselfError extends Error {
   constructor() {
     super();
-    this.message = 'You can\'t unshare with yourself';
+    this.message = "You can't unshare with yourself";
   }
 }
 
 export class CantShareWithYourselfError extends Error {
   constructor() {
     super();
-    this.message = 'You can\'t share with yourself';
+    this.message = "You can't share with yourself";
   }
 }
 
@@ -138,7 +138,7 @@ export class SecretNotFoundError extends Error {
 export class CantGenerateNewKeyError extends Error {
   constructor() {
     super();
-    this.message = 'You can\'t generate new key for this secret';
+    this.message = "You can't generate new key for this secret";
   }
 }
 
@@ -186,31 +186,31 @@ export class WrappingError {
       this.error = new DisconnectedError();
     } else if (error === 'Invalid signature') {
       this.error = new InvalidSignatureError();
-    } else if (error === 'You don\'t have this secret') {
+    } else if (error === "You don't have this secret") {
       this.error = new DontHaveSecretError();
     } else if (error === 'Folder not found') {
       this.error = new FolderNotFoundError();
-    } else if (error === 'You can\'t put this folder in itself.') {
+    } else if (error === "You can't put this folder in itself.") {
       this.error = new FolderInItselfError();
     } else if (error === 'LocalStorage unavailable') {
       this.error = new LocalStorageUnavailableError();
     } else if (error === 'Invalid Password') {
       this.error = new InvalidPasswordError();
-    } else if (error === 'You can\'t edit this secret') {
+    } else if (error === "You can't edit this secret") {
       this.error = new CantEditSecretError();
-    } else if (error === 'You can\'t share this secret') {
+    } else if (error === "You can't share this secret") {
       this.error = new CantShareSecretError();
-    } else if (error === 'You can\'t unshare this secret') {
+    } else if (error === "You can't unshare this secret") {
       this.error = new CantUnshareSecretError();
-    } else if (error === 'You can\'t unshare with yourself') {
+    } else if (error === "You can't unshare with yourself") {
       this.error = new CantUnshareWithYourselfError();
-    } else if (error === 'You can\'t share with yourself') {
+    } else if (error === "You can't share with yourself") {
       this.error = new CantShareWithYourselfError();
     } else if (error === 'Secret already exists') {
       this.error = new SecretAlreadyExistsError();
     } else if (error === 'Secret not found') {
       this.error = new SecretNotFoundError();
-    } else if (error === 'You can\'t generate new key for this secret') {
+    } else if (error === "You can't generate new key for this secret") {
       this.error = new CantGenerateNewKeyError();
     } else if (error === 'Secret not shared with this user') {
       this.error = new NotSharedWithUserError();
