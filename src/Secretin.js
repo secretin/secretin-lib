@@ -15,9 +15,20 @@ import {
 } from './Errors';
 
 import {
+  GetDerivationStatus,
+  PasswordDerivationStatus,
+  GetUserStatus,
+  ImportPublicKeyStatus,
+  DecryptPrivateKeyStatus,
+  DecryptUserOptionsStatus,
+  GetProtectKeyStatus,
+} from './Statuses';
+
+import {
   hexStringToUint8Array,
   localStorageAvailable,
   xorSeed,
+  defaultProgress,
 } from './lib/utils';
 
 import APIStandalone from './API/Standalone';
@@ -184,22 +195,25 @@ class Secretin {
       });
   }
 
-  loginUser(username, password, otp) {
+  loginUser(username, password, otp, progress = defaultProgress) {
     let key;
     let hash;
     let remoteUser;
     let parameters;
+    progress(new GetDerivationStatus());
     return this.api.getDerivationParameters(username)
       .then((rParameters) => {
         parameters = rParameters;
         if (parameters.totp && (typeof otp === 'undefined' || otp === '')) {
           throw new NeedTOTPTokenError();
         }
+        progress(new PasswordDerivationStatus());
         return derivePassword(password, parameters);
       })
       .then((dKey) => {
         hash = dKey.hash;
         key = dKey.key;
+        progress(new GetUserStatus());
         return this.api.getUser(username, hash, otp);
       })
       .then((user) => {
@@ -208,11 +222,18 @@ class Secretin {
         this.currentUser.hash = hash;
         remoteUser = user;
         this.currentUser.keys = remoteUser.keys;
+        progress(new ImportPublicKeyStatus());
         return this.currentUser.importPublicKey(remoteUser.publicKey);
       })
-      .then(() => this.currentUser.importPrivateKey(key, remoteUser.privateKey))
-      .then(() => this.currentUser.decryptAllMetadatas(remoteUser.metadatas))
-      .then(() => this.currentUser.importOptions(remoteUser.options))
+      .then(() => {
+        progress(new DecryptPrivateKeyStatus());
+        return this.currentUser.importPrivateKey(key, remoteUser.privateKey);
+      })
+      .then(() => {
+        progress(new DecryptUserOptionsStatus());
+        this.currentUser.importOptions(remoteUser.options);
+      })
+      .then(() => this.currentUser.decryptAllMetadatas(remoteUser.metadatas, progress))
       .then(() => {
         const shortpass = localStorage.getItem(`${Secretin.prefix}shortpass`);
         const signature = localStorage.getItem(`${Secretin.prefix}shortpassSignature`);
@@ -251,7 +272,7 @@ class Secretin {
       });
   }
 
-  refreshUser() {
+  refreshUser(progress = defaultProgress) {
     let remoteUser;
     return this.api.getUserWithSignature(this.currentUser)
       .then((user) => {
@@ -261,13 +282,13 @@ class Secretin {
           // Electron
           this.getDb();
         }
-        return this.currentUser.decryptAllMetadatas(remoteUser.metadatas);
+        return this.currentUser.decryptAllMetadatas(remoteUser.metadatas, progress);
       })
       .then(() => this.currentUser.importOptions(remoteUser.options))
       .catch((err) => {
         if (err === 'Offline') {
           this.offlineDB();
-          return this.refreshUser();
+          return this.refreshUser(progress);
         }
         const wrapper = new WrappingError(err);
         throw wrapper.error;
@@ -1122,25 +1143,34 @@ class Secretin {
     return Promise.reject(new LocalStorageUnavailableError());
   }
 
-  shortLogin(shortpass) {
+  shortLogin(shortpass, progress = defaultProgress) {
     const username = localStorage.getItem(`${Secretin.prefix}username`);
     const deviceName = localStorage.getItem(`${Secretin.prefix}deviceName`);
     let shortpassKey;
     let parameters;
     this.currentUser = new User(username);
+    progress(new GetDerivationStatus());
     return this.api.getProtectKeyParameters(username, deviceName)
       .then((rParameters) => {
         parameters = rParameters;
         this.currentUser.totp = parameters.totp;
-        return this.currentUser.importPublicKey(parameters.publicKey);
+        progress(new PasswordDerivationStatus());
+        return derivePassword(shortpass, parameters);
       })
-      .then(() => derivePassword(shortpass, parameters))
       .then((dKey) => {
         shortpassKey = dKey.key;
+        progress(new GetProtectKeyStatus());
         return this.api.getProtectKey(username, deviceName, dKey.hash);
       })
-      .then((protectKey) => this.currentUser.shortLogin(shortpassKey, protectKey))
-      .then(() => this.refreshUser())
+      .then((protectKey) => {
+        progress(new DecryptPrivateKeyStatus());
+        return this.currentUser.shortLogin(shortpassKey, protectKey);
+      })
+      .then(() => {
+        progress(new ImportPublicKeyStatus());
+        return this.currentUser.importPublicKey(parameters.publicKey);
+      })
+      .then(() => this.refreshUser(progress))
       .then(() => {
         if (typeof window.process !== 'undefined') {
           // Electron

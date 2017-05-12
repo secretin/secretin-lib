@@ -120,6 +120,17 @@ export function escapeRegExp(s) {
   return s.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
 }
 
+export function defaultProgress(status) {
+  const seconds = Math.trunc(Date.now() / 1000);
+  if (status.total === 1) {
+    // eslint-disable-next-line no-console
+    console.log(`${seconds} : ${status.message}`);
+  } else {
+    // eslint-disable-next-line no-console
+    console.log(`${seconds} : ${status.message} (${status.state}/${status.total})`);
+  }
+}
+
 const Utils = {
   generateRandomNumber,
   generateSeed,
@@ -130,6 +141,7 @@ const Utils = {
   xorSeed,
   escapeRegExp,
   PasswordGenerator,
+  defaultProgress,
 };
 
 export default Utils;

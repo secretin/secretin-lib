@@ -59,6 +59,9 @@ describe('Logged user', () => {
     signature: '6dfb8544f56accf650e71c6b5a9f0933931d9f034b8ba9f76b656267302ba765bd1158e247c9abe076ca9371cd19852b52ca7314f1c4d5087e9162fc72b454d4507056f7ed790e1ab94cc06204c829e8e23907d459f6047ddbc5ccd9f0e2d661a3f91ba5e9f904dab1efe920aa58afa8ff30b949fa7295dcc67811ab2d98c78a46632916c8e01ddc97658f2af43c491a8680826df384672d3473f0203aa2dc914ef827674b0522b4960e76d52aa60e7b017286f3236bc0193f34b48bbcdd013b0ab8dcc81e54c0bef66c1ef775aa4fb58d8621ee2b870bd5ee2d746242c18095af058f1f2cc546dade6886b3a5d8437b7b6f1bb8d6d1413f4e8a9bfcf79e8da49bf33038ea98de55fa11d77e88a1bcf03616da2d100ff24a90d9b64567f88f84f3f8e10e8ffec2c62bc2121ffed9cfc1040f331481d8c25c4ba3d57bbd36a2e3071efd254c0833f06573cb8707f8554e175f947180f9637a93795b16e2f3176710dbed1841a7eb568c4da32e14c7e051e7a282e1ff632c926a4277df7396cd4c29d33f1338eb2762011f97a18208f09712ced9ae8fef403c8fb1206ea9be7dbd2988cbc36ca342cab360fefe622b4be92d04d2cf8e455fc3c763b741a41ca9a8424a86f33867398dc246a76f5047dccf3c3c54449016fdd52a112f8d729ff08f2c64276c95d88e1e3568374aa68228eeea7c026d72751bc873dfe8bee0260102',
   };
 
+  const shortpass = 'test';
+  const deviceId = '9ad4ab83-9102-470b-b185-a87932774b6b';
+
   /*
     Create following arborescence :
       secret
@@ -1112,4 +1115,113 @@ describe('Logged user', () => {
       .then(() => this.secretin.currentUser.metadatas[otherSecretInOtherFolderId])
       .should.eventually.deep.equal(expectedMetadatas);
   });
+
+  if (__karma__.config.args[0] === 'server') {
+    it('Can activate shortlogin and use it', () =>
+      this.secretin.activateShortLogin(shortpass, deviceId)
+        .then(() => {
+          this.secretin.currentUser.disconnect();
+          return this.secretin.shortLogin(shortpass);
+        })
+        .then(() => this.secretin.currentUser.metadatas)
+        .should.eventually.deep.equal({
+          [secretId]: {
+            id: secretId,
+            lastModifiedAt: now,
+            lastModifiedBy: username,
+            title: secretTitle,
+            type: 'secret',
+            users: {
+              [username]: {
+                username,
+                rights: 2,
+                folders: { ROOT: true },
+              },
+            },
+          },
+          [folderId]: {
+            id: folderId,
+            lastModifiedAt: now,
+            lastModifiedBy: username,
+            title: folderTitle,
+            type: 'folder',
+            users: {
+              [username]: {
+                username,
+                rights: 2,
+                folders: { ROOT: true },
+              },
+            },
+          },
+          [otherFolderId]: {
+            id: otherFolderId,
+            lastModifiedAt: now,
+            lastModifiedBy: username,
+            title: otherFolderTitle,
+            type: 'folder',
+            users: {
+              [username]: {
+                username,
+                rights: 2,
+                folders: { ROOT: true },
+              },
+            },
+          },
+          [secretInFolderId]: {
+            users: {
+              [username]: {
+                username,
+                rights: 2,
+                folders: {
+                  [folderId]: {
+                    name: folderTitle,
+                  },
+                },
+              },
+            },
+            lastModifiedAt: now,
+            lastModifiedBy: username,
+            title: secretInFolderTitle,
+            type: 'secret',
+            id: secretInFolderId,
+          },
+          [otherSecretInOtherFolderId]: {
+            users: {
+              [username]: {
+                username,
+                rights: 2,
+                folders: {
+                  [otherFolderId]: {
+                    name: otherFolderTitle,
+                  },
+                },
+              },
+            },
+            lastModifiedAt: now,
+            lastModifiedBy: username,
+            title: otherSecretInOtherFolderTitle,
+            type: 'secret',
+            id: otherSecretInOtherFolderId,
+          },
+          [folderInFolderId]: {
+            users: {
+              [username]: {
+                username,
+                rights: 2,
+                folders: {
+                  [folderId]: {
+                    name: folderTitle,
+                  },
+                },
+              },
+            },
+            lastModifiedAt: now,
+            lastModifiedBy: username,
+            title: folderInFolderTitle,
+            type: 'folder',
+            id: folderInFolderId,
+          },
+        })
+    );
+  }
 });

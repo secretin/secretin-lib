@@ -19,6 +19,14 @@ import {
   verify,
 } from './lib/crypto';
 
+import {
+  DecryptMetadataStatus,
+} from './Statuses';
+
+import {
+  defaultProgress,
+} from './lib/utils';
+
 import Secretin from './Secretin';
 
 class User {
@@ -260,15 +268,19 @@ class User {
     return wrapRSAOAEP(key, publicKey);
   }
 
-  decryptAllMetadatas(allMetadatas) {
+  decryptAllMetadatas(allMetadatas, progress = defaultProgress) {
     const decryptMetadatasPromises = [];
     const hashedTitles = Object.keys(this.keys);
 
+    const progressStatus = new DecryptMetadataStatus(0, hashedTitles.length);
+    progress(progressStatus);
     this.metadatas = {};
     hashedTitles.forEach((hashedTitle) => {
       decryptMetadatasPromises.push(
         this.decryptSecret(hashedTitle, allMetadatas[hashedTitle])
           .then((metadatas) => {
+            progressStatus.step();
+            progress(progressStatus);
             this.metadatas[hashedTitle] = metadatas;
           })
       );
