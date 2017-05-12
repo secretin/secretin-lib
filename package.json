@@ -9,7 +9,8 @@
     "watch": "rollup -c config/rollup.config.js --watch",
     "lint": "eslint src/ test/",
     "karma": "./node_modules/karma/bin/karma start karma.conf.js",
-    "test": "npm run build && npm run karma"
+    "test": "npm run build && npm run karma",
+    "prettier": "prettier --print-width 80 --trailing-comma es5 --single-quote --write \"src/**/*.js\""
   },
   "repository": {
     "type": "git",
@@ -29,6 +30,7 @@
     "chai-as-promised": "^5.3.0",
     "eslint": "^3.4.0",
     "eslint-config-airbnb-base": "^5.0.3",
+    "eslint-config-prettier": "^2.0.0",
     "eslint-plugin-chai": "0.0.1",
     "eslint-plugin-import": "^1.14.0",
     "eslint-plugin-mocha": "^4.5.1",

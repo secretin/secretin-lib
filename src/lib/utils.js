@@ -50,7 +50,7 @@ export function bytesToASCIIString(bytes) {
 export function generateRandomNumber(max) {
   const randomValues = new Uint8Array(1);
   crypto.getRandomValues(randomValues);
-  return (randomValues[0] % max);
+  return randomValues[0] % max;
 }
 
 export function generateSeed() {
@@ -68,7 +68,7 @@ export function generateSeed() {
   for (i = 0; i < buf.length; i++) {
     byte = buf[i];
 
-    symbol = carry | (byte >> shift);
+    symbol = carry | byte >> shift;
     output += alphabet[symbol & 0x1f];
 
     if (shift > 5) {
@@ -104,8 +104,12 @@ export function localStorageAvailable() {
 }
 
 export function xorSeed(byteArray1, byteArray2) {
-  if (byteArray1 instanceof Uint8Array && byteArray2 instanceof Uint8Array &&
-      byteArray1.length === 32 && byteArray2.length === 32) {
+  if (
+    byteArray1 instanceof Uint8Array &&
+    byteArray2 instanceof Uint8Array &&
+    byteArray1.length === 32 &&
+    byteArray2.length === 32
+  ) {
     const buf = new Uint8Array(32);
     let i;
     for (i = 0; i < 32; i++) {
@@ -122,12 +126,14 @@ export function escapeRegExp(s) {
 
 export function defaultProgress(status) {
   const seconds = Math.trunc(Date.now() / 1000);
-  if (status.total === 1) {
+  if (status.total < 2) {
     // eslint-disable-next-line no-console
     console.log(`${seconds} : ${status.message}`);
   } else {
     // eslint-disable-next-line no-console
-    console.log(`${seconds} : ${status.message} (${status.state}/${status.total})`);
+    console.log(
+      `${seconds} : ${status.message} (${status.state}/${status.total})`
+    );
   }
 }
 

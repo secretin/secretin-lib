@@ -1,7 +1,4 @@
-import {
-  escapeRegExp,
-  generateRandomNumber,
-} from './utils';
+import { escapeRegExp, generateRandomNumber } from './utils';
 
 const symbols = '!@#$%^&*()+_=}{[]|:;"?.><,`~';
 const vowels = 'aeiouy';
@@ -11,18 +8,20 @@ const numbers = '0123456789';
 const similarChars = '[ilLI|`oO0';
 
 export const hasNumber = str => str.match(/\d+/g) != null;
-export const hasMixedCase = str => str.toUpperCase() !== str && str.toLowerCase() !== str;
-export const hasSymbol = (str) => {
+export const hasMixedCase = str =>
+  str.toUpperCase() !== str && str.toLowerCase() !== str;
+export const hasSymbol = str => {
   const regexString = `[${escapeRegExp(symbols)}]`;
   const symbolRegex = new RegExp(regexString);
   return str.match(symbolRegex) != null;
 };
 
-export const checkStrictRules = (str, rules) => (rules.numbers === hasNumber(str))
-      && (rules.mixedCase === hasMixedCase(str))
-      && (rules.symbols === hasSymbol(str));
+export const checkStrictRules = (str, rules) =>
+  rules.numbers === hasNumber(str) &&
+  rules.mixedCase === hasMixedCase(str) &&
+  rules.symbols === hasSymbol(str);
 
-export const buildCharset = (options) => {
+export const buildCharset = options => {
   const charset = [];
 
   const letters = vowels + consonants;
@@ -46,7 +45,7 @@ export const buildCharset = (options) => {
   return charset;
 };
 
-export const getRandomPassword = (options) => {
+export const getRandomPassword = options => {
   let password = '';
 
   if (options.readable) {
@@ -70,7 +69,7 @@ export const getRandomPassword = (options) => {
   return password;
 };
 
-export const generatePassword = (customOptions) => {
+export const generatePassword = customOptions => {
   const defaults = {
     length: 20,
     readable: false,
@@ -89,7 +88,9 @@ export const generatePassword = (customOptions) => {
   const password = getRandomPassword(options);
 
   if (options.strictRules) {
-    return checkStrictRules(password, contentRules) ? password : generatePassword(customOptions);
+    return checkStrictRules(password, contentRules)
+      ? password
+      : generatePassword(customOptions);
   }
 
   return password;
