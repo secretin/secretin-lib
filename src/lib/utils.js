@@ -125,7 +125,7 @@ export function escapeRegExp(s) {
 }
 
 export function defaultProgress(status) {
-  const seconds = Math.trunc(Date.now() / 1000);
+  const seconds = Math.trunc(Date.now());
   if (status.total < 2) {
     // eslint-disable-next-line no-console
     console.log(`${seconds} : ${status.message}`);
