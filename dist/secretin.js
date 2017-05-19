@@ -384,7 +384,7 @@ function escapeRegExp(s) {
 }
 
 function defaultProgress(status) {
-  var seconds = Math.trunc(Date.now() / 1000);
+  var seconds = Math.trunc(Date.now());
   if (status.total < 2) {
     // eslint-disable-next-line no-console
     console.log(seconds + ' : ' + status.message);
@@ -1978,21 +1978,20 @@ var User = function () {
 
     var progress = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : defaultProgress;
 
-    var decryptMetadatasPromises = [];
     var hashedTitles = Object.keys(this.keys);
 
     var progressStatus = new DecryptMetadataStatus(0, hashedTitles.length);
     progress(progressStatus);
     this.metadatas = {};
-    hashedTitles.forEach(function (hashedTitle) {
-      decryptMetadatasPromises.push(_this12.decryptSecret(hashedTitle, allMetadatas[hashedTitle]).then(function (metadatas) {
-        progressStatus.step();
-        progress(progressStatus);
-        _this12.metadatas[hashedTitle] = metadatas;
-      }));
-    });
-
-    return Promise.all(decryptMetadatasPromises);
+    return hashedTitles.reduce(function (promise, hashedTitle) {
+      return promise.then(function () {
+        return _this12.decryptSecret(hashedTitle, allMetadatas[hashedTitle]).then(function (metadatas) {
+          progressStatus.step();
+          progress(progressStatus);
+          _this12.metadatas[hashedTitle] = metadatas;
+        });
+      });
+    }, Promise.resolve());
   };
 
   User.prototype.activateShortLogin = function activateShortLogin(shortpass, deviceName) {
