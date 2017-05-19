@@ -1,6 +1,6 @@
 {
   "name": "secretin",
-  "version": "1.4.0",
+  "version": "1.6.1",
   "description": "Open source secret manager with groups managment based on webapi crypto https://developer.mozilla.org/en-US/docs/Web/API/Crypto",
   "main": "dist/secretin.umd.js",
   "scripts": {
@@ -17,7 +17,8 @@
     "adapter-node-test": "node_modules/mocha/bin/mocha adapters_test/node/input.test.js",
     "adapter-node-output": "node adapters_test/node/output.js",
     "adapter-browser-test": "./node_modules/karma/bin/karma start adapters_test/browser/karma.conf.js",
-    "adapter-browser-output": "google-chrome adapters_test/browser/output.html"
+    "adapter-browser-output": "google-chrome adapters_test/browser/output.html",
+    "prettier": "prettier --print-width 80 --trailing-comma es5 --single-quote --write \"src/**/*.js\""
   },
   "repository": {
     "type": "git",
@@ -37,6 +38,7 @@
     "chai-as-promised": "^5.3.0",
     "eslint": "^3.4.0",
     "eslint-config-airbnb-base": "^5.0.3",
+    "eslint-config-prettier": "^2.0.0",
     "eslint-plugin-chai": "0.0.1",
     "eslint-plugin-import": "^1.14.0",
     "eslint-plugin-mocha": "^4.5.1",
@@ -56,7 +58,7 @@
     "rollup-watch": "^2.5.0"
   },
   "peerDependencies": {
-    "node-forge": "^0.7.0"
+    "node-forge": "^0.7.1"
   },
   "dependencies": {}
 }

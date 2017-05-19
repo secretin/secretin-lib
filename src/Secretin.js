@@ -9,9 +9,20 @@ import {
 } from './Errors';
 
 import {
+  GetDerivationStatus,
+  PasswordDerivationStatus,
+  GetUserStatus,
+  ImportPublicKeyStatus,
+  DecryptPrivateKeyStatus,
+  DecryptUserOptionsStatus,
+  GetProtectKeyStatus,
+} from './Statuses';
+
+import {
   hexStringToUint8Array,
   localStorageAvailable,
   xorSeed,
+  defaultProgress,
 } from './lib/utils';
 
 import APIStandalone from './API/Standalone';
@@ -198,11 +209,12 @@ class Secretin {
       });
   }
 
-  loginUser(username, password, otp) {
+  loginUser(username, password, otp, progress = defaultProgress) {
     let key;
     let hash;
     let remoteUser;
     let parameters;
+    progress(new GetDerivationStatus());
     return this.api
       .getDerivationParameters(username)
       .then(rParameters => {
@@ -210,11 +222,13 @@ class Secretin {
         if (parameters.totp && (typeof otp === 'undefined' || otp === '')) {
           throw new NeedTOTPTokenError();
         }
+        progress(new PasswordDerivationStatus());
         return this.cryptoAdapter.derivePassword(password, parameters);
       })
       .then(dKey => {
         hash = dKey.hash;
         key = dKey.key;
+        progress(new GetUserStatus());
         return this.api.getUser(username, hash, otp);
       })
       .then(user => {
@@ -223,11 +237,38 @@ class Secretin {
         this.currentUser.hash = hash;
         remoteUser = user;
         this.currentUser.keys = remoteUser.keys;
+        progress(new ImportPublicKeyStatus());
         return this.currentUser.importPublicKey(remoteUser.publicKey);
       })
-      .then(() => this.currentUser.importPrivateKey(key, remoteUser.privateKey))
-      .then(() => this.currentUser.decryptAllMetadatas(remoteUser.metadatas))
-      .then(() => this.currentUser.importOptions(remoteUser.options))
+      .then(() => {
+        progress(new DecryptPrivateKeyStatus());
+        return this.currentUser.importPrivateKey(key, remoteUser.privateKey);
+      })
+      .then(() => {
+        progress(new DecryptUserOptionsStatus());
+        this.currentUser.importOptions(remoteUser.options);
+      })
+      .then(() =>
+        this.currentUser.decryptAllMetadatas(remoteUser.metadatas, progress))
+      .then(() => {
+        const shortpass = localStorage.getItem(`${Secretin.prefix}shortpass`);
+        const signature = localStorage.getItem(
+          `${Secretin.prefix}shortpassSignature`
+        );
+        if (shortpass && signature) {
+          return this.currentUser.importPrivateData(shortpass, signature);
+        }
+        return Promise.resolve(null);
+      })
+      .then(shortpass => {
+        if (shortpass) {
+          const deviceName = localStorage.getItem(
+            `${Secretin.prefix}deviceName`
+          );
+          return this.activateShortLogin(shortpass, deviceName);
+        }
+        return Promise.resolve();
+      })
       .then(() => {
         if (typeof window.process !== 'undefined') {
           // Electron
@@ -244,28 +285,34 @@ class Secretin {
       .catch(err => {
         if (err === 'Offline') {
           this.offlineDB(username);
-          return this.loginUser(username, password, otp);
+          return this.loginUser(username, password, otp, progress);
         }
         const wrapper = new WrappingError(err);
         throw wrapper.error;
       });
   }
 
-  refreshUser() {
+  refreshUser(progress = defaultProgress) {
+    let remoteUser;
     return this.api
       .getUserWithSignature(this.currentUser)
       .then(user => {
-        this.currentUser.keys = user.keys;
+        remoteUser = user;
+        this.currentUser.keys = remoteUser.keys;
         if (typeof window.process !== 'undefined') {
           // Electron
           this.getDb();
         }
-        return this.currentUser.decryptAllMetadatas(user.metadatas);
+        return this.currentUser.decryptAllMetadatas(
+          remoteUser.metadatas,
+          progress
+        );
       })
+      .then(() => this.currentUser.importOptions(remoteUser.options))
       .catch(err => {
         if (err === 'Offline') {
           this.offlineDB();
-          return this.refreshUser();
+          return this.refreshUser(progress);
         }
         const wrapper = new WrappingError(err);
         throw wrapper.error;
@@ -1161,12 +1208,19 @@ class Secretin {
       return this.currentUser
         .activateShortLogin(shortpass, deviceName)
         .then(toSend => this.api.activateShortLogin(toSend, this.currentUser))
-        .then(res => {
+        .then(() => {
           if (typeof window.process !== 'undefined') {
             // Electron
             this.getDb();
           }
-          return res;
+          return this.currentUser.exportPrivateData(shortpass);
+        })
+        .then(result => {
+          localStorage.setItem(`${Secretin.prefix}shortpass`, result.data);
+          localStorage.setItem(
+            `${Secretin.prefix}shortpassSignature`,
+            result.signature
+          );
         })
         .catch(err => {
           if (err === 'Offline') {
@@ -1186,31 +1240,42 @@ class Secretin {
       localStorage.removeItem(`${Secretin.prefix}privateKey`);
       localStorage.removeItem(`${Secretin.prefix}privateKeyIv`);
       localStorage.removeItem(`${Secretin.prefix}iv`);
+      localStorage.removeItem(`${Secretin.prefix}shortpass`);
+      localStorage.removeItem(`${Secretin.prefix}shortpassSignature`);
       return Promise.resolve();
     }
     return Promise.reject(new LocalStorageUnavailableError());
   }
 
-  shortLogin(shortpass) {
+  shortLogin(shortpass, progress = defaultProgress) {
     const username = localStorage.getItem(`${Secretin.prefix}username`);
     const deviceName = localStorage.getItem(`${Secretin.prefix}deviceName`);
     let shortpassKey;
     let parameters;
     this.currentUser = new User(username, this.cryptoAdapter);
+    progress(new GetDerivationStatus());
     return this.api
       .getProtectKeyParameters(username, deviceName)
       .then(rParameters => {
         parameters = rParameters;
         this.currentUser.totp = parameters.totp;
-        return this.currentUser.importPublicKey(parameters.publicKey);
+        progress(new PasswordDerivationStatus());
+        return this.cryptoAdapter.derivePassword(shortpass, parameters);
       })
-      .then(() => this.cryptoAdapter.derivePassword(shortpass, parameters))
       .then(dKey => {
         shortpassKey = dKey.key;
+        progress(new GetProtectKeyStatus());
         return this.api.getProtectKey(username, deviceName, dKey.hash);
       })
-      .then(protectKey => this.currentUser.shortLogin(shortpassKey, protectKey))
-      .then(() => this.refreshUser())
+      .then(protectKey => {
+        progress(new DecryptPrivateKeyStatus());
+        return this.currentUser.shortLogin(shortpassKey, protectKey);
+      })
+      .then(() => {
+        progress(new ImportPublicKeyStatus());
+        return this.currentUser.importPublicKey(parameters.publicKey);
+      })
+      .then(() => this.refreshUser(progress))
       .then(() => {
         if (typeof window.process !== 'undefined') {
           // Electron
@@ -1234,7 +1299,6 @@ class Secretin {
           !(err instanceof NotAvailableError)
         ) {
           localStorage.removeItem(`${Secretin.prefix}username`);
-          localStorage.removeItem(`${Secretin.prefix}deviceName`);
           localStorage.removeItem(`${Secretin.prefix}privateKey`);
           localStorage.removeItem(`${Secretin.prefix}privateKeyIv`);
           localStorage.removeItem(`${Secretin.prefix}iv`);

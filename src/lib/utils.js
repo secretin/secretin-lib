@@ -140,6 +140,19 @@ export function escapeRegExp(s) {
   return s.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
 }
 
+export function defaultProgress(status) {
+  const seconds = Math.trunc(Date.now());
+  if (status.total < 2) {
+    // eslint-disable-next-line no-console
+    console.log(`${seconds} : ${status.message}`);
+  } else {
+    // eslint-disable-next-line no-console
+    console.log(
+      `${seconds} : ${status.message} (${status.state}/${status.total})`
+    );
+  }
+}
+
 const Utils = {
   generateRandomNumber,
   generateSeed,
@@ -152,6 +165,7 @@ const Utils = {
   PasswordGenerator,
   asciiToHexString,
   hexStringToAscii,
+  defaultProgress,
 };
 
 export default Utils;

@@ -1,3 +1,5 @@
+import { DecryptMetadataStatus } from './Statuses';
+import { defaultProgress } from './lib/utils';
 import Secretin from './Secretin';
 
 class User {
@@ -101,18 +103,34 @@ class User {
       });
   }
 
-  exportOptions() {
+  exportPrivateData(data) {
     const result = {};
     return this.cryptoAdapter
-      .encryptRSAOAEP(this.options, this.publicKey)
+      .encryptRSAOAEP(data, this.publicKey)
       .then(encryptedOptions => {
-        result.options = encryptedOptions;
-        return this.sign(result.options);
+        result.data = encryptedOptions;
+        return this.sign(result.data);
       })
       .then(signature => {
         result.signature = signature;
         return result;
       });
+  }
+
+  importPrivateData(data, signature) {
+    return this.verify(data, signature).then(verified => {
+      if (verified) {
+        return this.cryptoAdapter.decryptRSAOAEP(data, this.privateKey);
+      }
+      return null;
+    });
+  }
+
+  exportOptions() {
+    return this.exportPrivateData(this.options).then(result => ({
+      options: result.data,
+      signature: result.signature,
+    }));
   }
 
   importOptions(optionsObject) {
@@ -121,23 +139,16 @@ class User {
       this.options = User.defaultOptions;
       return Promise.resolve(null);
     }
-    return this.verify(optionsObject.options, optionsObject.signature)
-      .then(verified => {
-        if (verified) {
-          return this.cryptoAdapter.decryptRSAOAEP(
-            optionsObject.options,
-            this.privateKey
-          );
-        }
-        return null;
-      })
-      .then(options => {
-        if (options) {
-          this.options = options;
-        } else {
-          this.options = User.defaultOptions;
-        }
-      });
+    return this.importPrivateData(
+      optionsObject.options,
+      optionsObject.signature
+    ).then(options => {
+      if (options) {
+        this.options = options;
+      } else {
+        this.options = User.defaultOptions;
+      }
+    });
   }
 
   shareSecret(friend, wrappedKey, hashedTitle) {
@@ -239,23 +250,25 @@ class User {
     return this.cryptoAdapter.wrapRSAOAEP(key, publicKey);
   }
 
-  decryptAllMetadatas(allMetadatas) {
-    const decryptMetadatasPromises = [];
+  decryptAllMetadatas(allMetadatas, progress = defaultProgress) {
     const hashedTitles = Object.keys(this.keys);
 
+    const progressStatus = new DecryptMetadataStatus(0, hashedTitles.length);
+    progress(progressStatus);
     this.metadatas = {};
-    hashedTitles.forEach(hashedTitle => {
-      decryptMetadatasPromises.push(
-        this.decryptSecret(
-          hashedTitle,
-          allMetadatas[hashedTitle]
-        ).then(metadatas => {
-          this.metadatas[hashedTitle] = metadatas;
-        })
-      );
-    });
-
-    return Promise.all(decryptMetadatasPromises);
+    return hashedTitles.reduce(
+      (promise, hashedTitle) =>
+        promise.then(() =>
+          this.decryptSecret(
+            hashedTitle,
+            allMetadatas[hashedTitle]
+          ).then(metadatas => {
+            progressStatus.step();
+            progress(progressStatus);
+            this.metadatas[hashedTitle] = metadatas;
+          })
+        ), Promise.resolve()
+      )
   }
 
   activateShortLogin(shortpass, deviceName) {

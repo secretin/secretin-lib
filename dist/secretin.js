@@ -1,7 +1,7 @@
 var Secretin = (function () {
 'use strict';
 
-var version = "1.4.0";
+var version = "1.6.1";
 
 var asyncGenerator = function () {
   function AwaitValue(value) {
@@ -265,7 +265,7 @@ var DontHaveSecretError = function (_Error7) {
 
     var _this7 = possibleConstructorReturn(this, _Error7.call(this));
 
-    _this7.message = 'You don\'t have this secret';
+    _this7.message = "You don't have this secret";
     return _this7;
   }
 
@@ -295,7 +295,7 @@ var FolderInItselfError = function (_Error9) {
 
     var _this9 = possibleConstructorReturn(this, _Error9.call(this));
 
-    _this9.message = 'You can\'t put this folder in itself.';
+    _this9.message = "You can't put this folder in itself.";
     return _this9;
   }
 
@@ -340,7 +340,7 @@ var CantEditSecretError = function (_Error12) {
 
     var _this12 = possibleConstructorReturn(this, _Error12.call(this));
 
-    _this12.message = 'You can\'t edit this secret';
+    _this12.message = "You can't edit this secret";
     return _this12;
   }
 
@@ -355,7 +355,7 @@ var CantShareSecretError = function (_Error13) {
 
     var _this13 = possibleConstructorReturn(this, _Error13.call(this));
 
-    _this13.message = 'You can\'t share this secret';
+    _this13.message = "You can't share this secret";
     return _this13;
   }
 
@@ -370,7 +370,7 @@ var CantUnshareSecretError = function (_Error14) {
 
     var _this14 = possibleConstructorReturn(this, _Error14.call(this));
 
-    _this14.message = 'You can\'t unshare this secret';
+    _this14.message = "You can't unshare this secret";
     return _this14;
   }
 
@@ -385,7 +385,7 @@ var CantUnshareWithYourselfError = function (_Error15) {
 
     var _this15 = possibleConstructorReturn(this, _Error15.call(this));
 
-    _this15.message = 'You can\'t unshare with yourself';
+    _this15.message = "You can't unshare with yourself";
     return _this15;
   }
 
@@ -400,7 +400,7 @@ var CantShareWithYourselfError = function (_Error16) {
 
     var _this16 = possibleConstructorReturn(this, _Error16.call(this));
 
-    _this16.message = 'You can\'t share with yourself';
+    _this16.message = "You can't share with yourself";
     return _this16;
   }
 
@@ -445,7 +445,7 @@ var CantGenerateNewKeyError = function (_Error19) {
 
     var _this19 = possibleConstructorReturn(this, _Error19.call(this));
 
-    _this19.message = 'You can\'t generate new key for this secret';
+    _this19.message = "You can't generate new key for this secret";
     return _this19;
   }
 
@@ -529,31 +529,31 @@ var WrappingError = function WrappingError(error) {
     this.error = new DisconnectedError();
   } else if (error === 'Invalid signature') {
     this.error = new InvalidSignatureError();
-  } else if (error === 'You don\'t have this secret') {
+  } else if (error === "You don't have this secret") {
     this.error = new DontHaveSecretError();
   } else if (error === 'Folder not found') {
     this.error = new FolderNotFoundError();
-  } else if (error === 'You can\'t put this folder in itself.') {
+  } else if (error === "You can't put this folder in itself.") {
     this.error = new FolderInItselfError();
   } else if (error === 'LocalStorage unavailable') {
     this.error = new LocalStorageUnavailableError();
   } else if (error === 'Invalid Password') {
     this.error = new InvalidPasswordError();
-  } else if (error === 'You can\'t edit this secret') {
+  } else if (error === "You can't edit this secret") {
     this.error = new CantEditSecretError();
-  } else if (error === 'You can\'t share this secret') {
+  } else if (error === "You can't share this secret") {
     this.error = new CantShareSecretError();
-  } else if (error === 'You can\'t unshare this secret') {
+  } else if (error === "You can't unshare this secret") {
     this.error = new CantUnshareSecretError();
-  } else if (error === 'You can\'t unshare with yourself') {
+  } else if (error === "You can't unshare with yourself") {
     this.error = new CantUnshareWithYourselfError();
-  } else if (error === 'You can\'t share with yourself') {
+  } else if (error === "You can't share with yourself") {
     this.error = new CantShareWithYourselfError();
   } else if (error === 'Secret already exists') {
     this.error = new SecretAlreadyExistsError();
   } else if (error === 'Secret not found') {
     this.error = new SecretNotFoundError();
-  } else if (error === 'You can\'t generate new key for this secret') {
+  } else if (error === "You can't generate new key for this secret") {
     this.error = new CantGenerateNewKeyError();
   } else if (error === 'Secret not shared with this user') {
     this.error = new NotSharedWithUserError();
@@ -594,6 +594,152 @@ var Errors = {
   FriendNotFoundError: FriendNotFoundError,
   OfflineError: OfflineError,
   NotAvailableError: NotAvailableError
+};
+
+var Status = function Status() {
+  var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+  var total = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+  classCallCheck(this, Status);
+
+  this.message = 'Unknown status';
+  this.state = state;
+  this.total = total;
+};
+
+var PasswordDerivationStatus = function (_Status) {
+  inherits(PasswordDerivationStatus, _Status);
+
+  function PasswordDerivationStatus() {
+    classCallCheck(this, PasswordDerivationStatus);
+
+    var _this = possibleConstructorReturn(this, _Status.call(this));
+
+    _this.message = 'Password derivation';
+    return _this;
+  }
+
+  return PasswordDerivationStatus;
+}(Status);
+
+var GetDerivationStatus = function (_Status2) {
+  inherits(GetDerivationStatus, _Status2);
+
+  function GetDerivationStatus() {
+    classCallCheck(this, GetDerivationStatus);
+
+    var _this2 = possibleConstructorReturn(this, _Status2.call(this));
+
+    _this2.message = 'Retrieve derivation parameters';
+    return _this2;
+  }
+
+  return GetDerivationStatus;
+}(Status);
+
+var GetUserStatus = function (_Status3) {
+  inherits(GetUserStatus, _Status3);
+
+  function GetUserStatus() {
+    classCallCheck(this, GetUserStatus);
+
+    var _this3 = possibleConstructorReturn(this, _Status3.call(this));
+
+    _this3.message = 'Get user encrypted datas';
+    return _this3;
+  }
+
+  return GetUserStatus;
+}(Status);
+
+var GetProtectKeyStatus = function (_Status4) {
+  inherits(GetProtectKeyStatus, _Status4);
+
+  function GetProtectKeyStatus() {
+    classCallCheck(this, GetProtectKeyStatus);
+
+    var _this4 = possibleConstructorReturn(this, _Status4.call(this));
+
+    _this4.message = 'Get encrypted protect key';
+    return _this4;
+  }
+
+  return GetProtectKeyStatus;
+}(Status);
+
+var ImportPublicKeyStatus = function (_Status5) {
+  inherits(ImportPublicKeyStatus, _Status5);
+
+  function ImportPublicKeyStatus() {
+    classCallCheck(this, ImportPublicKeyStatus);
+
+    var _this5 = possibleConstructorReturn(this, _Status5.call(this));
+
+    _this5.message = 'Import public key';
+    return _this5;
+  }
+
+  return ImportPublicKeyStatus;
+}(Status);
+
+var DecryptPrivateKeyStatus = function (_Status6) {
+  inherits(DecryptPrivateKeyStatus, _Status6);
+
+  function DecryptPrivateKeyStatus() {
+    classCallCheck(this, DecryptPrivateKeyStatus);
+
+    var _this6 = possibleConstructorReturn(this, _Status6.call(this));
+
+    _this6.message = 'Decrypt private key';
+    return _this6;
+  }
+
+  return DecryptPrivateKeyStatus;
+}(Status);
+
+var DecryptUserOptionsStatus = function (_Status7) {
+  inherits(DecryptUserOptionsStatus, _Status7);
+
+  function DecryptUserOptionsStatus() {
+    classCallCheck(this, DecryptUserOptionsStatus);
+
+    var _this7 = possibleConstructorReturn(this, _Status7.call(this));
+
+    _this7.message = 'Decrypt user options';
+    return _this7;
+  }
+
+  return DecryptUserOptionsStatus;
+}(Status);
+
+var DecryptMetadataStatus = function (_Status8) {
+  inherits(DecryptMetadataStatus, _Status8);
+
+  function DecryptMetadataStatus(state, total) {
+    classCallCheck(this, DecryptMetadataStatus);
+
+    var _this8 = possibleConstructorReturn(this, _Status8.call(this, state, total));
+
+    _this8.message = 'Decrypt metadata';
+    return _this8;
+  }
+
+  DecryptMetadataStatus.prototype.step = function step() {
+    this.state += 1;
+  };
+
+  return DecryptMetadataStatus;
+}(Status);
+
+var Statuses = {
+  Status: Status,
+  GetDerivationStatus: GetDerivationStatus,
+  PasswordDerivationStatus: PasswordDerivationStatus,
+  GetUserStatus: GetUserStatus,
+  ImportPublicKeyStatus: ImportPublicKeyStatus,
+  DecryptPrivateKeyStatus: DecryptPrivateKeyStatus,
+  DecryptUserOptionsStatus: DecryptUserOptionsStatus,
+  DecryptMetadataStatus: DecryptMetadataStatus,
+  GetProtectKeyStatus: GetProtectKeyStatus
 };
 
 var symbols = '!@#$%^&*()+_=}{[]|:;"?.><,`~';
@@ -838,6 +984,17 @@ function escapeRegExp(s) {
   return s.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
 }
 
+function defaultProgress(status) {
+  var seconds = Math.trunc(Date.now());
+  if (status.total < 2) {
+    // eslint-disable-next-line no-console
+    console.log(seconds + ' : ' + status.message);
+  } else {
+    // eslint-disable-next-line no-console
+    console.log(seconds + ' : ' + status.message + ' (' + status.state + '/' + status.total + ')');
+  }
+}
+
 var Utils = {
   generateRandomNumber: generateRandomNumber,
   generateSeed: generateSeed,
@@ -849,7 +1006,8 @@ var Utils = {
   escapeRegExp: escapeRegExp,
   PasswordGenerator: PasswordGenerator,
   asciiToHexString: asciiToHexString,
-  hexStringToAscii: hexStringToAscii
+  hexStringToAscii: hexStringToAscii,
+  defaultProgress: defaultProgress
 };
 
 var API = function () {
@@ -960,7 +1118,7 @@ var API = function () {
       if (typeof _this4.db.users[hashedUsername] !== 'undefined') {
         if (typeof _this4.db.secrets[hashedTitle] !== 'undefined') {
           if (typeof _this4.db.users[hashedUsername].keys[hashedTitle].rights === 'undefined' || _this4.db.users[hashedUsername].keys[hashedTitle].rights <= 0) {
-            return Promise.reject('You can\'t edit this secret');
+            return Promise.reject("You can't edit this secret");
           }
           _this4.db.secrets[hashedTitle].iv = secretObject.iv;
           _this4.db.secrets[hashedTitle].secret = secretObject.secret;
@@ -984,7 +1142,7 @@ var API = function () {
       if (typeof _this5.db.users[hashedUsername] !== 'undefined') {
         if (typeof _this5.db.secrets[hashedTitle] !== 'undefined') {
           if (typeof _this5.db.users[hashedUsername].keys[hashedTitle].rights === 'undefined' || _this5.db.users[hashedUsername].keys[hashedTitle].rights <= 1) {
-            return Promise.reject('You can\'t generate new key for this secret');
+            return Promise.reject("You can't generate new key for this secret");
           }
           _this5.db.secrets[hashedTitle].iv = secret.iv;
           _this5.db.secrets[hashedTitle].secret = secret.secret;
@@ -1045,7 +1203,7 @@ var API = function () {
               } else {
                 yourself = 1;
                 if (hashedFriendUsernames.length === 1) {
-                  response = 'You can\'t unshare with yourself';
+                  response = "You can't unshare with yourself";
                 }
               }
             });
@@ -1054,7 +1212,7 @@ var API = function () {
             }
             return Promise.reject('Something goes wrong.');
           }
-          return Promise.reject('You can\'t unshare this secret');
+          return Promise.reject("You can't unshare this secret");
         }
         return Promise.reject('Secret not found');
       }
@@ -1090,13 +1248,13 @@ var API = function () {
                   throw 'Friend not found';
                 }
               } else {
-                throw 'You can\'t share this secret';
+                throw "You can't share this secret";
               }
             } else {
               throw 'Secret not found';
             }
           } else {
-            throw 'You can\'t share with yourself';
+            throw "You can't share with yourself";
           }
         });
         if (nb !== sharedSecretObjects.length) {
@@ -1213,7 +1371,7 @@ var API = function () {
     return user.sign(hash).then(function () {
       return new Promise(function (resolve, reject) {
         if (typeof _this10.db.secrets[hash] === 'undefined') {
-          reject('You don\'t have this secret');
+          reject("You don't have this secret");
         } else {
           resolve(_this10.db.secrets[hash]);
         }
@@ -1391,50 +1549,65 @@ var User = function () {
     });
   };
 
-  User.prototype.exportOptions = function exportOptions() {
+  User.prototype.exportPrivateData = function exportPrivateData(data) {
     var _this5 = this;
 
     var result = {};
-    return this.cryptoAdapter.encryptRSAOAEP(this.options, this.publicKey).then(function (encryptedOptions) {
-      result.options = encryptedOptions;
-      return _this5.sign(result.options);
+    return this.cryptoAdapter.encryptRSAOAEP(data, this.publicKey).then(function (encryptedOptions) {
+      result.data = encryptedOptions;
+      return _this5.sign(result.data);
     }).then(function (signature) {
       result.signature = signature;
       return result;
     });
   };
 
-  User.prototype.importOptions = function importOptions(optionsObject) {
+  User.prototype.importPrivateData = function importPrivateData(data, signature) {
     var _this6 = this;
+
+    return this.verify(data, signature).then(function (verified) {
+      if (verified) {
+        return _this6.cryptoAdapter.decryptRSAOAEP(data, _this6.privateKey);
+      }
+      return null;
+    });
+  };
+
+  User.prototype.exportOptions = function exportOptions() {
+    return this.exportPrivateData(this.options).then(function (result) {
+      return {
+        options: result.data,
+        signature: result.signature
+      };
+    });
+  };
+
+  User.prototype.importOptions = function importOptions(optionsObject) {
+    var _this7 = this;
 
     // Retro compatibility
     if (typeof optionsObject === 'undefined') {
       this.options = User.defaultOptions;
       return Promise.resolve(null);
     }
-    return this.verify(optionsObject.options, optionsObject.signature).then(function (verified) {
-      if (verified) {
-        return _this6.cryptoAdapter.decryptRSAOAEP(optionsObject.options, _this6.privateKey);
-      }
-      return null;
-    }).then(function (options) {
+    return this.importPrivateData(optionsObject.options, optionsObject.signature).then(function (options) {
       if (options) {
-        _this6.options = options;
+        _this7.options = options;
       } else {
-        _this6.options = User.defaultOptions;
+        _this7.options = User.defaultOptions;
       }
     });
   };
 
   User.prototype.shareSecret = function shareSecret(friend, wrappedKey, hashedTitle) {
-    var _this7 = this;
+    var _this8 = this;
 
     var result = { hashedTitle: hashedTitle };
     return this.unwrapKey(wrappedKey).then(function (key) {
-      return _this7.wrapKey(key, friend.publicKey);
+      return _this8.wrapKey(key, friend.publicKey);
     }).then(function (friendWrappedKey) {
       result.wrappedKey = friendWrappedKey;
-      return _this7.cryptoAdapter.getSHA256(friend.username);
+      return _this8.cryptoAdapter.getSHA256(friend.username);
     }).then(function (hashedUsername) {
       result.friendName = hashedUsername;
       return result;
@@ -1442,11 +1615,11 @@ var User = function () {
   };
 
   User.prototype.editSecret = function editSecret(hashedTitle, secret) {
-    var _this8 = this;
+    var _this9 = this;
 
     var metadatas = this.metadatas[hashedTitle];
     if (typeof metadatas === 'undefined') {
-      return Promise.reject('You don\'t have this secret');
+      return Promise.reject("You don't have this secret");
     }
     var now = new Date();
     metadatas.lastModifiedAt = now.toISOString();
@@ -1454,7 +1627,7 @@ var User = function () {
     var wrappedKey = this.keys[hashedTitle].key;
     var result = {};
     return this.unwrapKey(wrappedKey).then(function (key) {
-      return _this8.encryptSecret(metadatas, secret, key);
+      return _this9.encryptSecret(metadatas, secret, key);
     }).then(function (secretObject) {
       result.secret = secretObject.secret;
       result.iv = secretObject.iv;
@@ -1465,7 +1638,7 @@ var User = function () {
   };
 
   User.prototype.createSecret = function createSecret(metadatas, secret) {
-    var _this9 = this;
+    var _this10 = this;
 
     var now = Date.now();
     var saltedTitle = now + '|' + metadatas.title;
@@ -1474,14 +1647,14 @@ var User = function () {
     return this.cryptoAdapter.getSHA256(saltedTitle).then(function (hashedTitle) {
       result.hashedTitle = hashedTitle;
       newMetadas.id = result.hashedTitle;
-      return _this9.encryptSecret(newMetadas, secret);
+      return _this10.encryptSecret(newMetadas, secret);
     }).then(function (secretObject) {
       result.secret = secretObject.secret;
       result.iv = secretObject.iv;
       result.metadatas = secretObject.metadatas;
       result.iv_meta = secretObject.iv_meta;
       result.hashedUsername = secretObject.hashedUsername;
-      return _this9.wrapKey(secretObject.key, _this9.publicKey);
+      return _this10.wrapKey(secretObject.key, _this10.publicKey);
     }).then(function (wrappedKey) {
       result.wrappedKey = wrappedKey;
       return result;
@@ -1489,18 +1662,18 @@ var User = function () {
   };
 
   User.prototype.encryptSecret = function encryptSecret(metadatas, secret, key) {
-    var _this10 = this;
+    var _this11 = this;
 
     var result = {};
     return this.cryptoAdapter.encryptAESGCM256(secret, key).then(function (secretObject) {
       result.secret = secretObject.secret;
       result.iv = secretObject.iv;
       result.key = secretObject.key;
-      return _this10.cryptoAdapter.encryptAESGCM256(metadatas, secretObject.key);
+      return _this11.cryptoAdapter.encryptAESGCM256(metadatas, secretObject.key);
     }).then(function (secretObject) {
       result.metadatas = secretObject.secret;
       result.iv_meta = secretObject.iv;
-      return _this10.cryptoAdapter.getSHA256(_this10.username);
+      return _this11.cryptoAdapter.getSHA256(_this11.username);
     }).then(function (hashedUsername) {
       result.hashedUsername = hashedUsername;
       return result;
@@ -1508,14 +1681,14 @@ var User = function () {
   };
 
   User.prototype.decryptSecret = function decryptSecret(hashedTitle, secret) {
-    var _this11 = this;
+    var _this12 = this;
 
     if (typeof this.keys[hashedTitle] === 'undefined') {
-      return Promise.reject('You don\'t have this secret');
+      return Promise.reject("You don't have this secret");
     }
     var wrappedKey = this.keys[hashedTitle].key;
     return this.unwrapKey(wrappedKey).then(function (key) {
-      return _this11.cryptoAdapter.decryptAESGCM256(secret, key);
+      return _this12.cryptoAdapter.decryptAESGCM256(secret, key);
     });
   };
 
@@ -1528,43 +1701,48 @@ var User = function () {
   };
 
   User.prototype.decryptAllMetadatas = function decryptAllMetadatas(allMetadatas) {
-    var _this12 = this;
+    var _this13 = this;
 
-    var decryptMetadatasPromises = [];
+    var progress = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : defaultProgress;
+
     var hashedTitles = Object.keys(this.keys);
 
+    var progressStatus = new DecryptMetadataStatus(0, hashedTitles.length);
+    progress(progressStatus);
     this.metadatas = {};
-    hashedTitles.forEach(function (hashedTitle) {
-      decryptMetadatasPromises.push(_this12.decryptSecret(hashedTitle, allMetadatas[hashedTitle]).then(function (metadatas) {
-        _this12.metadatas[hashedTitle] = metadatas;
-      }));
-    });
-
-    return Promise.all(decryptMetadatasPromises);
+    return hashedTitles.reduce(function (promise, hashedTitle) {
+      return promise.then(function () {
+        return _this13.decryptSecret(hashedTitle, allMetadatas[hashedTitle]).then(function (metadatas) {
+          progressStatus.step();
+          progress(progressStatus);
+          _this13.metadatas[hashedTitle] = metadatas;
+        });
+      });
+    }, Promise.resolve());
   };
 
   User.prototype.activateShortLogin = function activateShortLogin(shortpass, deviceName) {
-    var _this13 = this;
+    var _this14 = this;
 
     var protectKey = void 0;
     var toSend = {};
     return this.cryptoAdapter.generateWrappingKey().then(function (key) {
       protectKey = key;
-      return _this13.cryptoAdapter.exportKey(protectKey, _this13.privateKey);
+      return _this14.cryptoAdapter.exportKey(protectKey, _this14.privateKey);
     }).then(function (object) {
       localStorage.setItem(Secretin.prefix + 'privateKey', object.key);
       localStorage.setItem(Secretin.prefix + 'privateKeyIv', object.iv);
-      return _this13.cryptoAdapter.derivePassword(shortpass);
+      return _this14.cryptoAdapter.derivePassword(shortpass);
     }).then(function (derived) {
       toSend.salt = derived.salt;
       toSend.iterations = derived.iterations;
       toSend.hash = derived.hash;
-      return _this13.cryptoAdapter.exportKey(derived.key, protectKey);
+      return _this14.cryptoAdapter.exportKey(derived.key, protectKey);
     }).then(function (keyObject) {
       toSend.protectKey = keyObject.key;
       localStorage.setItem(Secretin.prefix + 'iv', keyObject.iv);
-      localStorage.setItem(Secretin.prefix + 'username', _this13.username);
-      return _this13.cryptoAdapter.getSHA256(deviceName);
+      localStorage.setItem(Secretin.prefix + 'username', _this14.username);
+      return _this14.cryptoAdapter.getSHA256(deviceName);
     }).then(function (deviceId) {
       toSend.deviceId = deviceId;
       localStorage.setItem(Secretin.prefix + 'deviceName', deviceName);
@@ -1573,7 +1751,7 @@ var User = function () {
   };
 
   User.prototype.shortLogin = function shortLogin(shortpass, wrappedProtectKey) {
-    var _this14 = this;
+    var _this15 = this;
 
     var keyObject = {
       key: wrappedProtectKey,
@@ -1584,7 +1762,7 @@ var User = function () {
         privateKey: localStorage.getItem(Secretin.prefix + 'privateKey'),
         iv: localStorage.getItem(Secretin.prefix + 'privateKeyIv')
       };
-      return _this14.this.cryptoAdapter.importPrivateKey(protectKey, privateKeyObject);
+      return _this15.this.cryptoAdapter.importPrivateKey(protectKey, privateKeyObject);
     });
   };
 
@@ -1764,19 +1942,24 @@ var Secretin = function () {
   Secretin.prototype.loginUser = function loginUser(username, password, otp) {
     var _this4 = this;
 
+    var progress = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : defaultProgress;
+
     var key = void 0;
     var hash = void 0;
     var remoteUser = void 0;
     var parameters = void 0;
+    progress(new GetDerivationStatus());
     return this.api.getDerivationParameters(username).then(function (rParameters) {
       parameters = rParameters;
       if (parameters.totp && (typeof otp === 'undefined' || otp === '')) {
         throw new NeedTOTPTokenError();
       }
+      progress(new PasswordDerivationStatus());
       return _this4.cryptoAdapter.derivePassword(password, parameters);
     }).then(function (dKey) {
       hash = dKey.hash;
       key = dKey.key;
+      progress(new GetUserStatus());
       return _this4.api.getUser(username, hash, otp);
     }).then(function (user) {
       _this4.currentUser = new User(username, _this4.cryptoAdapter);
@@ -1784,13 +1967,29 @@ var Secretin = function () {
       _this4.currentUser.hash = hash;
       remoteUser = user;
       _this4.currentUser.keys = remoteUser.keys;
+      progress(new ImportPublicKeyStatus());
       return _this4.currentUser.importPublicKey(remoteUser.publicKey);
     }).then(function () {
+      progress(new DecryptPrivateKeyStatus());
       return _this4.currentUser.importPrivateKey(key, remoteUser.privateKey);
     }).then(function () {
-      return _this4.currentUser.decryptAllMetadatas(remoteUser.metadatas);
+      progress(new DecryptUserOptionsStatus());
+      _this4.currentUser.importOptions(remoteUser.options);
     }).then(function () {
-      return _this4.currentUser.importOptions(remoteUser.options);
+      return _this4.currentUser.decryptAllMetadatas(remoteUser.metadatas, progress);
+    }).then(function () {
+      var shortpass = localStorage.getItem(Secretin.prefix + 'shortpass');
+      var signature = localStorage.getItem(Secretin.prefix + 'shortpassSignature');
+      if (shortpass && signature) {
+        return _this4.currentUser.importPrivateData(shortpass, signature);
+      }
+      return Promise.resolve(null);
+    }).then(function (shortpass) {
+      if (shortpass) {
+        var deviceName = localStorage.getItem(Secretin.prefix + 'deviceName');
+        return _this4.activateShortLogin(shortpass, deviceName);
+      }
+      return Promise.resolve();
     }).then(function () {
       if (typeof window.process !== 'undefined') {
         // Electron
@@ -1807,7 +2006,7 @@ var Secretin = function () {
     }).catch(function (err) {
       if (err === 'Offline') {
         _this4.offlineDB(username);
-        return _this4.loginUser(username, password, otp);
+        return _this4.loginUser(username, password, otp, progress);
       }
       var wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -1817,17 +2016,23 @@ var Secretin = function () {
   Secretin.prototype.refreshUser = function refreshUser() {
     var _this5 = this;
 
+    var progress = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : defaultProgress;
+
+    var remoteUser = void 0;
     return this.api.getUserWithSignature(this.currentUser).then(function (user) {
-      _this5.currentUser.keys = user.keys;
+      remoteUser = user;
+      _this5.currentUser.keys = remoteUser.keys;
       if (typeof window.process !== 'undefined') {
         // Electron
         _this5.getDb();
       }
-      return _this5.currentUser.decryptAllMetadatas(user.metadatas);
+      return _this5.currentUser.decryptAllMetadatas(remoteUser.metadatas, progress);
+    }).then(function () {
+      return _this5.currentUser.importOptions(remoteUser.options);
     }).catch(function (err) {
       if (err === 'Offline') {
         _this5.offlineDB();
-        return _this5.refreshUser();
+        return _this5.refreshUser(progress);
       }
       var wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -2337,7 +2542,10 @@ var Secretin = function () {
     }).then(function () {
       return _this16.currentUser.wrapKey(key, friend.publicKey);
     }).then(function (friendWrappedKey) {
-      return { user: hashedUsername, key: friendWrappedKey };
+      return {
+        user: hashedUsername,
+        key: friendWrappedKey
+      };
     }).catch(function (err) {
       if (err === 'Offline') {
         _this16.offlineDB();
@@ -2373,7 +2581,10 @@ var Secretin = function () {
       encryptedSecret.users.forEach(function (hashedUsername) {
         if (hashedCurrentUsername === hashedUsername) {
           wrappedKeysPromises.push(_this17.currentUser.wrapKey(secretObject.key, _this17.currentUser.publicKey).then(function (wrappedKey) {
-            return { user: hashedCurrentUsername, key: wrappedKey };
+            return {
+              user: hashedCurrentUsername,
+              key: wrappedKey
+            };
           }));
         } else {
           wrappedKeysPromises.push(_this17.wrapKeyForFriend(hashedUsername, secretObject.key));
@@ -2617,12 +2828,15 @@ var Secretin = function () {
     if (localStorageAvailable()) {
       return this.currentUser.activateShortLogin(shortpass, deviceName).then(function (toSend) {
         return _this24.api.activateShortLogin(toSend, _this24.currentUser);
-      }).then(function (res) {
+      }).then(function () {
         if (typeof window.process !== 'undefined') {
           // Electron
           _this24.getDb();
         }
-        return res;
+        return _this24.currentUser.exportPrivateData(shortpass);
+      }).then(function (result) {
+        localStorage.setItem(Secretin.prefix + 'shortpass', result.data);
+        localStorage.setItem(Secretin.prefix + 'shortpassSignature', result.signature);
       }).catch(function (err) {
         if (err === 'Offline') {
           _this24.offlineDB();
@@ -2641,6 +2855,8 @@ var Secretin = function () {
       localStorage.removeItem(Secretin.prefix + 'privateKey');
       localStorage.removeItem(Secretin.prefix + 'privateKeyIv');
       localStorage.removeItem(Secretin.prefix + 'iv');
+      localStorage.removeItem(Secretin.prefix + 'shortpass');
+      localStorage.removeItem(Secretin.prefix + 'shortpassSignature');
       return Promise.resolve();
     }
     return Promise.reject(new LocalStorageUnavailableError());
@@ -2649,24 +2865,31 @@ var Secretin = function () {
   Secretin.prototype.shortLogin = function shortLogin(shortpass) {
     var _this25 = this;
 
+    var progress = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : defaultProgress;
+
     var username = localStorage.getItem(Secretin.prefix + 'username');
     var deviceName = localStorage.getItem(Secretin.prefix + 'deviceName');
     var shortpassKey = void 0;
     var parameters = void 0;
     this.currentUser = new User(username, this.cryptoAdapter);
+    progress(new GetDerivationStatus());
     return this.api.getProtectKeyParameters(username, deviceName).then(function (rParameters) {
       parameters = rParameters;
       _this25.currentUser.totp = parameters.totp;
-      return _this25.currentUser.importPublicKey(parameters.publicKey);
-    }).then(function () {
+      progress(new PasswordDerivationStatus());
       return _this25.cryptoAdapter.derivePassword(shortpass, parameters);
     }).then(function (dKey) {
       shortpassKey = dKey.key;
+      progress(new GetProtectKeyStatus());
       return _this25.api.getProtectKey(username, deviceName, dKey.hash);
     }).then(function (protectKey) {
+      progress(new DecryptPrivateKeyStatus());
       return _this25.currentUser.shortLogin(shortpassKey, protectKey);
     }).then(function () {
-      return _this25.refreshUser();
+      progress(new ImportPublicKeyStatus());
+      return _this25.currentUser.importPublicKey(parameters.publicKey);
+    }).then(function () {
+      return _this25.refreshUser(progress);
     }).then(function () {
       if (typeof window.process !== 'undefined') {
         // Electron
@@ -2687,7 +2910,6 @@ var Secretin = function () {
       }
       if (err !== 'Not available in standalone mode' && !(err instanceof NotAvailableError)) {
         localStorage.removeItem(Secretin.prefix + 'username');
-        localStorage.removeItem(Secretin.prefix + 'deviceName');
         localStorage.removeItem(Secretin.prefix + 'privateKey');
         localStorage.removeItem(Secretin.prefix + 'privateKeyIv');
         localStorage.removeItem(Secretin.prefix + 'iv');

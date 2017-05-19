@@ -360,6 +360,17 @@ function escapeRegExp(s) {
   return s.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
 }
 
+function defaultProgress(status) {
+  var seconds = Math.trunc(Date.now());
+  if (status.total < 2) {
+    // eslint-disable-next-line no-console
+    console.log(seconds + ' : ' + status.message);
+  } else {
+    // eslint-disable-next-line no-console
+    console.log(seconds + ' : ' + status.message + ' (' + status.state + '/' + status.total + ')');
+  }
+}
+
 var Utils = {
   generateRandomNumber: generateRandomNumber,
   generateSeed: generateSeed,
@@ -371,7 +382,8 @@ var Utils = {
   escapeRegExp: escapeRegExp,
   PasswordGenerator: PasswordGenerator,
   asciiToHexString: asciiToHexString,
-  hexStringToAscii: hexStringToAscii
+  hexStringToAscii: hexStringToAscii,
+  defaultProgress: defaultProgress
 };
 
 function getSHA256(str) {
