@@ -266,26 +266,24 @@ class User {
   }
 
   decryptAllMetadatas(allMetadatas, progress = defaultProgress) {
-    const decryptMetadatasPromises = [];
     const hashedTitles = Object.keys(this.keys);
 
     const progressStatus = new DecryptMetadataStatus(0, hashedTitles.length);
     progress(progressStatus);
     this.metadatas = {};
-    hashedTitles.forEach(hashedTitle => {
-      decryptMetadatasPromises.push(
-        this.decryptSecret(
-          hashedTitle,
-          allMetadatas[hashedTitle]
-        ).then(metadatas => {
-          progressStatus.step();
-          progress(progressStatus);
-          this.metadatas[hashedTitle] = metadatas;
-        })
-      );
-    });
-
-    return Promise.all(decryptMetadatasPromises);
+    return hashedTitles.reduce(
+      (promise, hashedTitle) =>
+        promise.then(() =>
+          this.decryptSecret(
+            hashedTitle,
+            allMetadatas[hashedTitle]
+          ).then(metadatas => {
+            progressStatus.step();
+            progress(progressStatus);
+            this.metadatas[hashedTitle] = metadatas;
+          })
+        ), Promise.resolve()
+      )
   }
 
   activateShortLogin(shortpass, deviceName) {
