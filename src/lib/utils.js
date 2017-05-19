@@ -44,9 +44,10 @@ export function asciiToUint8Array(str) {
 }
 
 export function asciiToHexString(str) {
-  return str.split('').map(c =>
-    (`0${c.charCodeAt(0).toString(16)}`).slice(-2)
-  ).join('');
+  return str
+    .split('')
+    .map(c => `0${c.charCodeAt(0).toString(16)}`.slice(-2))
+    .join('');
 }
 
 export function hexStringToAscii(hexx) {
@@ -65,7 +66,7 @@ export function bytesToASCIIString(bytes) {
 export function generateRandomNumber(max) {
   const randomValues = new Uint8Array(1);
   crypto.getRandomValues(randomValues);
-  return (randomValues[0] % max);
+  return randomValues[0] % max;
 }
 
 export function generateSeed() {
@@ -83,7 +84,7 @@ export function generateSeed() {
   for (i = 0; i < buf.length; i++) {
     byte = buf[i];
 
-    symbol = carry | (byte >> shift);
+    symbol = carry | byte >> shift;
     output += alphabet[symbol & 0x1f];
 
     if (shift > 5) {
@@ -119,8 +120,12 @@ export function localStorageAvailable() {
 }
 
 export function xorSeed(byteArray1, byteArray2) {
-  if (byteArray1 instanceof Uint8Array && byteArray2 instanceof Uint8Array &&
-      byteArray1.length === 32 && byteArray2.length === 32) {
+  if (
+    byteArray1 instanceof Uint8Array &&
+    byteArray2 instanceof Uint8Array &&
+    byteArray1.length === 32 &&
+    byteArray2.length === 32
+  ) {
     const buf = new Uint8Array(32);
     let i;
     for (i = 0; i < 32; i++) {

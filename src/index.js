@@ -8,7 +8,6 @@ import Errors from './Errors';
 
 import Utils from './lib/utils';
 
-
 Secretin.version = version;
 Secretin.User = User;
 Secretin.API = {

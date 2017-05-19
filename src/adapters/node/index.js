@@ -10,7 +10,6 @@ import {
   bytesToHexString,
 } from '../../lib/utils';
 
-
 export function getSHA256(str) {
   const hash = crypto.createHash('sha256');
   const data = asciiToUint8Array(str);
@@ -52,7 +51,7 @@ export function encryptAESGCM256(secret, key) {
     iv,
     tagLength: 128,
   });
-  cipher.update(forge.util.createBuffer((JSON.stringify(secret))));
+  cipher.update(forge.util.createBuffer(JSON.stringify(secret)));
   cipher.finish();
 
   const data = asciiToHexString(cipher.output.getBytes());
@@ -125,14 +124,22 @@ export function verify(datas, signature, key) {
   const md = forge.md.sha256.create();
   md.update(datas, 'utf8');
 
-  const valid = key.verify(md.digest().getBytes(), hexStringToAscii(signature), pss);
+  const valid = key.verify(
+    md.digest().getBytes(),
+    hexStringToAscii(signature),
+    pss
+  );
   return Promise.resolve(valid);
 }
 
 export function unwrapRSAOAEP(wrappedKeyHex, privateKey) {
-  const decrypted = privateKey.decrypt(hexStringToAscii(wrappedKeyHex), 'RSA-OAEP', {
-    md: forge.md.sha256.create(),
-  });
+  const decrypted = privateKey.decrypt(
+    hexStringToAscii(wrappedKeyHex),
+    'RSA-OAEP',
+    {
+      md: forge.md.sha256.create(),
+    }
+  );
   return Promise.resolve(decrypted);
 }
 
@@ -154,10 +161,7 @@ export function exportClearKey(key) {
     alg: 'RSA-OAEP-256',
     e,
     ext: true,
-    key_ops: [
-      'encrypt',
-      'wrapKey',
-    ],
+    key_ops: ['encrypt', 'wrapKey'],
     kty: 'RSA',
     n,
   };
@@ -174,7 +178,7 @@ export function importPublicKey(jwkPublicKey) {
 
   const publicKey = forge.pki.setRsaPublicKey(
     new forge.jsbn.BigInteger(n.toString('hex'), 16),
-    new forge.jsbn.BigInteger(e.toString('hex'), 16),
+    new forge.jsbn.BigInteger(e.toString('hex'), 16)
   );
   return Promise.resolve(publicKey);
 }
@@ -200,15 +204,20 @@ export function derivePassword(password, parameters) {
   result.salt = bytesToHexString(saltBuf);
   result.iterations = iterations;
 
-  const derivedKey = crypto.pbkdf2Sync(password, saltBuf, iterations, 32, 'sha256');
+  const derivedKey = crypto.pbkdf2Sync(
+    password,
+    saltBuf,
+    iterations,
+    32,
+    'sha256'
+  );
 
   result.key = bytesToASCIIString(derivedKey);
 
-  return getSHA256(result.key)
-    .then((hash) => {
-      result.hash = hash;
-      return result;
-    });
+  return getSHA256(result.key).then(hash => {
+    result.hash = hash;
+    return result;
+  });
 }
 
 export function exportKey(wrappingKey, key) {
@@ -236,10 +245,7 @@ export function exportKey(wrappingKey, key) {
       dq,
       e,
       ext: true,
-      key_ops: [
-        'decrypt',
-        'unwrapKey',
-      ],
+      key_ops: ['decrypt', 'unwrapKey'],
       kty: 'RSA',
       n,
       p,
@@ -248,15 +254,15 @@ export function exportKey(wrappingKey, key) {
     };
   } else {
     const b64Key = new Buffer(key, 'binary').toString('base64');
-    const b64UrlKey = b64Key.replace(/[+]/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    const b64UrlKey = b64Key
+      .replace(/[+]/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
     jwk = {
       alg: 'A256CBC',
       ext: true,
       k: b64UrlKey,
-      key_ops: [
-        'wrapKey',
-        'unwrapKey',
-      ],
+      key_ops: ['wrapKey', 'unwrapKey'],
       kty: 'oct',
     };
   }
@@ -302,7 +308,7 @@ export function importPrivateKey(key, privateKeyObject) {
       new forge.jsbn.BigInteger(q.toString('hex'), 16),
       new forge.jsbn.BigInteger(dP.toString('hex'), 16),
       new forge.jsbn.BigInteger(dQ.toString('hex'), 16),
-      new forge.jsbn.BigInteger(qInv.toString('hex'), 16),
+      new forge.jsbn.BigInteger(qInv.toString('hex'), 16)
     );
     return Promise.resolve(privateKey);
   } catch (e) {
