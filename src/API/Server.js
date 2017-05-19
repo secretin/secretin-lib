@@ -58,8 +58,7 @@ class API {
       .then(signature =>
         doDELETE(`${this.db}${url}`, {
           sig: signature,
-        })
-      );
+        }));
   }
 
   editSecret(user, secretObject, hashedTitle) {
@@ -82,8 +81,7 @@ class API {
         doPUT(`${this.db}/secret/${hashedUsername}`, {
           json,
           sig: signature,
-        })
-      );
+        }));
   }
 
   newKey(user, hashedTitle, secret, wrappedKeys) {
@@ -102,8 +100,7 @@ class API {
         doPOST(`${this.db}/newKey/${hashedUsername}`, {
           json,
           sig: signature,
-        })
-      );
+        }));
   }
 
   unshareSecret(user, friendNames, hashedTitle) {
@@ -118,7 +115,7 @@ class API {
         hashedUsername = rHashedUsername;
         const hashedFriendUseramePromises = [];
         friendNames.forEach(username => {
-          hashedFriendUseramePromises.push(getSHA256(username));
+          hashedFriendUseramePromises.push(this.getSHA256(username));
         });
         return Promise.all(hashedFriendUseramePromises);
       })
@@ -134,8 +131,7 @@ class API {
         doPOST(`${this.db}/unshare/${hashedUsername}`, {
           json,
           sig: signature,
-        })
-      );
+        }));
   }
 
   shareSecret(user, sharedSecretObjects) {
@@ -152,8 +148,7 @@ class API {
         doPOST(`${this.db}/share/${hashedUsername}`, {
           json,
           sig: signature,
-        })
-      );
+        }));
   }
 
   retrieveUser(username, hash, hashed) {
@@ -214,7 +209,7 @@ class API {
 
   getHistory(user, hashedTitle) {
     let url;
-    return getSHA256(user.username)
+    return this.getSHA256(user.username)
       .then(hashedUsername => {
         url = `/history/${hashedUsername}/${hashedTitle}`;
         return user.sign(url);
@@ -286,8 +281,7 @@ class API {
         doPUT(`${this.db}/user/${hashedUsername}?type=${type}`, {
           json,
           sig: signature,
-        })
-      );
+        }));
   }
 
   changePassword(user, privateKey, pass) {
@@ -305,8 +299,7 @@ class API {
         doPUT(`${this.db}/user/${hashedUsername}`, {
           json,
           sig: signature,
-        })
-      );
+        }));
   }
 
   testTotp(seed, token) {
@@ -327,8 +320,7 @@ class API {
         doPUT(`${this.db}/activateTotp/${hashedUsername}`, {
           json,
           sig: signature,
-        })
-      );
+        }));
   }
 
   deactivateTotp(user) {

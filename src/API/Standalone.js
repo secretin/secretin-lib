@@ -1,7 +1,5 @@
 import { bytesToHexString } from '../lib/utils';
 
-import { bytesToHexString } from '../lib/utils';
-
 class API {
   constructor(db, getSHA256) {
     if (typeof db === 'object') {
@@ -174,7 +172,7 @@ class API {
         hashedUsername = rHashedUsername;
         const hashedFriendUseramePromises = [];
         friendNames.forEach(username => {
-          hashedFriendUseramePromises.push(getSHA256(username));
+          hashedFriendUseramePromises.push(this.getSHA256(username));
         });
         return Promise.all(hashedFriendUseramePromises);
       })

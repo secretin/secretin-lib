@@ -152,6 +152,7 @@ class Secretin {
       .username}`;
     const cacheActionsStr = localStorage.getItem(cacheActionsKey);
     const cacheActions = cacheActionsStr ? JSON.parse(cacheActionsStr) : [];
+<<<<<<< HEAD
     return cacheActions.reduce((promise, cacheAction) => {
       if (cacheAction.action === 'addSecret') {
         return promise.then(() =>
@@ -215,6 +216,50 @@ class Secretin {
       }
       return promise;
     }, Promise.resolve());
+=======
+    let updatedCacheActions;
+    return cacheActions.reduce(
+      (promise, cacheAction) => {
+        if (cacheAction.action === 'addSecret') {
+          return promise.then(() =>
+            this.api
+              .addSecret(this.currentUser, cacheAction.args[0])
+              .then(() => {
+                cacheActionsStr = localStorage.getItem(cacheActionsKey);
+                updatedCacheActions = JSON.parse(cacheActionsStr);
+                updatedCacheActions.shift();
+                return localStorage.setItem(
+                  cacheActionsKey,
+                  JSON.stringify(updatedCacheActions)
+                );
+              }));
+        } else if (cacheAction.action === 'editSecret') {
+          return promise.then(() =>
+            this.cryptoAdapter
+              .decryptRSAOAEP(cacheAction.args[2], this.currentUser.privateKey)
+              .then(metadatas => {
+                this.currentUser.metadatas[cacheAction.args[0]] = metadatas;
+                return this.cryptoAdapter.decryptRSAOAEP(
+                  cacheAction.args[1],
+                  this.currentUser.privateKey
+                );
+              })
+              .then(content => this.editSecret(cacheAction.args[0], content))
+              .then(() => {
+                cacheActionsStr = localStorage.getItem(cacheActionsKey);
+                updatedCacheActions = JSON.parse(cacheActionsStr);
+                updatedCacheActions.shift();
+                return localStorage.setItem(
+                  cacheActionsKey,
+                  JSON.stringify(updatedCacheActions)
+                );
+              }));
+        }
+        return promise;
+      },
+      Promise.resolve()
+    );
+>>>>>>> Prettier
   }
 
   newUser(username, password) {
@@ -257,8 +302,7 @@ class Secretin {
           publicKey,
           pass,
           options
-        )
-      )
+        ))
       .then(() => {
         if (typeof window.process !== 'undefined') {
           // Electron
@@ -266,7 +310,10 @@ class Secretin {
         }
         return Promise.resolve();
       })
+<<<<<<< HEAD
       .then(() => this.currentUser)
+=======
+>>>>>>> Prettier
       .catch(err => {
         if (err === 'Offline') {
           this.offlineDB();
@@ -281,7 +328,10 @@ class Secretin {
     let hash;
     let remoteUser;
     let parameters;
+<<<<<<< HEAD
     progress(new GetDerivationStatus());
+=======
+>>>>>>> Prettier
     return this.api
       .getDerivationParameters(username)
       .then(rParameters => {
@@ -353,6 +403,7 @@ class Secretin {
       });
   }
 
+<<<<<<< HEAD
   refreshUser(progress = defaultProgress) {
     let remoteUser;
     return this.api
@@ -360,12 +411,20 @@ class Secretin {
       .then(user => {
         remoteUser = user;
         this.currentUser.keys = remoteUser.keys;
+=======
+  refreshUser() {
+    return this.api
+      .getUserWithSignature(this.currentUser)
+      .then(user => {
+        this.currentUser.keys = user.keys;
+>>>>>>> Prettier
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb();
         }
         return Promise.resolve();
       })
+<<<<<<< HEAD
       .then(() => {
         progress(new DecryptUserOptionsStatus());
         return this.currentUser.importOptions(remoteUser.options);
@@ -373,6 +432,8 @@ class Secretin {
       .then(() =>
         this.currentUser.decryptAllMetadatas(remoteUser.metadatas, progress)
       )
+=======
+>>>>>>> Prettier
       .catch(err => {
         if (err === 'Offline') {
           this.offlineDB();
@@ -406,11 +467,18 @@ class Secretin {
     if (typeof inFolderId === 'undefined') {
       metadatas.users[this.currentUser.username].folders.ROOT = true;
     }
+<<<<<<< HEAD
     let secretObject;
     return this.currentUser
       .createSecret(metadatas, content)
       .then(rSecretObject => {
         secretObject = rSecretObject;
+=======
+
+    return this.currentUser
+      .createSecret(metadatas, content)
+      .then(secretObject => {
+>>>>>>> Prettier
         hashedTitle = secretObject.hashedTitle;
         this.currentUser.keys[secretObject.hashedTitle] = {
           key: secretObject.wrappedKey,
@@ -436,14 +504,21 @@ class Secretin {
         }
         return Promise.resolve();
       })
+<<<<<<< HEAD
       .then(() => {
+=======
+      .then(res => {
+>>>>>>> Prettier
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb();
         }
         return Promise.resolve();
       })
+<<<<<<< HEAD
       .then(() => hashedTitle)
+=======
+>>>>>>> Prettier
       .catch(err => {
         if (err === 'Offline') {
           this.offlineDB();
@@ -461,9 +536,14 @@ class Secretin {
     return this.currentUser
       .exportPrivateKey(password)
       .then(objectPrivateKey =>
+<<<<<<< HEAD
         this.api.editUser(this.currentUser, objectPrivateKey, 'password')
       )
       .then(() => {
+=======
+        this.api.editUser(this.currentUser, objectPrivateKey, 'password'))
+      .then(res => {
+>>>>>>> Prettier
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb();
@@ -480,6 +560,7 @@ class Secretin {
   }
 
   editSecret(hashedTitle, content) {
+<<<<<<< HEAD
     let secretObject;
     return this.api
       .getHistory(this.currentUser, hashedTitle)
@@ -488,6 +569,11 @@ class Secretin {
       )
       .then(rSecretObject => {
         secretObject = rSecretObject;
+=======
+    return this.currentUser
+      .editSecret(hashedTitle, content)
+      .then(secretObject => {
+>>>>>>> Prettier
         if (!this.editableDB) {
           if (
             Object.keys(this.currentUser.metadatas[hashedTitle].users).length >
@@ -496,6 +582,7 @@ class Secretin {
             return Promise.reject(new OfflineError());
           }
           const args = [hashedTitle];
+<<<<<<< HEAD
           const toEncrypt = {
             secret: content,
             title: this.currentUser.metadatas[hashedTitle].title,
@@ -504,15 +591,32 @@ class Secretin {
             .encryptRSAOAEP(toEncrypt, this.currentUser.publicKey)
             .then(encryptedContent => {
               args.push(encryptedContent);
+=======
+          this.cryptoAdapter
+            .encryptRSAOAEP(content, this.currentUser.publicKey)
+            .then(encryptedContent => {
+              args.push(encryptedContent);
+              return this.cryptoAdapter.encryptRSAOAEP(
+                this.currentUser.metadatas[hashedTitle],
+                this.currentUser.publicKey
+              );
+            })
+            .then(encryptedMetadatas => {
+              args.push(encryptedMetadatas);
+>>>>>>> Prettier
               return this.pushCacheAction('editSecret', args);
             });
         }
         return Promise.resolve();
       })
+<<<<<<< HEAD
       .then(() =>
         this.api.editSecret(this.currentUser, secretObject, hashedTitle)
       )
       .then(() => {
+=======
+      .then(res => {
+>>>>>>> Prettier
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb();
@@ -552,9 +656,14 @@ class Secretin {
     return this.currentUser
       .exportOptions()
       .then(encryptedOptions =>
+<<<<<<< HEAD
         this.api.editUser(this.currentUser, encryptedOptions, 'options')
       )
       .then(() => {
+=======
+        this.api.editUser(this.currentUser, encryptedOptions, 'options'))
+      .then(res => {
+>>>>>>> Prettier
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb();
@@ -588,8 +697,12 @@ class Secretin {
                 folderMetadatas.users[friend.username].rights,
                 [],
                 true
+<<<<<<< HEAD
               )
             );
+=======
+              ));
+>>>>>>> Prettier
         })()
       );
     });
@@ -599,8 +712,12 @@ class Secretin {
     return this.api
       .getSecret(hashedFolder, this.currentUser)
       .then(encryptedSecret =>
+<<<<<<< HEAD
         this.currentUser.decryptSecret(hashedFolder, encryptedSecret)
       )
+=======
+        this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
+>>>>>>> Prettier
       .then(secret => {
         const folders = secret;
         folders[hashedSecretTitle] = 1;
@@ -700,8 +817,12 @@ class Secretin {
               this.api
                 .getSecret(parentFolder, this.currentUser)
                 .then(encryptedSecret =>
+<<<<<<< HEAD
                   this.currentUser.decryptSecret(parentFolder, encryptedSecret)
                 )
+=======
+                  this.currentUser.decryptSecret(parentFolder, encryptedSecret))
+>>>>>>> Prettier
                 .then(secret => {
                   const folders = secret;
                   delete folders[hashedSecretTitle];
@@ -712,14 +833,22 @@ class Secretin {
         });
         return Promise.all(parentCleaningPromises);
       })
+<<<<<<< HEAD
       .then(() => {
+=======
+      .then(() => hashedSecretTitle)
+      .then(res => {
+>>>>>>> Prettier
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb();
         }
         return Promise.resolve();
       })
+<<<<<<< HEAD
       .then(() => hashedSecretTitle)
+=======
+>>>>>>> Prettier
       .catch(err => {
         if (err === 'Offline') {
           this.offlineDB();
@@ -748,8 +877,12 @@ class Secretin {
         isFolder = isFolder
           .then(() => this.api.getSecret(hashedTitle, this.currentUser))
           .then(encryptedSecret =>
+<<<<<<< HEAD
             this.currentUser.decryptSecret(hashedTitle, encryptedSecret)
           )
+=======
+            this.currentUser.decryptSecret(hashedTitle, encryptedSecret))
+>>>>>>> Prettier
           .then(secrets => {
             Object.keys(secrets).forEach(hash => {
               sharedSecretObjectPromises.push(
@@ -773,8 +906,12 @@ class Secretin {
             friend,
             this.currentUser.keys[hashedTitle].key,
             hashedTitle
+<<<<<<< HEAD
           )
         )
+=======
+          ))
+>>>>>>> Prettier
         .then(secretObject => {
           const newSecretObject = secretObject;
           newSecretObject.rights = rights;
@@ -834,7 +971,11 @@ class Secretin {
   resetMetadatas(hashedTitle) {
     return this.getSecret(hashedTitle)
       .then(secret => this.editSecret(hashedTitle, secret))
+<<<<<<< HEAD
       .then(() => {
+=======
+      .then(res => {
+>>>>>>> Prettier
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb();
@@ -880,9 +1021,20 @@ class Secretin {
             folders: {},
           };
           if (typeof sharedSecretObject.inFolder !== 'undefined') {
+<<<<<<< HEAD
             secretMetadatas.users[friend.username].folders[
               sharedSecretObject.inFolder
             ] = true;
+=======
+            const parentMetadatas = this.currentUser.metadatas[
+              sharedSecretObject.inFolder
+            ];
+            secretMetadatas.users[friend.username].folders[
+              sharedSecretObject.inFolder
+            ] = {
+              name: parentMetadatas.title,
+            };
+>>>>>>> Prettier
           } else {
             secretMetadatas.users[friend.username].folders.ROOT = true;
           }
@@ -892,14 +1044,22 @@ class Secretin {
         });
         return Promise.all(resetMetaPromises);
       })
+<<<<<<< HEAD
       .then(() => {
+=======
+      .then(() => this.currentUser.metadatas[hashedTitle])
+      .then(res => {
+>>>>>>> Prettier
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb();
         }
         return Promise.resolve();
       })
+<<<<<<< HEAD
       .then(() => this.currentUser.metadatas[hashedTitle])
+=======
+>>>>>>> Prettier
       .catch(err => {
         if (err === 'Offline') {
           this.offlineDB();
@@ -920,14 +1080,22 @@ class Secretin {
     }
     if (secretMetadatas.type === 'folder') {
       isFolder = isFolder.then(() =>
+<<<<<<< HEAD
         this.unshareFolderSecrets(hashedTitle, friendName)
       );
+=======
+        this.unshareFolderSecrets(hashedTitle, friendName));
+>>>>>>> Prettier
     }
 
     return isFolder
       .then(() =>
+<<<<<<< HEAD
         this.api.unshareSecret(this.currentUser, [friendName], hashedTitle)
       )
+=======
+        this.api.unshareSecret(this.currentUser, [friendName], hashedTitle))
+>>>>>>> Prettier
       .then(result => {
         if (result !== 'Secret unshared') {
           const wrapper = new WrappingError(result);
@@ -937,14 +1105,22 @@ class Secretin {
         return this.resetMetadatas(hashedTitle);
       })
       .then(() => this.renewKey(hashedTitle))
+<<<<<<< HEAD
       .then(() => {
+=======
+      .then(() => this.currentUser.metadatas[hashedTitle])
+      .then(res => {
+>>>>>>> Prettier
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb();
         }
         return Promise.resolve();
       })
+<<<<<<< HEAD
       .then(() => this.currentUser.metadatas[hashedTitle])
+=======
+>>>>>>> Prettier
       .catch(err => {
         if (err === 'Offline') {
           this.offlineDB();
@@ -961,16 +1137,25 @@ class Secretin {
     return this.api
       .getSecret(hashedFolder, this.currentUser)
       .then(encryptedSecret =>
+<<<<<<< HEAD
         this.currentUser.decryptSecret(hashedFolder, encryptedSecret)
       )
+=======
+        this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
+>>>>>>> Prettier
       .then(secrets =>
         Object.keys(secrets).reduce(
           (promise, hashedTitle) =>
             promise.then(() => this.unshareSecret(hashedTitle, friendName)),
           Promise.resolve()
+<<<<<<< HEAD
         )
       )
       .then(() => {
+=======
+        ))
+      .then(res => {
+>>>>>>> Prettier
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb();
@@ -1020,7 +1205,10 @@ class Secretin {
     const secret = {};
     let hashedCurrentUsername;
     let wrappedKeys;
+<<<<<<< HEAD
     let history;
+=======
+>>>>>>> Prettier
     return this.api
       .getSecret(hashedTitle, this.currentUser)
       .then(eSecret => {
@@ -1034,10 +1222,15 @@ class Secretin {
       .then(rawSecret =>
         this.currentUser.encryptSecret(
           this.currentUser.metadatas[hashedTitle],
+<<<<<<< HEAD
           rawSecret,
           history
         )
       )
+=======
+          rawSecret
+        ))
+>>>>>>> Prettier
       .then(secretObject => {
         secret.secret = secretObject.secret;
         secret.iv = secretObject.iv;
@@ -1082,7 +1275,11 @@ class Secretin {
           }
         });
       })
+<<<<<<< HEAD
       .then(() => {
+=======
+      .then(res => {
+>>>>>>> Prettier
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb();
@@ -1145,14 +1342,22 @@ class Secretin {
       .then(() => this.resetMetadatas(hashedTitle))
       .then(() => this.api.getSecret(hashedFolder, this.currentUser))
       .then(encryptedSecret =>
+<<<<<<< HEAD
         this.currentUser.decryptSecret(hashedFolder, encryptedSecret)
       )
+=======
+        this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
+>>>>>>> Prettier
       .then(secret => {
         const folder = secret;
         delete folder[hashedTitle];
         return this.editSecret(hashedFolder, folder);
       })
+<<<<<<< HEAD
       .then(() => {
+=======
+      .then(res => {
+>>>>>>> Prettier
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb();
@@ -1173,8 +1378,12 @@ class Secretin {
     return this.api
       .getSecret(hashedTitle, this.currentUser)
       .then(encryptedSecret =>
+<<<<<<< HEAD
         this.currentUser.decryptSecret(hashedTitle, encryptedSecret)
       )
+=======
+        this.currentUser.decryptSecret(hashedTitle, encryptedSecret))
+>>>>>>> Prettier
       .then(secret => secret)
       .catch(err => {
         if (err === 'Offline') {
@@ -1222,8 +1431,12 @@ class Secretin {
     }
     if (secretMetadatas.type === 'folder' && list.indexOf(hashedTitle) === -1) {
       isFolder = isFolder.then(() =>
+<<<<<<< HEAD
         this.deleteFolderSecrets(hashedTitle, list)
       );
+=======
+        this.deleteFolderSecrets(hashedTitle, list));
+>>>>>>> Prettier
     }
 
     return isFolder
@@ -1241,8 +1454,12 @@ class Secretin {
               this.api
                 .getSecret(hashedFolder, this.currentUser)
                 .then(encryptedSecret =>
+<<<<<<< HEAD
                   this.currentUser.decryptSecret(hashedFolder, encryptedSecret)
                 )
+=======
+                  this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
+>>>>>>> Prettier
                 .then(secret => {
                   const folder = secret;
                   delete folder[hashedTitle];
@@ -1253,7 +1470,11 @@ class Secretin {
         });
         return Promise.all(editFolderPromises);
       })
+<<<<<<< HEAD
       .then(() => {
+=======
+      .then(res => {
+>>>>>>> Prettier
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb();
@@ -1277,16 +1498,25 @@ class Secretin {
     return this.api
       .getSecret(hashedFolder, this.currentUser)
       .then(encryptedSecret =>
+<<<<<<< HEAD
         this.currentUser.decryptSecret(hashedFolder, encryptedSecret)
       )
+=======
+        this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
+>>>>>>> Prettier
       .then(secrets =>
         Object.keys(secrets).reduce(
           (promise, hashedTitle) =>
             promise.then(() => this.deleteSecret(hashedTitle, list)),
           Promise.resolve()
+<<<<<<< HEAD
         )
       )
       .then(() => {
+=======
+        ))
+      .then(res => {
+>>>>>>> Prettier
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb();
@@ -1308,7 +1538,11 @@ class Secretin {
     }
     return this.api
       .deactivateTotp(this.currentUser)
+<<<<<<< HEAD
       .then(() => {
+=======
+      .then(res => {
+>>>>>>> Prettier
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb();
@@ -1334,7 +1568,11 @@ class Secretin {
     );
     return this.api
       .activateTotp(protectedSeed, this.currentUser)
+<<<<<<< HEAD
       .then(() => {
+=======
+      .then(res => {
+>>>>>>> Prettier
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb();
@@ -1358,7 +1596,11 @@ class Secretin {
       return this.currentUser
         .activateShortLogin(shortpass, deviceName)
         .then(toSend => this.api.activateShortLogin(toSend, this.currentUser))
+<<<<<<< HEAD
         .then(() => {
+=======
+        .then(res => {
+>>>>>>> Prettier
           if (typeof window.process !== 'undefined') {
             // Electron
             return this.getDb();
@@ -1404,7 +1646,10 @@ class Secretin {
     let shortpassKey;
     let parameters;
     this.currentUser = new User(username, this.cryptoAdapter);
+<<<<<<< HEAD
     progress(new GetDerivationStatus());
+=======
+>>>>>>> Prettier
     return this.api
       .getProtectKeyParameters(username, deviceName)
       .then(rParameters => {
@@ -1413,11 +1658,16 @@ class Secretin {
         progress(new PasswordDerivationStatus());
         return this.cryptoAdapter.derivePassword(shortpass, parameters);
       })
+<<<<<<< HEAD
+=======
+      .then(() => this.cryptoAdapter.derivePassword(shortpass, parameters))
+>>>>>>> Prettier
       .then(dKey => {
         shortpassKey = dKey.key;
         progress(new GetProtectKeyStatus());
         return this.api.getProtectKey(username, deviceName, dKey.hash);
       })
+<<<<<<< HEAD
       .then(protectKey => {
         progress(new DecryptPrivateKeyStatus());
         return this.currentUser.shortLogin(shortpassKey, protectKey);
@@ -1427,6 +1677,10 @@ class Secretin {
         return this.currentUser.importPublicKey(parameters.publicKey);
       })
       .then(() => this.refreshUser(progress))
+=======
+      .then(protectKey => this.currentUser.shortLogin(shortpassKey, protectKey))
+      .then(() => this.refreshUser())
+>>>>>>> Prettier
       .then(() => {
         if (typeof window.process !== 'undefined') {
           // Electron
@@ -1460,11 +1714,9 @@ class Secretin {
   }
 
   canITryShortLogin() {
-    return (
-      this.editableDB &&
+    return this.editableDB &&
       localStorageAvailable() &&
-      localStorage.getItem(`${Secretin.prefix}username`) !== null
-    );
+      localStorage.getItem(`${Secretin.prefix}username`) !== null;
   }
 
   getSavedUsername() {
@@ -1498,6 +1750,7 @@ class Secretin {
     return this.api
       .getDb(this.currentUser, revs)
       .then(newDb => {
+<<<<<<< HEAD
         Object.keys(newDb.secrets).forEach(key => {
           if (
             typeof DbCache.secrets[key] !== 'undefined' &&
@@ -1506,6 +1759,8 @@ class Secretin {
             this.setConflict(key, 'conflict');
           }
         });
+=======
+>>>>>>> Prettier
         Object.assign(DbCache.users, newDb.users);
         Object.assign(DbCache.secrets, newDb.secrets);
         Object.keys(DbCache.secrets).forEach(key => {

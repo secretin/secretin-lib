@@ -159,7 +159,7 @@ class User {
       .then(key => this.wrapKey(key, friend.publicKey))
       .then(friendWrappedKey => {
         result.wrappedKey = friendWrappedKey;
-        return this.cryptoAdaptergetSHA256(friend.username);
+        return this.cryptoAdapter.getSHA256(friend.username);
       })
       .then(hashedUsername => {
         result.friendName = hashedUsername;

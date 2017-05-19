@@ -44,9 +44,10 @@ export function asciiToUint8Array(str) {
 }
 
 export function asciiToHexString(str) {
-  return str.split('').map(c =>
-    (`0${c.charCodeAt(0).toString(16)}`).slice(-2)
-  ).join('');
+  return str
+    .split('')
+    .map(c => `0${c.charCodeAt(0).toString(16)}`.slice(-2))
+    .join('');
 }
 
 export function hexStringToAscii(hexx) {
@@ -83,7 +84,7 @@ export function generateSeed() {
   for (i = 0; i < buf.length; i++) {
     byte = buf[i];
 
-    symbol = carry | (byte >> shift);
+    symbol = carry | byte >> shift;
     output += alphabet[symbol & 0x1f];
 
     if (shift > 5) {
