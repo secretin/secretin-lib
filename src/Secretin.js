@@ -261,7 +261,7 @@ class Secretin {
         return Promise.resolve(null);
       })
       .then(shortpass => {
-        if (shortpass) {
+        if (shortpass && this.editableDB) {
           const deviceName = localStorage.getItem(
             `${Secretin.prefix}deviceName`
           );
