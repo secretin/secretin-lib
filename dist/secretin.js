@@ -2257,7 +2257,7 @@ var Secretin = function () {
       }
       return Promise.resolve(null);
     }).then(function (shortpass) {
-      if (shortpass) {
+      if (shortpass && _this4.editableDB) {
         var deviceName = localStorage.getItem(Secretin.prefix + 'deviceName');
         return _this4.activateShortLogin(shortpass, deviceName);
       }
