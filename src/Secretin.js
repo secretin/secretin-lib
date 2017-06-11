@@ -127,22 +127,21 @@ class Secretin {
               }));
         } else if (cacheAction.action === 'editSecret') {
           return promise.then(() => {
-            let content;
             let metadatas;
             return decryptRSAOAEP(cacheAction.args[2], this.currentUser.privateKey)
               .then(rawMetadatas => {
                 metadatas = rawMetadatas;
-                this.currentUser.metadatas[cacheAction.args[0]] = metadatas;
                 return decryptRSAOAEP(
                   cacheAction.args[1],
                   this.currentUser.privateKey
                 );
               })
-              .then(rawContent => {
-                content = rawContent;
+              .then(content => {
+                if (typeof this.currentUser.keys[metadatas.id] === 'undefined'){
+                  return this.addSecret(`${metadatas.title} (Conflict)`, content)
+                }
                 return this.editSecret(cacheAction.args[0], content)
               })
-              .then(() => {}, () => this.addSecret(`${metadatas.title} (Conflict)`, content))
               .then(() => {
                 cacheActionsStr = localStorage.getItem(cacheActionsKey);
                 updatedCacheActions = JSON.parse(cacheActionsStr);
