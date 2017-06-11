@@ -5,6 +5,7 @@ import User from './User';
 import APIStandalone from './API/Standalone';
 import APIServer from './API/Server';
 import Errors from './Errors';
+import Statuses from './Statuses';
 
 import Utils from './lib/utils';
 
@@ -16,6 +17,7 @@ Secretin.API = {
 };
 
 Secretin.Errors = Errors;
+Secretin.Statuses = Statuses;
 Secretin.Utils = Utils;
 
 export default Secretin;
