@@ -2104,6 +2104,8 @@ var Secretin = function () {
         if (typeof _this.currentUser.username !== 'undefined') {
           _this.getDb().then(function () {
             return _this.doCacheActions();
+          }).then(function () {
+            return _this.refreshUser();
           });
         }
       }).catch(function (err) {
@@ -2147,10 +2149,14 @@ var Secretin = function () {
         });
       } else if (cacheAction.action === 'editSecret') {
         return promise.then(function () {
-          return decryptRSAOAEP(cacheAction.args[2], _this2.currentUser.privateKey).then(function (metadatas) {
-            _this2.currentUser.metadatas[cacheAction.args[0]] = metadatas;
+          var metadatas = void 0;
+          return decryptRSAOAEP(cacheAction.args[2], _this2.currentUser.privateKey).then(function (rawMetadatas) {
+            metadatas = rawMetadatas;
             return decryptRSAOAEP(cacheAction.args[1], _this2.currentUser.privateKey);
           }).then(function (content) {
+            if (typeof _this2.currentUser.keys[metadatas.id] === 'undefined') {
+              return _this2.addSecret(metadatas.title + ' (Conflict)', content);
+            }
             return _this2.editSecret(cacheAction.args[0], content);
           }).then(function () {
             cacheActionsStr = localStorage.getItem(cacheActionsKey);
@@ -2267,7 +2273,9 @@ var Secretin = function () {
         // Electron
         return _this4.getDb().then(function () {
           if (_this4.editableDB) {
-            return _this4.doCacheActions();
+            return _this4.doCacheActions().then(function () {
+              return _this4.refreshUser(progress);
+            });
           }
           return Promise.resolve();
         });
@@ -2403,7 +2411,7 @@ var Secretin = function () {
           return Promise.reject(new OfflineError());
         }
         var args = [hashedTitle];
-        encryptRSAOAEP(content, _this8.currentUser.publicKey).then(function (encryptedContent) {
+        return encryptRSAOAEP(content, _this8.currentUser.publicKey).then(function (encryptedContent) {
           args.push(encryptedContent);
           return encryptRSAOAEP(_this8.currentUser.metadatas[hashedTitle], _this8.currentUser.publicKey);
         }).then(function (encryptedMetadatas) {
@@ -3167,7 +3175,9 @@ var Secretin = function () {
         // Electron
         return _this25.getDb().then(function () {
           if (_this25.editableDB) {
-            return _this25.doCacheActions();
+            return _this25.doCacheActions().then(function () {
+              return _this25.refreshUser(progress);
+            });
           }
           return Promise.resolve();
         });
@@ -3689,6 +3699,7 @@ Secretin.API = {
 };
 
 Secretin.Errors = Errors;
+Secretin.Statuses = Statuses;
 Secretin.Utils = Utils;
 
 return Secretin;
