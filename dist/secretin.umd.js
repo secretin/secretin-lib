@@ -4,7 +4,7 @@
 	(global.Secretin = factory());
 }(this, (function () { 'use strict';
 
-var version = "1.6.2";
+var version = "1.6.3";
 
 var asyncGenerator = function () {
   function AwaitValue(value) {
