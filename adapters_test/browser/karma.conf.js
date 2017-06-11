@@ -3,10 +3,12 @@
 
 module.exports = function exports(config) {
   const files = [
-    'dist/secretin.js',
-    'dist/adapters/browser.js',
-    'test/fixtures/keys.js',
-    'test/*.js',
+    '../../dist/secretin.js',
+    '../../dist/adapters/browser.js',
+    '../../adapters_test/fixtures/browser.js',
+    '../../adapters_test/fixtures/node.js',
+    '../../adapters_test/test_input.js',
+    '../../adapters_test/browser/input.test.js',
   ];
 
   const karmaConfig = {
@@ -24,10 +26,6 @@ module.exports = function exports(config) {
       mocha: {
         timeout: '10000',
       },
-      args: [
-        process.env.API_TYPE,
-        process.env.SERVER_URI,
-      ],
     },
 
     browserNoActivityTimeout: '30000',
@@ -79,6 +77,7 @@ module.exports = function exports(config) {
     customLaunchers: {
       ChromeOnTravis: {
         base: 'Chrome',
+        flags: ['--no-sandbox'],
       },
     },
 

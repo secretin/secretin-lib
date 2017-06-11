@@ -1,0 +1,9 @@
+<script src="../../dist/secretin.js"></script>
+<script src="../../dist/adapters/browser.js"></script>
+<script src="../gen_output.js"></script>
+<script>
+  genOutput('Browser', SecretinBrowserAdapter).then((output) => {
+    document.getElementById('output').textContent = output;
+  });
+</script>
+<pre id="output"></pre>

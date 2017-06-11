@@ -1,32 +1,10 @@
-import {
-  getSHA256,
-  exportKey,
-  importKey,
-  genRSAOAEP,
-  decryptRSAOAEP,
-  encryptRSAOAEP,
-  exportClearKey,
-  convertOAEPToPSS,
-  importPublicKey,
-  importPrivateKey,
-  encryptAESGCM256,
-  decryptAESGCM256,
-  wrapRSAOAEP,
-  unwrapRSAOAEP,
-  generateWrappingKey,
-  derivePassword,
-  sign,
-  verify,
-} from './lib/crypto';
-
 import { DecryptMetadataStatus } from './Statuses';
-
 import { defaultProgress } from './lib/utils';
-
 import Secretin from './Secretin';
 
 class User {
-  constructor(username) {
+  constructor(username, cryptoAdapter) {
+    this.cryptoAdapter = cryptoAdapter;
     this.username = username;
     this.publicKey = null;
     this.publicKeySign = null;
@@ -53,23 +31,24 @@ class User {
   }
 
   sign(datas) {
-    return sign(datas, this.privateKeySign);
+    return this.cryptoAdapter.sign(datas, this.privateKeySign);
   }
 
   verify(datas, signature) {
-    return verify(datas, signature, this.publicKeySign);
+    return this.cryptoAdapter.verify(datas, signature, this.publicKeySign);
   }
 
   generateMasterKey() {
-    return genRSAOAEP()
+    return this.cryptoAdapter
+      .genRSAOAEP()
       .then(keyPair => {
         this.publicKey = keyPair.publicKey;
         this.privateKey = keyPair.privateKey;
-        return convertOAEPToPSS(this.privateKey, 'sign');
+        return this.cryptoAdapter.convertOAEPToPSS(this.privateKey, 'sign');
       })
       .then(privateKeySign => {
         this.privateKeySign = privateKeySign;
-        return convertOAEPToPSS(this.publicKey, 'verify');
+        return this.cryptoAdapter.convertOAEPToPSS(this.publicKey, 'verify');
       })
       .then(publicKeySign => {
         this.publicKeySign = publicKeySign;
@@ -77,14 +56,15 @@ class User {
   }
 
   exportPublicKey() {
-    return exportClearKey(this.publicKey);
+    return this.cryptoAdapter.exportClearKey(this.publicKey);
   }
 
   importPublicKey(jwkPublicKey) {
-    return importPublicKey(jwkPublicKey)
+    return this.cryptoAdapter
+      .importPublicKey(jwkPublicKey)
       .then(publicKey => {
         this.publicKey = publicKey;
-        return convertOAEPToPSS(this.publicKey, 'verify');
+        return this.cryptoAdapter.convertOAEPToPSS(this.publicKey, 'verify');
       })
       .then(publicKeySign => {
         this.publicKeySign = publicKeySign;
@@ -93,13 +73,14 @@ class User {
 
   exportPrivateKey(password) {
     const pass = {};
-    return derivePassword(password)
+    return this.cryptoAdapter
+      .derivePassword(password)
       .then(dKey => {
         pass.salt = dKey.salt;
         this.hash = dKey.hash;
         pass.hash = this.hash;
         pass.iterations = dKey.iterations;
-        return exportKey(dKey.key, this.privateKey);
+        return this.cryptoAdapter.exportKey(dKey.key, this.privateKey);
       })
       .then(keyObject => ({
         privateKey: {
@@ -111,10 +92,11 @@ class User {
   }
 
   importPrivateKey(dKey, privateKeyObject) {
-    return importPrivateKey(dKey, privateKeyObject)
+    return this.cryptoAdapter
+      .importPrivateKey(dKey, privateKeyObject)
       .then(privateKey => {
         this.privateKey = privateKey;
-        return convertOAEPToPSS(this.privateKey, 'sign');
+        return this.cryptoAdapter.convertOAEPToPSS(this.privateKey, 'sign');
       })
       .then(privateKeySign => {
         this.privateKeySign = privateKeySign;
@@ -123,7 +105,8 @@ class User {
 
   exportPrivateData(data) {
     const result = {};
-    return encryptRSAOAEP(data, this.publicKey)
+    return this.cryptoAdapter
+      .encryptRSAOAEP(data, this.publicKey)
       .then(encryptedOptions => {
         result.data = encryptedOptions;
         return this.sign(result.data);
@@ -137,7 +120,7 @@ class User {
   importPrivateData(data, signature) {
     return this.verify(data, signature).then(verified => {
       if (verified) {
-        return decryptRSAOAEP(data, this.privateKey);
+        return this.cryptoAdapter.decryptRSAOAEP(data, this.privateKey);
       }
       return null;
     });
@@ -174,7 +157,7 @@ class User {
       .then(key => this.wrapKey(key, friend.publicKey))
       .then(friendWrappedKey => {
         result.wrappedKey = friendWrappedKey;
-        return getSHA256(friend.username);
+        return this.cryptoAdapter.getSHA256(friend.username);
       })
       .then(hashedUsername => {
         result.friendName = hashedUsername;
@@ -208,7 +191,8 @@ class User {
     const saltedTitle = `${now}|${metadatas.title}`;
     const result = {};
     const newMetadas = metadatas;
-    return getSHA256(saltedTitle)
+    return this.cryptoAdapter
+      .getSHA256(saltedTitle)
       .then(hashedTitle => {
         result.hashedTitle = hashedTitle;
         newMetadas.id = result.hashedTitle;
@@ -230,17 +214,18 @@ class User {
 
   encryptSecret(metadatas, secret, key) {
     const result = {};
-    return encryptAESGCM256(secret, key)
+    return this.cryptoAdapter
+      .encryptAESGCM256(secret, key)
       .then(secretObject => {
         result.secret = secretObject.secret;
         result.iv = secretObject.iv;
         result.key = secretObject.key;
-        return encryptAESGCM256(metadatas, secretObject.key);
+        return this.cryptoAdapter.encryptAESGCM256(metadatas, secretObject.key);
       })
       .then(secretObject => {
         result.metadatas = secretObject.secret;
         result.iv_meta = secretObject.iv;
-        return getSHA256(this.username);
+        return this.cryptoAdapter.getSHA256(this.username);
       })
       .then(hashedUsername => {
         result.hashedUsername = hashedUsername;
@@ -254,15 +239,15 @@ class User {
     }
     const wrappedKey = this.keys[hashedTitle].key;
     return this.unwrapKey(wrappedKey).then(key =>
-      decryptAESGCM256(secret, key));
+      this.cryptoAdapter.decryptAESGCM256(secret, key));
   }
 
   unwrapKey(wrappedKey) {
-    return unwrapRSAOAEP(wrappedKey, this.privateKey);
+    return this.cryptoAdapter.unwrapRSAOAEP(wrappedKey, this.privateKey);
   }
 
   wrapKey(key, publicKey) {
-    return wrapRSAOAEP(key, publicKey);
+    return this.cryptoAdapter.wrapRSAOAEP(key, publicKey);
   }
 
   decryptAllMetadatas(allMetadatas, progress = defaultProgress) {
@@ -289,27 +274,28 @@ class User {
   activateShortLogin(shortpass, deviceName) {
     let protectKey;
     const toSend = {};
-    return generateWrappingKey()
+    return this.cryptoAdapter
+      .generateWrappingKey()
       .then(key => {
         protectKey = key;
-        return exportKey(protectKey, this.privateKey);
+        return this.cryptoAdapter.exportKey(protectKey, this.privateKey);
       })
       .then(object => {
         localStorage.setItem(`${Secretin.prefix}privateKey`, object.key);
         localStorage.setItem(`${Secretin.prefix}privateKeyIv`, object.iv);
-        return derivePassword(shortpass);
+        return this.cryptoAdapter.derivePassword(shortpass);
       })
       .then(derived => {
         toSend.salt = derived.salt;
         toSend.iterations = derived.iterations;
         toSend.hash = derived.hash;
-        return exportKey(derived.key, protectKey);
+        return this.cryptoAdapter.exportKey(derived.key, protectKey);
       })
       .then(keyObject => {
         toSend.protectKey = keyObject.key;
         localStorage.setItem(`${Secretin.prefix}iv`, keyObject.iv);
         localStorage.setItem(`${Secretin.prefix}username`, this.username);
-        return getSHA256(deviceName);
+        return this.cryptoAdapter.getSHA256(deviceName);
       })
       .then(deviceId => {
         toSend.deviceId = deviceId;
@@ -323,13 +309,18 @@ class User {
       key: wrappedProtectKey,
       iv: localStorage.getItem(`${Secretin.prefix}iv`),
     };
-    return importKey(shortpass, keyObject).then(protectKey => {
-      const privateKeyObject = {
-        privateKey: localStorage.getItem(`${Secretin.prefix}privateKey`),
-        iv: localStorage.getItem(`${Secretin.prefix}privateKeyIv`),
-      };
-      return this.importPrivateKey(protectKey, privateKeyObject);
-    });
+    return this.cryptoAdapter
+      .importKey(shortpass, keyObject)
+      .then(protectKey => {
+        const privateKeyObject = {
+          privateKey: localStorage.getItem(`${Secretin.prefix}privateKey`),
+          iv: localStorage.getItem(`${Secretin.prefix}privateKeyIv`),
+        };
+        return this.this.cryptoAdapter.importPrivateKey(
+          protectKey,
+          privateKeyObject
+        );
+      });
   }
 }
 

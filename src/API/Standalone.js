@@ -1,14 +1,13 @@
-import { getSHA256 } from '../lib/crypto';
-
 import { bytesToHexString } from '../lib/utils';
 
 class API {
-  constructor(db) {
+  constructor(db, getSHA256) {
     if (typeof db === 'object') {
       this.db = db;
     } else {
       this.db = { users: {}, secrets: {} };
     }
+    this.getSHA256 = getSHA256;
   }
 
   userExists(username, isHashed) {
@@ -20,12 +19,12 @@ class API {
 
   addUser(username, privateKey, publicKey, pass, options) {
     let hashedUsername;
-    return getSHA256(username)
+    return this.getSHA256(username)
       .then(rHashedUsername => {
         hashedUsername = rHashedUsername;
         return new Promise((resolve, reject) => {
           if (typeof this.db.users[hashedUsername] === 'undefined') {
-            resolve(getSHA256(pass.hash));
+            resolve(this.getSHA256(pass.hash));
           } else {
             reject('Username already exists');
           }
@@ -75,7 +74,7 @@ class API {
 
   deleteSecret(user, hashedTitle) {
     let hashedUsername;
-    return getSHA256(user.username).then(rHashedUsername => {
+    return this.getSHA256(user.username).then(rHashedUsername => {
       hashedUsername = rHashedUsername;
       if (typeof this.db.users[hashedUsername] !== 'undefined') {
         if (typeof this.db.secrets[hashedTitle] === 'undefined') {
@@ -99,7 +98,7 @@ class API {
 
   editSecret(user, secretObject, hashedTitle) {
     let hashedUsername;
-    return getSHA256(user.username).then(rHashedUsername => {
+    return this.getSHA256(user.username).then(rHashedUsername => {
       hashedUsername = rHashedUsername;
       if (typeof this.db.users[hashedUsername] !== 'undefined') {
         if (typeof this.db.secrets[hashedTitle] !== 'undefined') {
@@ -125,7 +124,7 @@ class API {
 
   newKey(user, hashedTitle, secret, wrappedKeys) {
     let hashedUsername;
-    return getSHA256(user.username).then(rHashedUsername => {
+    return this.getSHA256(user.username).then(rHashedUsername => {
       hashedUsername = rHashedUsername;
       if (typeof this.db.users[hashedUsername] !== 'undefined') {
         if (typeof this.db.secrets[hashedTitle] !== 'undefined') {
@@ -163,12 +162,12 @@ class API {
   unshareSecret(user, friendNames, hashedTitle) {
     let hashedUsername;
     const hashedFriendUsernames = [];
-    return getSHA256(user.username)
+    return this.getSHA256(user.username)
       .then(rHashedUsername => {
         hashedUsername = rHashedUsername;
         const hashedFriendUseramePromises = [];
         friendNames.forEach(username => {
-          hashedFriendUseramePromises.push(getSHA256(username));
+          hashedFriendUseramePromises.push(this.getSHA256(username));
         });
         return Promise.all(hashedFriendUseramePromises);
       })
@@ -225,7 +224,7 @@ class API {
 
   shareSecret(user, sharedSecretObjects) {
     let hashedUsername;
-    return getSHA256(user.username).then(rHashedUsername => {
+    return this.getSHA256(user.username).then(rHashedUsername => {
       hashedUsername = rHashedUsername;
       const dbUser = this.db.users[hashedUsername];
       if (typeof dbUser !== 'undefined') {
@@ -283,7 +282,7 @@ class API {
 
     if (!hashed) {
       isHashed = isHashed
-        .then(() => getSHA256(username))
+        .then(() => this.getSHA256(username))
         .then(rHashedUsername => {
           hashedUsername = rHashedUsername;
         });
@@ -295,7 +294,7 @@ class API {
           return Promise.reject('User not found');
         }
         user = JSON.parse(JSON.stringify(this.db.users[hashedUsername]));
-        return getSHA256(hash);
+        return this.getSHA256(hash);
       })
       .then(hashedHash => {
         if (hashedHash === user.pass.hash) {
@@ -348,7 +347,7 @@ class API {
 
   getUserWithSignature(user) {
     let hashedUsername;
-    return getSHA256(user.username).then(rHashedUsername => {
+    return this.getSHA256(user.username).then(rHashedUsername => {
       hashedUsername = rHashedUsername;
       return new Promise((resolve, reject) => {
         if (typeof this.db.users[hashedUsername] === 'undefined') {
@@ -413,7 +412,7 @@ class API {
 
   editUser(user, datas, type) {
     let hashedUsername;
-    return getSHA256(user.username).then(rHashedUsername => {
+    return this.getSHA256(user.username).then(rHashedUsername => {
       hashedUsername = rHashedUsername;
       return new Promise((resolve, reject) => {
         if (typeof this.db.users[hashedUsername] !== 'undefined') {
@@ -433,7 +432,7 @@ class API {
   }
 
   changePassword(hashedUsername, privateKey, pass) {
-    return getSHA256(pass.hash).then(hashedHash => {
+    return this.getSHA256(pass.hash).then(hashedHash => {
       const newPass = pass;
       newPass.hash = hashedHash;
       this.db.users[hashedUsername].privateKey = privateKey;
