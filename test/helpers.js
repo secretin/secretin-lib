@@ -1,3 +1,13 @@
+function getDB(){
+  if (__karma__.config.args[0] === 'server') {
+    let server = 'http://127.0.0.1:3000';
+    if (__karma__.config.args[1]) {
+      server = __karma__.config.args[1];
+    }
+    return new Secretin(Secretin.API.Server, server);
+  }
+  return new Secretin();
+}
 // eslint-disable-next-line
 function resetAndGetDB() {
   if (__karma__.config.args[0] === 'server') {
@@ -10,7 +20,7 @@ function resetAndGetDB() {
       xhr.open('GET', `${server}/reset`);
       xhr.onload = () => {
         if (xhr.status === 200) {
-          this.secretin = new Secretin(Secretin.API.Server, server);
+          this.secretin = getDB();
           resolve();
         } else {
           reject(xhr.statusText);

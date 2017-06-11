@@ -78,7 +78,7 @@ class Secretin {
             this.editableDB = true;
             this.dispatchEvent('connectionChange', { connection: 'online' });
             if (typeof this.currentUser.username !== 'undefined') {
-              this.getDb().then(() => this.doCacheActions());
+              this.getDb().then(() => this.doCacheActions()).then(() => this.refreshUser());
             }
           })
           .catch(err => {
@@ -126,16 +126,22 @@ class Secretin {
                 );
               }));
         } else if (cacheAction.action === 'editSecret') {
-          return promise.then(() =>
-            decryptRSAOAEP(cacheAction.args[2], this.currentUser.privateKey)
-              .then(metadatas => {
-                this.currentUser.metadatas[cacheAction.args[0]] = metadatas;
+          return promise.then(() => {
+            let metadatas;
+            return decryptRSAOAEP(cacheAction.args[2], this.currentUser.privateKey)
+              .then(rawMetadatas => {
+                metadatas = rawMetadatas;
                 return decryptRSAOAEP(
                   cacheAction.args[1],
                   this.currentUser.privateKey
                 );
               })
-              .then(content => this.editSecret(cacheAction.args[0], content))
+              .then(content => {
+                if (typeof this.currentUser.keys[metadatas.id] === 'undefined'){
+                  return this.addSecret(`${metadatas.title} (Conflict)`, content)
+                }
+                return this.editSecret(cacheAction.args[0], content)
+              })
               .then(() => {
                 cacheActionsStr = localStorage.getItem(cacheActionsKey);
                 updatedCacheActions = JSON.parse(cacheActionsStr);
@@ -144,7 +150,8 @@ class Secretin {
                   cacheActionsKey,
                   JSON.stringify(updatedCacheActions)
                 );
-              }));
+              })
+            });
         }
         return promise;
       },
@@ -274,7 +281,7 @@ class Secretin {
           // Electron
           return this.getDb().then(() => {
             if (this.editableDB) {
-              return this.doCacheActions();
+              return this.doCacheActions().then(() => this.refreshUser(progress));
             }
             return Promise.resolve();
           });
@@ -416,7 +423,7 @@ class Secretin {
             return Promise.reject(new OfflineError());
           }
           const args = [hashedTitle];
-          encryptRSAOAEP(content, this.currentUser.publicKey)
+          return encryptRSAOAEP(content, this.currentUser.publicKey)
             .then(encryptedContent => {
               args.push(encryptedContent);
               return encryptRSAOAEP(
@@ -1280,7 +1287,7 @@ class Secretin {
           // Electron
           return this.getDb().then(() => {
             if (this.editableDB) {
-              return this.doCacheActions();
+              return this.doCacheActions().then(() => this.refreshUser(progress));
             }
             return Promise.resolve();
           });
