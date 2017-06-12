@@ -207,13 +207,11 @@ class API {
   getHistory(user, hashedTitle) {
     let url;
     return getSHA256(user.username)
-      .then((hashedUsername) => {
+      .then(hashedUsername => {
         url = `/history/${hashedUsername}/${hashedTitle}`;
         return user.sign(url);
       })
-      .then((signature) =>
-        doGET(`${this.db}${url}?sig=${signature}`)
-      )
+      .then(signature => doGET(`${this.db}${url}?sig=${signature}`))
       .then(secret => ({
         iv: secret.iv_history,
         secret: secret.history,

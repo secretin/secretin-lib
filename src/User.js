@@ -242,7 +242,7 @@ class User {
         }
         return Promise.resolve([]);
       })
-      .then((rHistory) => {
+      .then(rHistory => {
         newHistory = rHistory;
         if (
           newHistory.length === 0 ||
@@ -267,7 +267,7 @@ class User {
         result.iv_meta = secretObject.iv;
         return encryptAESGCM256(newHistory, secretObject.key);
       })
-      .then((secretObject) => {
+      .then(secretObject => {
         result.history = secretObject.secret;
         result.iv_history = secretObject.iv;
         return getSHA256(this.username);

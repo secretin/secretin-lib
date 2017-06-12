@@ -77,8 +77,15 @@ class Secretin {
             this.api = this.oldApi;
             this.editableDB = true;
             this.dispatchEvent('connectionChange', { connection: 'online' });
+<<<<<<< HEAD
             if (typeof this.currentUser.username !== 'undefined' && typeof window.process !== 'undefined') {
               this.getDb().then(() => this.doCacheActions());
+=======
+            if (typeof this.currentUser.username !== 'undefined') {
+              this.getDb()
+                .then(() => this.doCacheActions())
+                .then(() => this.refreshUser());
+>>>>>>> Prettier and fix offline access to getHistory
             }
             return Promise.resolve();
           })
@@ -153,10 +160,30 @@ class Secretin {
             this.api
               .addSecret(this.currentUser, cacheAction.args[0])
               .then(() => {
+<<<<<<< HEAD
                 this.currentUser.keys[cacheAction.args[0].hashedTitle] = {
                   key: cacheAction.args[0].wrappedKey,
                   rights: 2,
                 };
+=======
+                cacheActionsStr = localStorage.getItem(cacheActionsKey);
+                updatedCacheActions = JSON.parse(cacheActionsStr);
+                updatedCacheActions.shift();
+                return localStorage.setItem(
+                  cacheActionsKey,
+                  JSON.stringify(updatedCacheActions)
+                );
+              }));
+        } else if (cacheAction.action === 'editSecret') {
+          return promise.then(() => {
+            let metadatas;
+            return decryptRSAOAEP(
+              cacheAction.args[2],
+              this.currentUser.privateKey
+            )
+              .then(rawMetadatas => {
+                metadatas = rawMetadatas;
+>>>>>>> Prettier and fix offline access to getHistory
                 return decryptRSAOAEP(
                   cacheAction.args[1],
                   this.currentUser.privateKey
@@ -174,6 +201,7 @@ class Secretin {
             const encryptedContent = cacheAction.args[1];
             return decryptRSAOAEP(encryptedContent, this.currentUser.privateKey)
               .then(content => {
+<<<<<<< HEAD
                 if (typeof this.currentUser.keys[secretId] === 'undefined') {
                   return this.addSecret(
                     `${content.title} (Conflict)`,
@@ -201,6 +229,27 @@ class Secretin {
                 return this.renameSecret(secretId, content.title);
               })
               .then(() => this.popCacheAction());
+=======
+                if (
+                  typeof this.currentUser.keys[metadatas.id] === 'undefined'
+                ) {
+                  return this.addSecret(
+                    `${metadatas.title} (Conflict)`,
+                    content
+                  );
+                }
+                return this.editSecret(cacheAction.args[0], content);
+              })
+              .then(() => {
+                cacheActionsStr = localStorage.getItem(cacheActionsKey);
+                updatedCacheActions = JSON.parse(cacheActionsStr);
+                updatedCacheActions.shift();
+                return localStorage.setItem(
+                  cacheActionsKey,
+                  JSON.stringify(updatedCacheActions)
+                );
+              });
+>>>>>>> Prettier and fix offline access to getHistory
           });
         }
         return promise;
@@ -326,7 +375,12 @@ class Secretin {
           // Electron
           return this.getDb().then(() => {
             if (this.editableDB) {
+<<<<<<< HEAD
               return this.doCacheActions();
+=======
+              return this.doCacheActions().then(() =>
+                this.refreshUser(progress));
+>>>>>>> Prettier and fix offline access to getHistory
             }
             return Promise.resolve();
           });
@@ -470,11 +524,13 @@ class Secretin {
   }
 
   editSecret(hashedTitle, content) {
-    let secretObject;
-    return this.api.getHistory(this.currentUser, hashedTitle)
-      .then(history => this.currentUser.editSecret(hashedTitle, content, history))
-      .then(rsecretObject => {
-        secretObject = rsecretObject;
+    let secretObject
+    return this.api
+      .getHistory(this.currentUser, hashedTitle)
+      .then(history =>
+        this.currentUser.editSecret(hashedTitle, content, history))
+      .then(rSecretObject => {
+        secretObject = rSecretObject;
         if (!this.editableDB) {
           if (
             Object.keys(this.currentUser.metadatas[hashedTitle].users).length >
@@ -1000,7 +1056,8 @@ class Secretin {
       .then(eSecret => {
         encryptedSecret = eSecret;
         return this.api.getHistory(this.currentUser, hashedTitle);
-      }).then((rHistory) => {
+      })
+      .then(rHistory => {
         history = rHistory;
         return this.currentUser.decryptSecret(hashedTitle, encryptedSecret);
       })
@@ -1157,22 +1214,23 @@ class Secretin {
   }
 
   getHistory(hashedTitle, index) {
-    return this.api.getHistory(this.currentUser, hashedTitle)
-      .then((encryptedHistory) =>
+    return this.api
+      .getHistory(this.currentUser, hashedTitle)
+      .then(encryptedHistory =>
         this.currentUser.decryptSecret(hashedTitle, encryptedHistory))
-      .then((history) => {
+      .then(history => {
         if (typeof index === 'undefined') {
           return history;
         } else if (index < 0) {
-          const diff = (-index) % history.length;
+          const diff = -index % history.length;
           return history[-diff];
         }
         return history[index % history.length];
       })
-      .catch((err) => {
+      .catch(err => {
         if (err === 'Offline') {
           this.offlineDB();
-          return this.getSecret(hashedTitle);
+          return this.getHistory(hashedTitle, index);
         }
         const wrapper = new WrappingError(err);
         throw wrapper.error;
@@ -1396,7 +1454,12 @@ class Secretin {
           // Electron
           return this.getDb().then(() => {
             if (this.editableDB) {
+<<<<<<< HEAD
               return this.doCacheActions();
+=======
+              return this.doCacheActions().then(() =>
+                this.refreshUser(progress));
+>>>>>>> Prettier and fix offline access to getHistory
             }
             return Promise.resolve();
           });

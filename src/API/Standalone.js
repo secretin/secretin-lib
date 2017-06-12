@@ -398,11 +398,11 @@ class API {
   }
 
   getHistory(user, hash) {
-    return user.sign(hash)
-      .then(() =>
+    return user.sign(hash).then(
+      () =>
         new Promise((resolve, reject) => {
           if (typeof this.db.secrets[hash] === 'undefined') {
-            reject('You don\'t have this secret');
+            reject("You don't have this secret");
           } else {
             const secret = this.db.secrets[hash];
             const history = {
@@ -412,7 +412,7 @@ class API {
             resolve(history);
           }
         })
-      );
+    );
   }
 
   getProtectKeyParameters() {
