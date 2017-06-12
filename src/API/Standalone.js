@@ -114,7 +114,7 @@ class API {
           this.db.secrets[hashedTitle].secret = secretObject.secret;
           this.db.secrets[hashedTitle].iv_meta = secretObject.iv_meta;
           this.db.secrets[hashedTitle].metadatas = secretObject.metadatas;
-          this.db.secrets[hashedTitle].rev = 'Standalone';
+          this.db.secrets[hashedTitle].editOffline = true;
           return Promise.resolve();
         }
         return Promise.reject('Secret not found');

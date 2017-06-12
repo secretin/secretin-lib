@@ -281,9 +281,9 @@ class User {
             progressStatus.step();
             progress(progressStatus);
             this.metadatas[hashedTitle] = metadatas;
-          })
-        ), Promise.resolve()
-      )
+          })),
+      Promise.resolve()
+    );
   }
 
   activateShortLogin(shortpass, deviceName) {
