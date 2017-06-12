@@ -194,7 +194,7 @@ class API {
       .then(signature => doGET(`${this.db}${url}?sig=${signature}`));
   }
 
-  getSecret(user, hashedTitle) {
+  getSecret(hashedTitle, user) {
     let url;
     return getSHA256(user.username)
       .then(hashedUsername => {

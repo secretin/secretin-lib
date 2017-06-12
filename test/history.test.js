@@ -42,6 +42,9 @@ describe('Test history', () => {
 
   const username = 'user';
   const password = 'password';
+
+  const username2 = 'user2';
+  const password2 = 'password2';
   /*
     Create following arborescence :
       secret
@@ -59,6 +62,7 @@ describe('Test history', () => {
     availableKeyCounter = 0;
     // eslint-disable-next-line
     return resetAndGetDB()
+      .then(() => this.secretin.newUser(username2, password2))
       .then(() => this.secretin.newUser(username, password))
       .then(() => this.secretin.addSecret(secretTitle, secretContent))
       .then((hashedTitle) => {
@@ -90,27 +94,59 @@ describe('Test history', () => {
       })
       .then(() => this.secretin.addSecretToFolder(folderInFolderId, folderId))
       .then(() => this.secretin.addSecretToFolder(otherSecretInOtherFolderId, otherFolderId))
+      .then(() => this.secretin.shareSecret(secretInFolderId, username2, 0))
       .then(() => {
         this.secretin.currentUser.disconnect();
         return this.secretin.loginUser(username, password);
       });
   });
 
-  it('Can retrieve history', () => {
-    const expectedMetadatas = {};
-    return this.secretin.getHistory(secretId)
-      .then((history) => {
-        console.log(JSON.stringify(history), expectedMetadatas);
-        return this.secretin.editSecret(secretId, newSecretContent);
-      })
+  it('Can retrieve history', () =>
+    this.secretin.getHistory(secretId)
+      .should.eventually.deep.equal([{
+        secret: secretContent,
+        lastModifiedAt: now,
+        lastModifiedBy: username
+      }])
+      .then(() => this.secretin.editSecret(secretId, newSecretContent))
       .then(() => this.secretin.getHistory(secretId))
-      .then((history) => {
-        console.log(JSON.stringify(history), expectedMetadatas);
-        return this.secretin.editSecret(secretId, newSecretContent);
-      })
+      .should.eventually.deep.equal([{
+        secret: newSecretContent,
+        lastModifiedAt: now,
+        lastModifiedBy: username
+      },
+      {
+        secret: secretContent,
+        lastModifiedAt: now,
+        lastModifiedBy: username
+      }])
+      .then(() => this.secretin.editSecret(secretId, newSecretContent))
       .then(() => this.secretin.getHistory(secretId))
-      .then((history) => {
-        console.log(JSON.stringify(history), expectedMetadatas);
-      });
-  });
+      .should.eventually.deep.equal([{
+        secret: newSecretContent,
+        lastModifiedAt: now,
+        lastModifiedBy: username
+      },
+      {
+        secret: secretContent,
+        lastModifiedAt: now,
+        lastModifiedBy: username
+      }])
+  );
+
+  it('Can unshare and retrieve history', () =>
+    this.secretin.getHistory(secretInFolderId)
+      .should.eventually.deep.equal([{
+        secret: secretContent,
+        lastModifiedAt: now,
+        lastModifiedBy: username
+      }])
+      .then(() => this.secretin.unshareSecret(secretInFolderId, username2))
+      .then(() => this.secretin.getHistory(secretId))
+      .should.eventually.deep.equal([{
+        secret: secretContent,
+        lastModifiedAt: now,
+        lastModifiedBy: username
+      }])
+  );
 });

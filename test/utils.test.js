@@ -1,4 +1,4 @@
-xdescribe('Utils', () => {
+describe('Utils', () => {
   beforeEach(() => {
     // eslint-disable-next-line
     expectedRandom = 1337;
