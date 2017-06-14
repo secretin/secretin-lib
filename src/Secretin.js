@@ -310,12 +310,14 @@ class Secretin {
           // Electron
           this.getDb();
         }
-        return this.currentUser.decryptAllMetadatas(
+        progress(new DecryptUserOptionsStatus());
+        return this.currentUser.importOptions(remoteUser.options)
+      })
+      .then(() => this.currentUser.decryptAllMetadatas(
           remoteUser.metadatas,
           progress
-        );
-      })
-      .then(() => this.currentUser.importOptions(remoteUser.options))
+        )
+      )
       .catch(err => {
         if (err === 'Offline') {
           this.offlineDB();
