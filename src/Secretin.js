@@ -334,6 +334,9 @@ class Secretin {
           // Electron
           return this.getDb();
         }
+        return Promise.resolve();
+      })
+      .then(() => {
         progress(new DecryptUserOptionsStatus());
         return this.currentUser.importOptions(remoteUser.options)
       })
