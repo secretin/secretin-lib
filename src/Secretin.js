@@ -78,7 +78,7 @@ class Secretin {
             this.editableDB = true;
             this.dispatchEvent('connectionChange', { connection: 'online' });
             if (typeof this.currentUser.username !== 'undefined') {
-              this.getDb().then(() => this.doCacheActions()).then(() => this.refreshUser());
+              this.getDb().then(() => this.doCacheActions());
             }
           })
           .catch(err => {
@@ -117,6 +117,14 @@ class Secretin {
             this.api
               .addSecret(this.currentUser, cacheAction.args[0])
               .then(() => {
+                this.currentUser.keys[cacheAction.args[0].hashedTitle] = {
+                  key: cacheAction.args[0].wrappedKey,
+                  rights: 2,
+                }
+                return decryptRSAOAEP(cacheAction.args[1], this.currentUser.privateKey);
+              })
+              .then((metadatas) => {
+                this.currentUser.metadatas[cacheAction.args[0].hashedTitle] = metadatas;
                 cacheActionsStr = localStorage.getItem(cacheActionsKey);
                 updatedCacheActions = JSON.parse(cacheActionsStr);
                 updatedCacheActions.shift();
@@ -243,20 +251,13 @@ class Secretin {
         this.currentUser.totp = parameters.totp;
         this.currentUser.hash = hash;
         remoteUser = user;
-        this.currentUser.keys = remoteUser.keys;
-        progress(new ImportPublicKeyStatus());
-        return this.currentUser.importPublicKey(remoteUser.publicKey);
-      })
-      .then(() => {
         progress(new DecryptPrivateKeyStatus());
         return this.currentUser.importPrivateKey(key, remoteUser.privateKey);
       })
       .then(() => {
-        progress(new DecryptUserOptionsStatus());
-        this.currentUser.importOptions(remoteUser.options);
+        progress(new ImportPublicKeyStatus());
+        return this.currentUser.importPublicKey(remoteUser.publicKey);
       })
-      .then(() =>
-        this.currentUser.decryptAllMetadatas(remoteUser.metadatas, progress))
       .then(() => {
         const shortpass = localStorage.getItem(`${Secretin.prefix}shortpass`);
         const signature = localStorage.getItem(
@@ -276,12 +277,13 @@ class Secretin {
         }
         return Promise.resolve();
       })
+      .then(() => this.refreshUser(progress))
       .then(() => {
         if (typeof window.process !== 'undefined') {
           // Electron
           return this.getDb().then(() => {
             if (this.editableDB) {
-              return this.doCacheActions().then(() => this.refreshUser(progress));
+              return this.doCacheActions();
             }
             return Promise.resolve();
           });
@@ -352,19 +354,29 @@ class Secretin {
       metadatas.users[this.currentUser.username].folders.ROOT = true;
     }
 
+    let secretObject;
+
     return this.currentUser
       .createSecret(metadatas, content)
-      .then(secretObject => {
+      .then(rSecretObject => {
+        secretObject = rSecretObject;
         hashedTitle = secretObject.hashedTitle;
         this.currentUser.keys[secretObject.hashedTitle] = {
           key: secretObject.wrappedKey,
           rights: metadatas.users[this.currentUser.username].rights,
         };
         if (!this.editableDB) {
-          this.pushCacheAction('addSecret', [secretObject]);
+          return encryptRSAOAEP(
+            metadatas,
+            this.currentUser.publicKey
+          )
+          .then(encryptedMetadatas => {
+            this.pushCacheAction('addSecret', [secretObject, encryptedMetadatas]);
+          });
         }
-        return this.api.addSecret(this.currentUser, secretObject);
+        return Promise.resolve();
       })
+      .then(() => this.api.addSecret(this.currentUser, secretObject))
       .then(() => {
         this.currentUser.metadatas[hashedTitle] = metadatas;
         if (typeof inFolderId !== 'undefined') {
@@ -1289,7 +1301,7 @@ class Secretin {
           // Electron
           return this.getDb().then(() => {
             if (this.editableDB) {
-              return this.doCacheActions().then(() => this.refreshUser(progress));
+              return this.doCacheActions();
             }
             return Promise.resolve();
           });

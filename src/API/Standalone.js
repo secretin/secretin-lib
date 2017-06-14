@@ -298,17 +298,8 @@ class API {
         return getSHA256(hash);
       })
       .then(hashedHash => {
+        delete user.keys;
         if (hashedHash === user.pass.hash) {
-          const metadatas = {};
-          const hashedTitles = Object.keys(user.keys);
-          hashedTitles.forEach(hashedTitle => {
-            const secret = this.db.secrets[hashedTitle];
-            metadatas[hashedTitle] = {
-              iv: secret.iv_meta,
-              secret: secret.metadatas,
-            };
-          });
-          user.metadatas = metadatas;
           return user;
         }
         const fakePrivateKey = new Uint8Array(3232);
@@ -321,8 +312,6 @@ class API {
           privateKey: bytesToHexString(fakePrivateKey),
           iv: bytesToHexString(fakeIV),
         };
-        user.keys = {};
-        user.metadatas = {};
         user.pass.hash = fakeHash;
         return user;
       });
@@ -358,7 +347,7 @@ class API {
             JSON.stringify(this.db.users[hashedUsername])
           );
           const metadatas = {};
-          const hashedTitles = Object.keys(user.keys);
+          const hashedTitles = Object.keys(userObject.keys);
           hashedTitles.forEach(hashedTitle => {
             const secret = this.db.secrets[hashedTitle];
             metadatas[hashedTitle] = {
