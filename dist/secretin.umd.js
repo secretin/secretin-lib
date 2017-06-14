@@ -2309,9 +2309,10 @@ var Secretin = function () {
         // Electron
         _this5.getDb();
       }
-      return _this5.currentUser.decryptAllMetadatas(remoteUser.metadatas, progress);
-    }).then(function () {
+      progress(new DecryptUserOptionsStatus());
       return _this5.currentUser.importOptions(remoteUser.options);
+    }).then(function () {
+      return _this5.currentUser.decryptAllMetadatas(remoteUser.metadatas, progress);
     }).catch(function (err) {
       if (err === 'Offline') {
         _this5.offlineDB();
