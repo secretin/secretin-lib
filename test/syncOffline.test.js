@@ -26,9 +26,26 @@ if (__karma__.config.args[0] === 'server') {
       }],
     };
 
+    const newSecretContent2 = {
+      fields: [{
+        label: 'e',
+        content: 'f',
+      }],
+    };
+
+    const newSecretContent3 = {
+      fields: [{
+        label: 'g',
+        content: 'h',
+      }],
+    };
+
+    const conflictSecretsKey = `${Secretin.prefix}conflictSecrets${username}`;
+    const cacheActionsKey = `${Secretin.prefix}cacheActions_${username}`;
+
     beforeEach(() => {
-      const cacheActionsKey = `${Secretin.prefix}cacheActions_${username}`;
       localStorage.removeItem(cacheActionsKey);
+      localStorage.removeItem(conflictSecretsKey);
       // eslint-disable-next-line
       availableKeyCounter = 0;
       // eslint-disable-next-line
@@ -135,7 +152,7 @@ if (__karma__.config.args[0] === 'server') {
         .should.eventually.deep.equal(newSecretContent)
     );
 
-    it('Can\'t edit deleted secret', () => {
+    it('Edit "deleted secret" create conflict', () => {
       const expectedMetadatas = {
         lastModifiedAt: now,
         lastModifiedBy: username,
@@ -151,12 +168,18 @@ if (__karma__.config.args[0] === 'server') {
       };
       return syncThenOffline()
         .then(() => {
+          delete window.process;
           // eslint-disable-next-line
           this.secretin2 = getDB();
           return this.secretin2.loginUser(username, password);
         })
         .then(() => this.secretin2.deleteSecret(secretId))
-        .then(() => this.secretin.editSecret(secretId, newSecretContent))
+        .then(() => {
+          this.secretin2.currentUser.disconnect();
+          window.process = 'karma';
+          return this.secretin.editSecret(secretId, newSecretContent)
+        })
+        .then(() => this.secretin.editSecret(secretId, newSecretContent2))
         .then(() => goBackOnline())
         .then(() => {
           const id = Object.keys(this.secretin.currentUser.metadatas)[0];
@@ -164,8 +187,69 @@ if (__karma__.config.args[0] === 'server') {
           return this.secretin.currentUser.metadatas[id];
         })
         .should.eventually.deep.equal(expectedMetadatas)
-    }
-    );
+        .then(() => Object.keys(this.secretin.currentUser.metadatas).length)
+        .should.eventually.equal(1);
+    });
+
+
+    it('Edit "edited secret" create conflict', () => {
+      const expectedMetadatas = {
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+        title: `${secretTitle} (Conflict)`,
+        type: 'secret',
+        users: {
+          [username]: {
+            username,
+            rights: 2,
+            folders: { ROOT: true },
+          },
+        },
+      };
+
+      let conflictSecrets;
+      let conflictId;
+
+      return syncThenOffline()
+        .then(() => {
+          delete window.process;
+          // eslint-disable-next-line
+          this.secretin2 = getDB();
+          return this.secretin2.loginUser(username, password);
+        })
+        .then(() => this.secretin2.editSecret(secretId, newSecretContent))
+        .then(() => {
+          this.secretin2.currentUser.disconnect();
+          window.process = 'karma';
+          return this.secretin.editSecret(secretId, newSecretContent2)
+        })
+        .then(() => this.secretin.editSecret(secretId, newSecretContent3))
+        .then(() => goBackOnline())
+        .then(() => Object.keys(this.secretin.currentUser.metadatas).length)
+        .should.eventually.equal(2)
+        .then(() => {
+          Object.keys(this.secretin.currentUser.metadatas).forEach(key => {
+            if(this.secretin.currentUser.metadatas[key].title.indexOf('Conflict')) {
+              conflictId = key;
+            }
+          })
+          delete this.secretin.currentUser.metadatas[conflictId].id;
+          return this.secretin.currentUser.metadatas[conflictId];
+        })
+        .should.eventually.deep.equal(expectedMetadatas)
+        .then(() => this.secretin.getSecret(conflictId))
+        .should.eventually.deep.equal(newSecretContent3)
+        .then(() => this.secretin.getSecret(secretId))
+        .should.eventually.deep.equal(newSecretContent)
+        .then(() => {
+          const conflictSecretsStr = localStorage.getItem(conflictSecretsKey);
+          conflictSecrets = conflictSecretsStr
+            ? JSON.parse(conflictSecretsStr)
+            : {};
+          return Object.keys(conflictSecrets)[0]
+        })
+        .should.eventually.deep.equal(secretId)
+    });
 
   });
 }
