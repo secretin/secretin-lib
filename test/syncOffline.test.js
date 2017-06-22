@@ -152,6 +152,14 @@ if (__karma__.config.args[0] === 'server') {
         .should.eventually.deep.equal(newSecretContent)
     );
 
+    it('Can rename secret', () =>
+      syncThenOffline()
+        .then(() => this.secretin.renameSecret(secretId, newSecretTitle))
+        .then(() => goBackOnline())
+        .then(() => this.secretin.currentUser.metadatas[secretId].title)
+        .should.eventually.deep.equal(newSecretTitle)
+    );
+
     it('Edit "deleted secret" create conflict', () => {
       const expectedMetadatas = {
         lastModifiedAt: now,
