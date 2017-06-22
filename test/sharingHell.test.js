@@ -198,27 +198,21 @@ describe('Sharing hell', () => {
             username: user1,
             rights: 0,
             folders: {
-              [folderId]: {
-                name: folderTitle,
-              },
+              [folderId]: true,
             },
           },
           [user2]: {
             username: user2,
             rights: 1,
             folders: {
-              [folderId]: {
-                name: folderTitle,
-              },
+              [folderId]: true,
             },
           },
           [user3]: {
             username: user3,
             rights: 2,
             folders: {
-              [folderId]: {
-                name: folderTitle,
-              },
+              [folderId]: true,
             },
           },
         },
@@ -234,18 +228,14 @@ describe('Sharing hell', () => {
             username: user4,
             rights: 0,
             folders: {
-              [otherFolderId]: {
-                name: otherFolderTitle,
-              },
+              [otherFolderId]: true,
             },
           },
           [user3]: {
             username: user3,
             rights: 2,
             folders: {
-              [otherFolderId]: {
-                name: otherFolderTitle,
-              },
+              [otherFolderId]: true,
             },
           },
         },
@@ -261,18 +251,14 @@ describe('Sharing hell', () => {
             username: user3,
             rights: 2,
             folders: {
-              [otherFolderId]: {
-                name: otherFolderTitle,
-              },
+              [otherFolderId]: true,
             },
           },
           [user4]: {
             username: user4,
             rights: 0,
             folders: {
-              [otherFolderId]: {
-                name: otherFolderTitle,
-              },
+              [otherFolderId]: true,
             },
           },
         },
@@ -288,27 +274,21 @@ describe('Sharing hell', () => {
             username: user1,
             rights: 0,
             folders: {
-              [folderId]: {
-                name: folderTitle,
-              },
+              [folderId]: true,
             },
           },
           [user2]: {
             username: user2,
             rights: 1,
             folders: {
-              [folderId]: {
-                name: folderTitle,
-              },
+              [folderId]: true,
             },
           },
           [user3]: {
             username: user3,
             rights: 2,
             folders: {
-              [folderId]: {
-                name: folderTitle,
-              },
+              [folderId]: true,
             },
           },
         },
@@ -340,27 +320,21 @@ describe('Sharing hell', () => {
           username: user1,
           rights: 0,
           folders: {
-            [folderId]: {
-              name: folderTitle,
-            },
+            [folderId]: true,
           },
         },
         [user2]: {
           username: user2,
           rights: 1,
           folders: {
-            [folderId]: {
-              name: folderTitle,
-            },
+            [folderId]: true,
           },
         },
         [user3]: {
           username: user3,
           rights: 2,
           folders: {
-            [folderId]: {
-              name: folderTitle,
-            },
+            [folderId]: true,
           },
         },
       },
@@ -402,18 +376,14 @@ describe('Sharing hell', () => {
           username: user2,
           rights: 1,
           folders: {
-            [folderId]: {
-              name: folderTitle,
-            },
+            [folderId]: true,
           },
         },
         [user3]: {
           username: user3,
           rights: 2,
           folders: {
-            [folderId]: {
-              name: folderTitle,
-            },
+            [folderId]: true,
           },
         },
       },

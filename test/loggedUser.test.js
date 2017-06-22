@@ -166,9 +166,7 @@ describe('Logged user', () => {
             username,
             rights: 2,
             folders: {
-              [folderId]: {
-                name: folderTitle,
-              },
+              [folderId]: true,
             },
           },
         },
@@ -184,9 +182,7 @@ describe('Logged user', () => {
             username,
             rights: 2,
             folders: {
-              [otherFolderId]: {
-                name: otherFolderTitle,
-              },
+              [otherFolderId]: true,
             },
           },
         },
@@ -202,9 +198,7 @@ describe('Logged user', () => {
             username,
             rights: 2,
             folders: {
-              [folderId]: {
-                name: folderTitle,
-              },
+              [folderId]: true,
             },
           },
         },
@@ -317,9 +311,7 @@ describe('Logged user', () => {
               username,
               rights: 2,
               folders: {
-                [folderId]: {
-                  name: folderTitle,
-                },
+                [folderId]: true,
               },
             },
           },
@@ -335,9 +327,7 @@ describe('Logged user', () => {
               username,
               rights: 2,
               folders: {
-                [otherFolderId]: {
-                  name: otherFolderTitle,
-                },
+                [otherFolderId]: true,
               },
             },
           },
@@ -353,9 +343,7 @@ describe('Logged user', () => {
               username,
               rights: 2,
               folders: {
-                [folderId]: {
-                  name: folderTitle,
-                },
+                [folderId]: true,
               },
             },
           },
@@ -452,9 +440,7 @@ describe('Logged user', () => {
             username,
             rights: 2,
             folders: {
-              [folderId]: {
-                name: folderTitle,
-              },
+              [folderId]: true,
             },
           },
         },
@@ -509,9 +495,7 @@ describe('Logged user', () => {
             username,
             rights: 2,
             folders: {
-              [folderId]: {
-                name: folderTitle,
-              },
+              [folderId]: true,
             },
           },
         },
@@ -579,6 +563,12 @@ describe('Logged user', () => {
       .should.eventually.deep.equal(newSecretContent)
   );
 
+  it('Can rename secret', () =>
+    this.secretin.renameSecret(secretId, newSecretTitle)
+      .then(() => this.secretin.currentUser.metadatas[secretId].title)
+      .should.eventually.deep.equal(newSecretTitle)
+  );
+
   it('Can add secret to folder', () => {
     const expectedMetadatas = {
       lastModifiedAt: now,
@@ -588,9 +578,7 @@ describe('Logged user', () => {
           username,
           rights: 2,
           folders: {
-            [folderId]: {
-              name: folderTitle,
-            },
+            [folderId]: true,
           },
         },
       },
@@ -683,9 +671,7 @@ describe('Logged user', () => {
             username,
             rights: 2,
             folders: {
-              [folderId]: {
-                name: folderTitle,
-              },
+              [folderId]: true,
             },
           },
         },
@@ -701,9 +687,7 @@ describe('Logged user', () => {
             username,
             rights: 2,
             folders: {
-              [otherFolderId]: {
-                name: otherFolderTitle,
-              },
+              [otherFolderId]: true,
             },
           },
         },
@@ -719,9 +703,7 @@ describe('Logged user', () => {
             username,
             rights: 2,
             folders: {
-              [folderId]: {
-                name: folderTitle,
-              },
+              [folderId]: true,
             },
           },
         },
@@ -798,9 +780,7 @@ describe('Logged user', () => {
             username,
             rights: 2,
             folders: {
-              [otherFolderId]: {
-                name: otherFolderTitle,
-              },
+              [otherFolderId]: true,
             },
           },
         },
@@ -816,9 +796,7 @@ describe('Logged user', () => {
             username,
             rights: 2,
             folders: {
-              [folderId]: {
-                name: folderTitle,
-              },
+              [folderId]: true,
             },
           },
         },
@@ -880,9 +858,7 @@ describe('Logged user', () => {
             username,
             rights: 2,
             folders: {
-              [otherFolderId]: {
-                name: otherFolderTitle,
-              },
+              [otherFolderId]: true,
             },
           },
         },
@@ -925,9 +901,7 @@ describe('Logged user', () => {
           username,
           rights: 2,
           folders: {
-            [folderInFolderId]: {
-              name: folderInFolderTitle,
-            },
+            [folderInFolderId]: true,
           },
         },
       },
@@ -981,9 +955,7 @@ describe('Logged user', () => {
             username,
             rights: 2,
             folders: {
-              [otherFolderId]: {
-                name: otherFolderTitle,
-              },
+              [otherFolderId]: true,
             },
           },
         },
@@ -1008,9 +980,7 @@ describe('Logged user', () => {
             username,
             rights: 2,
             folders: {
-              [folderId]: {
-                name: folderTitle,
-              },
+              [folderId]: true,
             },
           },
         },
@@ -1026,9 +996,7 @@ describe('Logged user', () => {
             username,
             rights: 2,
             folders: {
-              [otherFolderId]: {
-                name: otherFolderTitle,
-              },
+              [otherFolderId]: true,
             },
           },
         },
@@ -1044,9 +1012,7 @@ describe('Logged user', () => {
             username,
             rights: 2,
             folders: {
-              [folderId]: {
-                name: folderTitle,
-              },
+              [folderId]: true,
             },
           },
         },
@@ -1084,12 +1050,8 @@ describe('Logged user', () => {
           username,
           rights: 2,
           folders: {
-            [folderInFolderId]: {
-              name: folderInFolderTitle,
-            },
-            [otherFolderId]: {
-              name: otherFolderTitle,
-            },
+            [folderInFolderId]: true,
+            [otherFolderId]: true,
           },
         },
       },
@@ -1173,9 +1135,7 @@ describe('Logged user', () => {
                 username,
                 rights: 2,
                 folders: {
-                  [folderId]: {
-                    name: folderTitle,
-                  },
+                  [folderId]: true,
                 },
               },
             },
@@ -1191,9 +1151,7 @@ describe('Logged user', () => {
                 username,
                 rights: 2,
                 folders: {
-                  [otherFolderId]: {
-                    name: otherFolderTitle,
-                  },
+                  [otherFolderId]: true,
                 },
               },
             },
@@ -1209,9 +1167,7 @@ describe('Logged user', () => {
                 username,
                 rights: 2,
                 folders: {
-                  [folderId]: {
-                    name: folderTitle,
-                  },
+                  [folderId]: true,
                 },
               },
             },

@@ -156,28 +156,49 @@ class Secretin {
                 this.currentUser.keys[cacheAction.args[0].hashedTitle] = {
                   key: cacheAction.args[0].wrappedKey,
                   rights: 2,
-                }
-                return decryptRSAOAEP(cacheAction.args[1], this.currentUser.privateKey);
+                };
+                return decryptRSAOAEP(
+                  cacheAction.args[1],
+                  this.currentUser.privateKey
+                );
               })
-              .then((metadatas) => {
-                this.currentUser.metadatas[cacheAction.args[0].hashedTitle] = metadatas;
+              .then(metadatas => {
+                this.currentUser.metadatas[
+                  cacheAction.args[0].hashedTitle
+                ] = metadatas;
                 return this.popCacheAction();
               }));
         } else if (cacheAction.action === 'editSecret') {
           return promise.then(() => {
             const secretId = this.getConflict(cacheAction.args[0]);
             const encryptedContent = cacheAction.args[1];
-            const secretTitle = cacheAction.args[2];
             return decryptRSAOAEP(encryptedContent, this.currentUser.privateKey)
               .then(content => {
                 if (typeof this.currentUser.keys[secretId] === 'undefined') {
                   return this.addSecret(
-                    `${secretTitle} (Conflict)`,
-                    content
+                    `${content.title} (Conflict)`,
+                    content.secret
                   ).then(conflictSecretId =>
                     this.setConflict(cacheAction.args[0], conflictSecretId));
                 }
-                return this.editSecret(secretId, content);
+                return this.editSecret(secretId, content.secret);
+              })
+              .then(() => this.popCacheAction());
+          });
+        } else if (cacheAction.action === 'renameSecret') {
+          return promise.then(() => {
+            const secretId = this.getConflict(cacheAction.args[0]);
+            const encryptedContent = cacheAction.args[1];
+            return decryptRSAOAEP(encryptedContent, this.currentUser.privateKey)
+              .then(content => {
+                if (typeof this.currentUser.keys[secretId] === 'undefined') {
+                  return this.addSecret(
+                    `${content.title} (Conflict)`,
+                    content.secret
+                  ).then(conflictSecretId =>
+                    this.setConflict(cacheAction.args[0], conflictSecretId));
+                }
+                return this.renameSecret(secretId, content.title);
               })
               .then(() => this.popCacheAction());
           });
@@ -338,13 +359,10 @@ class Secretin {
       })
       .then(() => {
         progress(new DecryptUserOptionsStatus());
-        return this.currentUser.importOptions(remoteUser.options)
+        return this.currentUser.importOptions(remoteUser.options);
       })
-      .then(() => this.currentUser.decryptAllMetadatas(
-          remoteUser.metadatas,
-          progress
-        )
-      )
+      .then(() =>
+        this.currentUser.decryptAllMetadatas(remoteUser.metadatas, progress))
       .catch(err => {
         if (err === 'Offline') {
           this.offlineDB();
@@ -392,9 +410,11 @@ class Secretin {
           return encryptRSAOAEP(
             metadatas,
             this.currentUser.publicKey
-          )
-          .then(encryptedMetadatas => {
-            this.pushCacheAction('addSecret', [secretObject, encryptedMetadatas]);
+          ).then(encryptedMetadatas => {
+            this.pushCacheAction('addSecret', [
+              secretObject,
+              encryptedMetadatas,
+            ]);
           });
         }
         return Promise.resolve();
@@ -463,12 +483,15 @@ class Secretin {
             return Promise.reject(new OfflineError());
           }
           const args = [hashedTitle];
+          const toEncrypt = {
+            secret: content,
+            title: this.currentUser.metadatas[hashedTitle].title,
+          };
           return encryptRSAOAEP(
-            content,
+            toEncrypt,
             this.currentUser.publicKey
           ).then(encryptedContent => {
             args.push(encryptedContent);
-            args.push(this.currentUser.metadatas[hashedTitle].title);
             return this.pushCacheAction('editSecret', args);
           });
         }
@@ -632,14 +655,9 @@ class Secretin {
             }
 
             if (typeof infos.folder !== 'undefined') {
-              const parentMetadatas = this.currentUser.metadatas[infos.folder];
-              metaUser.folders[infos.folder] = {
-                name: parentMetadatas.title,
-              };
+              metaUser.folders[infos.folder] = true;
             } else {
-              metaUser.folders[hashedFolder] = {
-                name: folderMetadatas.title,
-              };
+              metaUser.folders[hashedFolder] = true;
             }
 
             commonParentToClean.forEach(parentFolder => {
@@ -760,11 +778,38 @@ class Secretin {
     }
   }
 
+  renameSecret(hashedTitle, newTitle) {
+    this.currentUser.metadatas[hashedTitle].title = newTitle;
+    if (!this.editableDB) {
+      if (
+        Object.keys(this.currentUser.metadatas[hashedTitle].users).length > 1
+      ) {
+        return Promise.reject(new OfflineError());
+      }
+      const args = [hashedTitle];
+
+      return this.getSecret(hashedTitle)
+        .then(secret => {
+          const toEncrypt = {
+            secret,
+            title: newTitle,
+          };
+          return encryptRSAOAEP(toEncrypt, this.currentUser.publicKey);
+        })
+        .then(encryptedContent => {
+          args.push(encryptedContent);
+          return this.pushCacheAction('renameSecret', args);
+        });
+    }
+    return this.resetMetadatas(hashedTitle).catch(err => {
+      if (err instanceof OfflineError) {
+        return this.renameSecret(hashedTitle, newTitle);
+      }
+      throw err;
+    });
+  }
+
   resetMetadatas(hashedTitle) {
-    const secretMetadatas = this.currentUser.metadatas[hashedTitle];
-    const now = new Date();
-    secretMetadatas.lastModifiedAt = now;
-    secretMetadatas.lastModifiedBy = this.currentUser.username;
     return this.getSecret(hashedTitle)
       .then(secret => this.editSecret(hashedTitle, secret))
       .then(() => {
@@ -813,14 +858,9 @@ class Secretin {
             folders: {},
           };
           if (typeof sharedSecretObject.inFolder !== 'undefined') {
-            const parentMetadatas = this.currentUser.metadatas[
-              sharedSecretObject.inFolder
-            ];
             secretMetadatas.users[friend.username].folders[
               sharedSecretObject.inFolder
-            ] = {
-              name: parentMetadatas.title,
-            };
+            ] = true;
           } else {
             secretMetadatas.users[friend.username].folders.ROOT = true;
           }
