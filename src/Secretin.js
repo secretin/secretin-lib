@@ -77,7 +77,7 @@ class Secretin {
             this.api = this.oldApi;
             this.editableDB = true;
             this.dispatchEvent('connectionChange', { connection: 'online' });
-            if (typeof this.currentUser.username !== 'undefined') {
+            if (typeof this.currentUser.username !== 'undefined' && typeof window.process !== 'undefined') {
               this.getDb().then(() => this.doCacheActions());
             }
             return Promise.resolve();
