@@ -1671,17 +1671,15 @@ var API = function () {
     });
   };
 
-  API.prototype.getSecret = function getSecret(hash, user) {
+  API.prototype.getSecret = function getSecret(hash) {
     var _this10 = this;
 
-    return user.sign(hash).then(function () {
-      return new Promise(function (resolve, reject) {
-        if (typeof _this10.db.secrets[hash] === 'undefined') {
-          reject("You don't have this secret");
-        } else {
-          resolve(_this10.db.secrets[hash]);
-        }
-      });
+    return new Promise(function (resolve, reject) {
+      if (typeof _this10.db.secrets[hash] === 'undefined') {
+        reject("You don't have this secret");
+      } else {
+        resolve(_this10.db.secrets[hash]);
+      }
     });
   };
 
@@ -1705,19 +1703,17 @@ var API = function () {
   API.prototype.getHistory = function getHistory(user, hash) {
     var _this12 = this;
 
-    return user.sign(hash).then(function () {
-      return new Promise(function (resolve, reject) {
-        if (typeof _this12.db.secrets[hash] === 'undefined') {
-          reject("You don't have this secret");
-        } else {
-          var secret = _this12.db.secrets[hash];
-          var history = {
-            iv: secret.iv_history,
-            secret: secret.history
-          };
-          resolve(history);
-        }
-      });
+    return new Promise(function (resolve, reject) {
+      if (typeof _this12.db.secrets[hash] === 'undefined') {
+        reject("You don't have this secret");
+      } else {
+        var secret = _this12.db.secrets[hash];
+        var history = {
+          iv: secret.iv_history,
+          secret: secret.history
+        };
+        resolve(history);
+      }
     });
   };
 
@@ -1733,7 +1729,7 @@ var API = function () {
     });
   };
 
-  API.prototype.editUser = function editUser(user, datas, type) {
+  API.prototype.editUser = function editUser(user, datas) {
     var _this14 = this;
 
     var hashedUsername = void 0;
@@ -1741,7 +1737,7 @@ var API = function () {
       hashedUsername = rHashedUsername;
       return new Promise(function (resolve, reject) {
         if (typeof _this14.db.users[hashedUsername] !== 'undefined') {
-          if (type === 'password') {
+          if (typeof datas.privateKey !== 'undefined' && typeof datas.pass !== 'undefined') {
             resolve(_this14.changePassword(hashedUsername, datas.privateKey, datas.pass));
           } else {
             _this14.db.users[hashedUsername].options = datas;
@@ -3737,10 +3733,12 @@ var API$1 = function () {
       key: secretObject.wrappedKey,
       title: secretObject.hashedTitle
     });
-    return user.sign(json).then(function (signature) {
+    var now = Date.now();
+    return user.sign(json + '|' + now).then(function (signature) {
       return doPOST(_this2.db + '/secret/' + secretObject.hashedUsername, {
         json: json,
-        sig: signature
+        sig: signature,
+        sigTime: now
       });
     });
   };
@@ -3749,12 +3747,14 @@ var API$1 = function () {
     var _this3 = this;
 
     var url = void 0;
+    var now = Date.now();
     return getSHA256(user.username).then(function (hashedUsername) {
       url = '/secret/' + hashedUsername + '/' + hashedTitle;
-      return user.sign('DELETE ' + url);
+      return user.sign('DELETE ' + url + '|' + now);
     }).then(function (signature) {
       return doDELETE('' + _this3.db + url, {
-        sig: signature
+        sig: signature,
+        sigTime: now
       });
     });
   };
@@ -3772,13 +3772,15 @@ var API$1 = function () {
       history: secretObject.history,
       title: hashedTitle
     });
+    var now = Date.now();
     return getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
-      return user.sign(json);
+      return user.sign(json + '|' + now);
     }).then(function (signature) {
       return doPUT(_this4.db + '/secret/' + hashedUsername, {
         json: json,
-        sig: signature
+        sig: signature,
+        sigTime: now
       });
     });
   };
@@ -3792,13 +3794,15 @@ var API$1 = function () {
       secret: secret,
       title: hashedTitle
     });
+    var now = Date.now();
     return getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
-      return user.sign(json);
+      return user.sign(json + '|' + now);
     }).then(function (signature) {
       return doPOST(_this5.db + '/newKey/' + hashedUsername, {
         json: json,
-        sig: signature
+        sig: signature,
+        sigTime: now
       });
     });
   };
@@ -3812,6 +3816,7 @@ var API$1 = function () {
       title: hashedTitle
     };
     var json = void 0;
+    var now = Date.now();
     return getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       var hashedFriendUseramePromises = [];
@@ -3825,11 +3830,12 @@ var API$1 = function () {
       });
       datas.friendNames = hashedFriendUsernames;
       json = JSON.stringify(datas);
-      return user.sign(json);
+      return user.sign(json + '|' + now);
     }).then(function (signature) {
       return doPOST(_this6.db + '/unshare/' + hashedUsername, {
         json: json,
-        sig: signature
+        sig: signature,
+        sigTime: now
       });
     });
   };
@@ -3841,13 +3847,15 @@ var API$1 = function () {
     var json = JSON.stringify({
       secretObjects: sharedSecretObjects
     });
+    var now = Date.now();
     return getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
-      return user.sign(json);
+      return user.sign(json + '|' + now);
     }).then(function (signature) {
       return doPOST(_this7.db + '/share/' + hashedUsername, {
         json: json,
-        sig: signature
+        sig: signature,
+        sigTime: now
       });
     });
   };
@@ -3898,11 +3906,12 @@ var API$1 = function () {
     var _this10 = this;
 
     var url = void 0;
+    var now = Date.now();
     return getSHA256(user.username).then(function (hashedUsername) {
       url = '/user/' + hashedUsername;
-      return user.sign(url);
+      return user.sign(url + '|' + now);
     }).then(function (signature) {
-      return doGET('' + _this10.db + url + '?sig=' + signature);
+      return doGET('' + _this10.db + url + '?sig=' + signature + '&sigTime=' + now);
     });
   };
 
@@ -3910,11 +3919,12 @@ var API$1 = function () {
     var _this11 = this;
 
     var url = void 0;
+    var now = Date.now();
     return getSHA256(user.username).then(function (hashedUsername) {
       url = '/secret/' + hashedUsername + '/' + hashedTitle;
-      return user.sign(url);
+      return user.sign(url + '|' + now);
     }).then(function (signature) {
-      return doGET('' + _this11.db + url + '?sig=' + signature);
+      return doGET('' + _this11.db + url + '?sig=' + signature + '&sigTime=' + now);
     });
   };
 
@@ -3922,11 +3932,12 @@ var API$1 = function () {
     var _this12 = this;
 
     var url = void 0;
+    var now = Date.now();
     return getSHA256(user.username).then(function (hashedUsername) {
       url = '/history/' + hashedUsername + '/' + hashedTitle;
-      return user.sign(url);
+      return user.sign(url + '|' + now);
     }).then(function (signature) {
-      return doGET('' + _this12.db + url + '?sig=' + signature);
+      return doGET('' + _this12.db + url + '?sig=' + signature + '&sigTime=' + now);
     }).then(function (secret) {
       return {
         iv: secret.iv_history,
@@ -3961,13 +3972,15 @@ var API$1 = function () {
 
     var url = void 0;
     var json = JSON.stringify(revs);
+    var now = Date.now();
     return getSHA256(user.username).then(function (hashedUsername) {
       url = '/database/' + hashedUsername;
-      return user.sign(json);
+      return user.sign(json + '|' + now);
     }).then(function (signature) {
       return doPOST('' + _this14.db + url, {
         json: json,
-        sig: signature
+        sig: signature,
+        sigTime: now
       });
     });
   };
@@ -3976,26 +3989,29 @@ var API$1 = function () {
     var _this15 = this;
 
     var url = void 0;
+    var now = Date.now();
     return getSHA256(user.username).then(function (hashedUsername) {
       url = '/rescueCodes/' + hashedUsername;
-      return user.sign(url);
+      return user.sign(url + '|' + now);
     }).then(function (signature) {
-      return doGET('' + _this15.db + url + '?sig=' + signature);
+      return doGET('' + _this15.db + url + '?sig=' + signature + '&sigTime=' + now);
     });
   };
 
-  API.prototype.editUser = function editUser(user, datas, type) {
+  API.prototype.editUser = function editUser(user, datas) {
     var _this16 = this;
 
     var hashedUsername = void 0;
     var json = JSON.stringify(datas);
+    var now = Date.now();
     return getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
-      return user.sign(json);
+      return user.sign(json + '|' + now);
     }).then(function (signature) {
-      return doPUT(_this16.db + '/user/' + hashedUsername + '?type=' + type, {
+      return doPUT(_this16.db + '/user/' + hashedUsername, {
         json: json,
-        sig: signature
+        sig: signature,
+        sigTime: now
       });
     });
   };
@@ -4008,13 +4024,15 @@ var API$1 = function () {
       pass: pass,
       privateKey: privateKey
     });
+    var now = Date.now();
     return getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
-      return user.sign(json);
+      return user.sign(json + '|' + now);
     }).then(function (signature) {
       return doPUT(_this17.db + '/user/' + hashedUsername, {
         json: json,
-        sig: signature
+        sig: signature,
+        sigTime: now
       });
     });
   };
@@ -4030,13 +4048,15 @@ var API$1 = function () {
     var json = JSON.stringify({
       seed: seed
     });
+    var now = Date.now();
     return getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
-      return user.sign(json);
+      return user.sign(json + '|' + now);
     }).then(function (signature) {
       return doPUT(_this18.db + '/activateTotp/' + hashedUsername, {
         json: json,
-        sig: signature
+        sig: signature,
+        sigTime: now
       });
     });
   };
@@ -4045,11 +4065,12 @@ var API$1 = function () {
     var _this19 = this;
 
     var url = void 0;
+    var now = Date.now();
     return getSHA256(user.username).then(function (hashedUsername) {
       url = '/deactivateTotp/' + hashedUsername;
-      return user.sign(url);
+      return user.sign(url + '|' + now);
     }).then(function (signature) {
-      return doPUT('' + _this19.db + url + '?sig=' + signature, {});
+      return doPUT('' + _this19.db + url + '?sig=' + signature + '&sigTime=now', {});
     });
   };
 
@@ -4060,13 +4081,15 @@ var API$1 = function () {
     var json = JSON.stringify({
       shortpass: shortpass
     });
+    var now = Date.now();
     return getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
-      return user.sign(json);
+      return user.sign(json + '|' + now);
     }).then(function (signature) {
       return doPUT(_this20.db + '/activateShortLogin/' + hashedUsername, {
         json: json,
-        sig: signature
+        sig: signature,
+        sigTime: now
       });
     });
   };
