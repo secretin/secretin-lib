@@ -119,7 +119,6 @@ class API {
           this.db.secrets[hashedTitle].editOffline = true;
           this.db.secrets[hashedTitle].iv_history = secretObject.iv_history;
           this.db.secrets[hashedTitle].history = secretObject.history;
-          this.db.secrets[hashedTitle].rev = 'Standalone';
           return Promise.resolve();
         }
         return Promise.reject('Secret not found');
