@@ -53,8 +53,10 @@ class API {
           this.db.secrets[secretObject.hashedTitle] = {
             secret: secretObject.secret,
             metadatas: secretObject.metadatas,
+            history: secretObject.history,
             iv: secretObject.iv,
             iv_meta: secretObject.iv_meta,
+            iv_history: secretObject.iv_history,
             users: [secretObject.hashedUsername],
             rev: 'Standalone',
           };
@@ -115,6 +117,8 @@ class API {
           this.db.secrets[hashedTitle].iv_meta = secretObject.iv_meta;
           this.db.secrets[hashedTitle].metadatas = secretObject.metadatas;
           this.db.secrets[hashedTitle].editOffline = true;
+          this.db.secrets[hashedTitle].iv_history = secretObject.iv_history;
+          this.db.secrets[hashedTitle].history = secretObject.history;
           return Promise.resolve();
         }
         return Promise.reject('Secret not found');
@@ -140,6 +144,8 @@ class API {
           this.db.secrets[hashedTitle].secret = secret.secret;
           this.db.secrets[hashedTitle].iv_meta = secret.iv_meta;
           this.db.secrets[hashedTitle].metadatas = secret.metadatas;
+          this.db.secrets[hashedTitle].iv_history = secret.iv_history;
+          this.db.secrets[hashedTitle].history = secret.history;
           wrappedKeys.forEach(wrappedKey => {
             if (typeof this.db.users[wrappedKey.user] !== 'undefined') {
               if (
@@ -388,6 +394,24 @@ class API {
       });
       resolve(result);
     });
+  }
+
+  getHistory(user, hash) {
+    return user.sign(hash).then(
+      () =>
+        new Promise((resolve, reject) => {
+          if (typeof this.db.secrets[hash] === 'undefined') {
+            reject("You don't have this secret");
+          } else {
+            const secret = this.db.secrets[hash];
+            const history = {
+              iv: secret.iv_history,
+              secret: secret.history,
+            };
+            resolve(history);
+          }
+        })
+    );
   }
 
   getProtectKeyParameters() {

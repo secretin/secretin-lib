@@ -182,7 +182,7 @@ class User {
       });
   }
 
-  editSecret(hashedTitle, secret) {
+  editSecret(hashedTitle, secret, history) {
     const metadatas = this.metadatas[hashedTitle];
     if (typeof metadatas === 'undefined') {
       return Promise.reject("You don't have this secret");
@@ -193,12 +193,14 @@ class User {
     const wrappedKey = this.keys[hashedTitle].key;
     const result = {};
     return this.unwrapKey(wrappedKey)
-      .then(key => this.encryptSecret(metadatas, secret, key))
+      .then(key => this.encryptSecret(metadatas, secret, history, key))
       .then(secretObject => {
         result.secret = secretObject.secret;
         result.iv = secretObject.iv;
         result.metadatas = secretObject.metadatas;
         result.iv_meta = secretObject.iv_meta;
+        result.history = secretObject.history;
+        result.iv_history = secretObject.iv_history;
         return result;
       });
   }
@@ -219,6 +221,8 @@ class User {
         result.iv = secretObject.iv;
         result.metadatas = secretObject.metadatas;
         result.iv_meta = secretObject.iv_meta;
+        result.history = secretObject.history;
+        result.iv_history = secretObject.iv_history;
         result.hashedUsername = secretObject.hashedUsername;
         return this.wrapKey(secretObject.key, this.publicKey);
       })
@@ -228,9 +232,30 @@ class User {
       });
   }
 
-  encryptSecret(metadatas, secret, key) {
+  encryptSecret(metadatas, secret, history, key) {
     const result = {};
-    return encryptAESGCM256(secret, key)
+    let newHistory;
+    return Promise.resolve()
+      .then(() => {
+        if (typeof history !== 'undefined') {
+          return this.decryptSecret(metadatas.id, history);
+        }
+        return Promise.resolve([]);
+      })
+      .then(rHistory => {
+        newHistory = rHistory;
+        if (
+          newHistory.length === 0 ||
+          JSON.stringify(newHistory[0].secret) !== JSON.stringify(secret)
+        ) {
+          newHistory.unshift({
+            secret,
+            lastModifiedAt: metadatas.lastModifiedAt,
+            lastModifiedBy: metadatas.lastModifiedBy,
+          });
+        }
+        return encryptAESGCM256(secret, key);
+      })
       .then(secretObject => {
         result.secret = secretObject.secret;
         result.iv = secretObject.iv;
@@ -240,6 +265,11 @@ class User {
       .then(secretObject => {
         result.metadatas = secretObject.secret;
         result.iv_meta = secretObject.iv;
+        return encryptAESGCM256(newHistory, secretObject.key);
+      })
+      .then(secretObject => {
+        result.history = secretObject.secret;
+        result.iv_history = secretObject.iv;
         return getSHA256(this.username);
       })
       .then(hashedUsername => {

@@ -470,9 +470,11 @@ class Secretin {
   }
 
   editSecret(hashedTitle, content) {
-    let secretObject;
-    return this.currentUser
-      .editSecret(hashedTitle, content)
+    let secretObject
+    return this.api
+      .getHistory(this.currentUser, hashedTitle)
+      .then(history =>
+        this.currentUser.editSecret(hashedTitle, content, history))
       .then(rSecretObject => {
         secretObject = rSecretObject;
         if (!this.editableDB) {
@@ -994,22 +996,30 @@ class Secretin {
     const secret = {};
     let hashedCurrentUsername;
     let wrappedKeys;
+    let history;
     return this.api
       .getSecret(hashedTitle, this.currentUser)
       .then(eSecret => {
         encryptedSecret = eSecret;
+        return this.api.getHistory(this.currentUser, hashedTitle);
+      })
+      .then(rHistory => {
+        history = rHistory;
         return this.currentUser.decryptSecret(hashedTitle, encryptedSecret);
       })
       .then(rawSecret =>
         this.currentUser.encryptSecret(
           this.currentUser.metadatas[hashedTitle],
-          rawSecret
+          rawSecret,
+          history
         ))
       .then(secretObject => {
         secret.secret = secretObject.secret;
         secret.iv = secretObject.iv;
         secret.metadatas = secretObject.metadatas;
         secret.iv_meta = secretObject.iv_meta;
+        secret.history = secretObject.history;
+        secret.iv_history = secretObject.iv_history;
         hashedCurrentUsername = secretObject.hashedUsername;
         const wrappedKeysPromises = [];
         encryptedSecret.users.forEach(hashedUsername => {
@@ -1143,6 +1153,30 @@ class Secretin {
         if (err === 'Offline') {
           this.offlineDB();
           return this.getSecret(hashedTitle);
+        }
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      });
+  }
+
+  getHistory(hashedTitle, index) {
+    return this.api
+      .getHistory(this.currentUser, hashedTitle)
+      .then(encryptedHistory =>
+        this.currentUser.decryptSecret(hashedTitle, encryptedHistory))
+      .then(history => {
+        if (typeof index === 'undefined') {
+          return history;
+        } else if (index < 0) {
+          const diff = -index % history.length;
+          return history[-diff];
+        }
+        return history[index % history.length];
+      })
+      .catch(err => {
+        if (err === 'Offline') {
+          this.offlineDB();
+          return this.getHistory(hashedTitle, index);
         }
         const wrapper = new WrappingError(err);
         throw wrapper.error;

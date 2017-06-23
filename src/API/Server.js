@@ -35,6 +35,8 @@ class API {
       iv: secretObject.iv,
       metadatas: secretObject.metadatas,
       iv_meta: secretObject.iv_meta,
+      history: secretObject.history,
+      iv_history: secretObject.iv_history,
       key: secretObject.wrappedKey,
       title: secretObject.hashedTitle,
     });
@@ -65,6 +67,8 @@ class API {
       secret: secretObject.secret,
       iv_meta: secretObject.iv_meta,
       metadatas: secretObject.metadatas,
+      iv_history: secretObject.iv_history,
+      history: secretObject.history,
       title: hashedTitle,
     });
     return getSHA256(user.username)
@@ -198,6 +202,20 @@ class API {
         return user.sign(url);
       })
       .then(signature => doGET(`${this.db}${url}?sig=${signature}`));
+  }
+
+  getHistory(user, hashedTitle) {
+    let url;
+    return getSHA256(user.username)
+      .then(hashedUsername => {
+        url = `/history/${hashedUsername}/${hashedTitle}`;
+        return user.sign(url);
+      })
+      .then(signature => doGET(`${this.db}${url}?sig=${signature}`))
+      .then(secret => ({
+        iv: secret.iv_history,
+        secret: secret.history,
+      }));
   }
 
   getProtectKey(username, deviceName, hash) {
