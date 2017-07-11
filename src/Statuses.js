@@ -66,6 +66,17 @@ export class DecryptMetadataStatus extends Status {
   }
 }
 
+export class ImportSecretStatus extends Status {
+  constructor(state, total) {
+    super(state, total);
+    this.message = 'Import secret';
+  }
+
+  step() {
+    this.state += 1;
+  }
+}
+
 const Statuses = {
   Status,
   GetDerivationStatus,
@@ -76,6 +87,7 @@ const Statuses = {
   DecryptUserOptionsStatus,
   DecryptMetadataStatus,
   GetProtectKeyStatus,
+  ImportSecretStatus,
 };
 
 export default Statuses;

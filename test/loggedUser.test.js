@@ -4,22 +4,28 @@ describe('Logged user', () => {
   Date.prototype.toISOString = () => now;
 
   const secretContent = {
-    fields: [{
-      label: 'a',
-      content: 'b',
-    }],
+    fields: [
+      {
+        label: 'a',
+        content: 'b',
+      },
+    ],
   };
   const newSecretContent = {
-    fields: [{
-      label: 'c',
-      content: 'd',
-    }],
+    fields: [
+      {
+        label: 'c',
+        content: 'd',
+      },
+    ],
   };
   const otherSecretInOtherFolderContent = {
-    fields: [{
-      label: 'e',
-      content: 'f',
-    }],
+    fields: [
+      {
+        label: 'e',
+        content: 'f',
+      },
+    ],
   };
 
   const newSecretTitle = 'newSecret';
@@ -74,42 +80,46 @@ describe('Logged user', () => {
 
   // eslint-disable-next-line
   beforeEach(() => {
-    localStorage.removeItem(`${Secretin.prefix}cache`);
+    localStorage.clear();
     // eslint-disable-next-line
     availableKeyCounter = 0;
     // eslint-disable-next-line
     return resetAndGetDB()
       .then(() => this.secretin.newUser(username, password))
       .then(() => this.secretin.addSecret(secretTitle, secretContent))
-      .then((hashedTitle) => {
+      .then(hashedTitle => {
         secretId = hashedTitle;
         return this.secretin.addFolder(folderTitle);
       })
-      .then((hashedTitle) => {
+      .then(hashedTitle => {
         folderId = hashedTitle;
         return this.secretin.addFolder(folderInFolderTitle);
       })
-      .then((hashedTitle) => {
+      .then(hashedTitle => {
         folderInFolderId = hashedTitle;
         return this.secretin.addFolder(otherFolderTitle);
       })
-      .then((hashedTitle) => {
+      .then(hashedTitle => {
         otherFolderId = hashedTitle;
         return this.secretin.addSecret(secretInFolderTitle, secretContent);
       })
-      .then((hashedTitle) => {
+      .then(hashedTitle => {
         secretInFolderId = hashedTitle;
         return this.secretin.addSecret(
           otherSecretInOtherFolderTitle,
           otherSecretInOtherFolderContent
         );
       })
-      .then((hashedTitle) => {
+      .then(hashedTitle => {
         otherSecretInOtherFolderId = hashedTitle;
         return this.secretin.addSecretToFolder(secretInFolderId, folderId);
       })
       .then(() => this.secretin.addSecretToFolder(folderInFolderId, folderId))
-      .then(() => this.secretin.addSecretToFolder(otherSecretInOtherFolderId, otherFolderId))
+      .then(() =>
+        this.secretin.addSecretToFolder(
+          otherSecretInOtherFolderId,
+          otherFolderId
+        ))
       .then(() => {
         this.secretin.currentUser.disconnect();
         return this.secretin.loginUser(username, password);
@@ -209,12 +219,220 @@ describe('Logged user', () => {
         id: folderInFolderId,
       },
     };
-    return this.secretin.currentUser.metadatas.should.deep.equal(expectedMetadatas);
+    return this.secretin.currentUser.metadatas.should.deep.equal(
+      expectedMetadatas
+    );
   });
 
-  if (__karma__.config.args[0] === 'server') {
-    it('Can get database', () => {
-      const expected = {
+  it('Can import database', () => {
+    const usernameOld = 'user_old';
+    const passwordOld = 'password_old';
+    const expectedMetadatas = {
+      [secretId]: {
+        id: secretId,
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+        title: secretTitle,
+        type: 'secret',
+        users: {
+          [username]: {
+            username,
+            rights: 2,
+            folders: { ROOT: true },
+          },
+        },
+      },
+      [folderId]: {
+        id: folderId,
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+        title: folderTitle,
+        type: 'folder',
+        users: {
+          [username]: {
+            username,
+            rights: 2,
+            folders: { ROOT: true },
+          },
+        },
+      },
+      [otherFolderId]: {
+        id: otherFolderId,
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+        title: otherFolderTitle,
+        type: 'folder',
+        users: {
+          [username]: {
+            username,
+            rights: 2,
+            folders: { ROOT: true },
+          },
+        },
+      },
+      [secretInFolderId]: {
+        users: {
+          [username]: {
+            username,
+            rights: 2,
+            folders: {
+              [folderId]: true,
+            },
+          },
+        },
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+        title: secretInFolderTitle,
+        type: 'secret',
+        id: secretInFolderId,
+      },
+      [otherSecretInOtherFolderId]: {
+        users: {
+          [username]: {
+            username,
+            rights: 2,
+            folders: {
+              [otherFolderId]: true,
+            },
+          },
+        },
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+        title: otherSecretInOtherFolderTitle,
+        type: 'secret',
+        id: otherSecretInOtherFolderId,
+      },
+      [folderInFolderId]: {
+        users: {
+          [username]: {
+            username,
+            rights: 2,
+            folders: {
+              [folderId]: true,
+            },
+          },
+        },
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+        title: folderInFolderTitle,
+        type: 'folder',
+        id: folderInFolderId,
+      },
+      '00905719c739fcccc8b45613d3bf4da69e2c036f37e77f2f40b23c1d174ce2b5': {
+        id: '00905719c739fcccc8b45613d3bf4da69e2c036f37e77f2f40b23c1d174ce2b5',
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+        title: `${secretInFolderTitle}_old`,
+        type: 'secret',
+        users: {
+          [username]: {
+            folders: {
+              f0d578bd1227b874178621f8a7b2298aca6442b782d399fa42affaa5efdc0cb4: true,
+            },
+            rights: 2,
+            username,
+          },
+        },
+      },
+      '1095e5806f1217be96d35c24193bbc65c355dd6d1e58269fb4bd8f9ecee23a1e': {
+        id: '1095e5806f1217be96d35c24193bbc65c355dd6d1e58269fb4bd8f9ecee23a1e',
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+        title: `${otherFolderTitle}_old`,
+        type: 'folder',
+        users: {
+          [username]: {
+            folders: { ROOT: true },
+            rights: 2,
+            username,
+          },
+        },
+      },
+      '49d78edb5095243ed23e43d45c22fdd9b1ee8aef2711b5d3cd62f9706383dc0b': {
+        id: '49d78edb5095243ed23e43d45c22fdd9b1ee8aef2711b5d3cd62f9706383dc0b',
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+        title: `${folderInFolderTitle}_old`,
+        type: 'folder',
+        users: {
+          [username]: {
+            folders: {
+              f0d578bd1227b874178621f8a7b2298aca6442b782d399fa42affaa5efdc0cb4: true,
+            },
+            rights: 2,
+            username,
+          },
+        },
+      },
+      '5dec92bdbdb9284463226e571c8fe953402dfd2426389a1e369c49c2c954bc38': {
+        id: '5dec92bdbdb9284463226e571c8fe953402dfd2426389a1e369c49c2c954bc38',
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+        title: `${secretTitle}_old`,
+        type: 'secret',
+        users: {
+          [username]: {
+            folders: {
+              ROOT: true,
+            },
+            rights: 2,
+            username,
+          },
+        },
+      },
+      bb8b69ef509350f7be31d26e9b656d57657518549da5934a0ffaf3a99883d9e3: {
+        id: 'bb8b69ef509350f7be31d26e9b656d57657518549da5934a0ffaf3a99883d9e3',
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+        title: `${otherSecretInOtherFolderTitle}_old`,
+        type: 'secret',
+        users: {
+          [username]: {
+            folders: {
+              '1095e5806f1217be96d35c24193bbc65c355dd6d1e58269fb4bd8f9ecee23a1e': true,
+            },
+            rights: 2,
+            username,
+          },
+        },
+      },
+      f0d578bd1227b874178621f8a7b2298aca6442b782d399fa42affaa5efdc0cb4: {
+        id: 'f0d578bd1227b874178621f8a7b2298aca6442b782d399fa42affaa5efdc0cb4',
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+        title: `${folderTitle}_old`,
+        type: 'folder',
+        users: {
+          [username]: {
+            folders: {
+              ROOT: true,
+            },
+            rights: 2,
+            username,
+          },
+        },
+      },
+    };
+    return (
+      this.secretin
+        // eslint-disable-next-line
+        .importDb(usernameOld, passwordOld, mockedExportedDB)
+        .then(() => this.secretin.currentUser.metadatas)
+        .should.eventually.deep.equal(expectedMetadatas)
+        .then(() => {
+          this.secretin.currentUser.disconnect();
+          return this.secretin.loginUser(username, password);
+        })
+        .then(() => this.secretin.currentUser.metadatas)
+        .should.eventually.deep.equal(expectedMetadatas)
+    );
+  });
+
+  it('Can get database', () => {
+    let expected;
+    let expected2;
+    if (__karma__.config.args[0] === 'server') {
+      expected = {
         [secretId]: '1',
         [folderId]: '3',
         [otherFolderId]: '2',
@@ -223,7 +441,7 @@ describe('Logged user', () => {
         [folderInFolderId]: '2',
       };
 
-      const expected2 = {
+      expected2 = {
         [secretId]: '2',
         [folderId]: '3',
         [otherFolderId]: '2',
@@ -231,36 +449,58 @@ describe('Logged user', () => {
         [otherSecretInOtherFolderId]: '2',
         [folderInFolderId]: '2',
       };
+    } else {
+      expected = {
+        [secretId]: 'Standalone',
+        [folderId]: 'Standalone',
+        [otherFolderId]: 'Standalone',
+        [secretInFolderId]: 'Standalone',
+        [otherSecretInOtherFolderId]: 'Standalone',
+        [folderInFolderId]: 'Standalone',
+      };
 
-      const cacheKey = `${Secretin.prefix}cache_${this.secretin.currentUser.username}`;
-      return this.secretin.getDb()
-        .then((DbCacheStr) => {
-          const DbCache = JSON.parse(DbCacheStr);
-          const revs = {};
-          Object.keys(DbCache.secrets).forEach((key) => {
-            revs[key] = DbCache.secrets[key].rev[0];
-          });
-          return revs;
-        })
-        .should.eventually.deep.equal(expected)
-        .then(() => this.secretin.editSecret(secretId, newSecretContent)
-        .then(() => this.secretin.getSecret(secretId))
-        .then(() => this.secretin.getDb())
-        .then(() => localStorage.getItem(cacheKey))
-        .then((DbCacheStr) => {
-          const DbCache = JSON.parse(DbCacheStr);
-          const revs = {};
-          Object.keys(DbCache.secrets).forEach((key) => {
-            revs[key] = DbCache.secrets[key].rev[0];
-          });
-          return revs;
-        })
-        .should.eventually.deep.equal(expected2));
-    });
-  }
+      expected2 = {
+        [secretId]: 'Standalone',
+        [folderId]: 'Standalone',
+        [otherFolderId]: 'Standalone',
+        [secretInFolderId]: 'Standalone',
+        [otherSecretInOtherFolderId]: 'Standalone',
+        [folderInFolderId]: 'Standalone',
+      };
+    }
+
+    const cacheKey = `${Secretin.prefix}cache_${this.secretin.currentUser.username}`;
+    return this.secretin
+      .getDb()
+      .then(DbCacheStr => {
+        const DbCache = JSON.parse(DbCacheStr);
+        const revs = {};
+        Object.keys(DbCache.secrets).forEach(key => {
+          revs[key] = DbCache.secrets[key].rev.split('-')[0];
+        });
+        return revs;
+      })
+      .should.eventually.deep.equal(expected)
+      .then(() =>
+        this.secretin
+          .editSecret(secretId, newSecretContent)
+          .then(() => this.secretin.getSecret(secretId))
+          .then(() => this.secretin.getDb())
+          .then(() => localStorage.getItem(cacheKey))
+          .then(DbCacheStr => {
+            const DbCache = JSON.parse(DbCacheStr);
+            const revs = {};
+            Object.keys(DbCache.secrets).forEach(key => {
+              revs[key] = DbCache.secrets[key].rev.split('-')[0];
+            });
+            return revs;
+          })
+          .should.eventually.deep.equal(expected2));
+  });
 
   it('Can refresh infos', () =>
-    this.secretin.refreshUser()
+    this.secretin
+      .refreshUser()
       .then(() => this.secretin.currentUser.metadatas)
       .should.eventually.deep.equal({
         [secretId]: {
@@ -353,53 +593,54 @@ describe('Logged user', () => {
           type: 'folder',
           id: folderInFolderId,
         },
-      })
-  );
+      }));
 
   it('Can retrieve options', () =>
     this.secretin.currentUser.options.should.deep.equal({
       timeToClose: 30,
-    })
-  );
+    }));
 
   it('Can export private data', () =>
-    this.secretin.currentUser.exportPrivateData(dataToExport)
-      .should.eventually.have.all.keys(
-        'data',
-        'signature'
-      )
-  );
+    this.secretin.currentUser
+      .exportPrivateData(dataToExport)
+      .should.eventually.have.all.keys('data', 'signature'));
 
   it('Can import private data', () =>
-    this.secretin.currentUser.importPrivateData(exportedData.data, exportedData.signature)
-      .should.eventually.equal(dataToExport)
-  );
+    this.secretin.currentUser
+      .importPrivateData(exportedData.data, exportedData.signature)
+      .should.eventually.equal(dataToExport));
 
   it('Can edit options', () =>
-    this.secretin.editOptions({
-      timeToClose: 60,
-    })
-    .then(() => this.secretin.currentUser.options)
-    .should.eventually.deep.equal({
-      timeToClose: 60,
-    })
-    .then(() => {
-      this.secretin.currentUser.disconnect();
-      return this.secretin.loginUser(username, password);
-    })
-    .then(() => this.secretin.currentUser.options)
-    .should.eventually.deep.equal({
-      timeToClose: 60,
-    })
-  );
+    this.secretin
+      .editOptions({
+        timeToClose: 60,
+      })
+      .then(() => this.secretin.currentUser.options)
+      .should.eventually.deep.equal({
+        timeToClose: 60,
+      })
+      .then(() => {
+        this.secretin.currentUser.disconnect();
+        return this.secretin.loginUser(username, password);
+      })
+      .then(() => this.secretin.currentUser.options)
+      .should.eventually.deep.equal({
+        timeToClose: 60,
+      }));
 
   it('Can create secret', () => {
     let hashedTitle;
-    return this.secretin.addSecret(newSecretTitle, newSecretContent)
+    return this.secretin
+      .addSecret(newSecretTitle, newSecretContent)
       .then(() => {
         let id = -1;
-        Object.keys(this.secretin.currentUser.metadatas).forEach((mHashedTitle, i) => {
-          if (this.secretin.currentUser.metadatas[mHashedTitle].title === newSecretTitle) {
+        Object.keys(
+          this.secretin.currentUser.metadatas
+        ).forEach((mHashedTitle, i) => {
+          if (
+            this.secretin.currentUser.metadatas[mHashedTitle].title ===
+            newSecretTitle
+          ) {
             id = i;
           }
         });
@@ -426,8 +667,9 @@ describe('Logged user', () => {
 
   it('Can create secret in folder', () => {
     let hashedTitle;
-    return this.secretin.addSecret(newSecretTitle, newSecretContent, folderId)
-      .then((rHashedTitle) => {
+    return this.secretin
+      .addSecret(newSecretTitle, newSecretContent, folderId)
+      .then(rHashedTitle => {
         hashedTitle = rHashedTitle;
         delete this.secretin.currentUser.metadatas[hashedTitle].id;
         return this.secretin.currentUser.metadatas[hashedTitle];
@@ -450,14 +692,15 @@ describe('Logged user', () => {
       .then(() => this.secretin.getSecret(hashedTitle))
       .should.eventually.deep.equal(newSecretContent)
       .then(() => this.secretin.getSecret(folderId))
-      .then((folderContent) => Object.keys(folderContent).length)
+      .then(folderContent => Object.keys(folderContent).length)
       .should.eventually.equal(3);
   });
 
   it('Can create folder', () => {
     let hashedTitle;
-    return this.secretin.addFolder(newFolderTitle)
-      .then((rHashedTitle) => {
+    return this.secretin
+      .addFolder(newFolderTitle)
+      .then(rHashedTitle => {
         hashedTitle = rHashedTitle;
         delete this.secretin.currentUser.metadatas[hashedTitle].id;
         return this.secretin.currentUser.metadatas[hashedTitle];
@@ -481,8 +724,9 @@ describe('Logged user', () => {
 
   it('Can create folder in folder', () => {
     let hashedTitle;
-    return this.secretin.addFolder(newFolderTitle, folderId)
-      .then((rHashedTitle) => {
+    return this.secretin
+      .addFolder(newFolderTitle, folderId)
+      .then(rHashedTitle => {
         hashedTitle = rHashedTitle;
         delete this.secretin.currentUser.metadatas[hashedTitle].id;
         return this.secretin.currentUser.metadatas[hashedTitle];
@@ -505,7 +749,7 @@ describe('Logged user', () => {
       .then(() => this.secretin.getSecret(hashedTitle))
       .should.eventually.deep.equal({})
       .then(() => this.secretin.getSecret(folderId))
-      .then((folderContent) => Object.keys(folderContent).length)
+      .then(folderContent => Object.keys(folderContent).length)
       .should.eventually.equal(3);
   });
 
@@ -526,7 +770,8 @@ describe('Logged user', () => {
   });
 
   it('Can change its password', () =>
-    this.secretin.changePassword(newPassword)
+    this.secretin
+      .changePassword(newPassword)
       .then(() => {
         this.secretin.currentUser.disconnect();
         return this.secretin.loginUser(username, newPassword);
@@ -543,31 +788,30 @@ describe('Logged user', () => {
         'metadatas',
         'options'
       )
-      .then((currentUser) => currentUser.privateKey)
-      .should.eventually.be.instanceOf(CryptoKey)
-  );
+      .then(currentUser => currentUser.privateKey)
+      .should.eventually.be.instanceOf(CryptoKey));
 
   it('Can get secret', () =>
-    this.secretin.getSecret(secretId)
-      .should.eventually.deep.equal(secretContent)
-  );
+    this.secretin
+      .getSecret(secretId)
+      .should.eventually.deep.equal(secretContent));
 
-  it('Can\'t get unknown secret', () =>
-      this.secretin.getSecret(unknownSecretId)
-        .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError)
-    );
+  it("Can't get unknown secret", () =>
+    this.secretin
+      .getSecret(unknownSecretId)
+      .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError));
 
   it('Can edit secret', () =>
-    this.secretin.editSecret(secretId, newSecretContent)
+    this.secretin
+      .editSecret(secretId, newSecretContent)
       .then(() => this.secretin.getSecret(secretId))
-      .should.eventually.deep.equal(newSecretContent)
-  );
+      .should.eventually.deep.equal(newSecretContent));
 
   it('Can rename secret', () =>
-    this.secretin.renameSecret(secretId, newSecretTitle)
+    this.secretin
+      .renameSecret(secretId, newSecretTitle)
       .then(() => this.secretin.currentUser.metadatas[secretId].title)
-      .should.eventually.deep.equal(newSecretTitle)
-  );
+      .should.eventually.deep.equal(newSecretTitle));
 
   it('Can add secret to folder', () => {
     const expectedMetadatas = {
@@ -586,7 +830,8 @@ describe('Logged user', () => {
       type: 'secret',
       id: secretId,
     };
-    return this.secretin.addSecretToFolder(secretId, folderId)
+    return this.secretin
+      .addSecretToFolder(secretId, folderId)
       .then(() => this.secretin.currentUser.metadatas[secretId])
       .should.eventually.deep.equal(expectedMetadatas)
       .then(() => this.secretin.getSecret(folderId))
@@ -618,7 +863,8 @@ describe('Logged user', () => {
       type: 'secret',
       id: secretInFolderId,
     };
-    return this.secretin.removeSecretFromFolder(secretInFolderId, folderId)
+    return this.secretin
+      .removeSecretFromFolder(secretInFolderId, folderId)
       .then(() => this.secretin.currentUser.metadatas[secretInFolderId])
       .should.eventually.deep.equal(expectedMetadatas)
       .then(() => this.secretin.getSecret(folderId))
@@ -714,7 +960,8 @@ describe('Logged user', () => {
         id: folderInFolderId,
       },
     };
-    return this.secretin.deleteSecret(secretId)
+    return this.secretin
+      .deleteSecret(secretId)
       .then(() => this.secretin.currentUser.metadatas)
       .should.eventually.deep.equal(expectedMetadatas)
       .then(() => {
@@ -725,10 +972,10 @@ describe('Logged user', () => {
       .should.eventually.deep.equal(expectedMetadatas);
   });
 
-  it('Can\'t delete unknown secret', () =>
-    this.secretin.deleteSecret(unknownSecretId)
-      .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError)
-  );
+  it("Can't delete unknown secret", () =>
+    this.secretin
+      .deleteSecret(unknownSecretId)
+      .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError));
 
   it('Can delete secret in a folder', () => {
     const expectedMetadatas = {
@@ -807,7 +1054,8 @@ describe('Logged user', () => {
         id: folderInFolderId,
       },
     };
-    return this.secretin.deleteSecret(secretInFolderId)
+    return this.secretin
+      .deleteSecret(secretInFolderId)
       .then(() => this.secretin.currentUser.metadatas)
       .should.eventually.deep.equal(expectedMetadatas)
       .then(() => this.secretin.getSecret(folderId))
@@ -869,7 +1117,8 @@ describe('Logged user', () => {
         id: otherSecretInOtherFolderId,
       },
     };
-    return this.secretin.deleteSecret(folderId)
+    return this.secretin
+      .deleteSecret(folderId)
       .then(() => this.secretin.currentUser.metadatas)
       .should.eventually.deep.equal(expectedMetadatas)
       .then(() => this.secretin.getSecret(secretInFolderId))
@@ -882,15 +1131,15 @@ describe('Logged user', () => {
       .should.eventually.deep.equal(expectedMetadatas);
   });
 
-  it('Can\'t share to unknown user', () =>
-    this.secretin.shareSecret(secretId, unknownUser)
-      .should.be.rejectedWith(Secretin.Errors.FriendNotFoundError)
-  );
+  it("Can't share to unknown user", () =>
+    this.secretin
+      .shareSecret(secretId, unknownUser)
+      .should.be.rejectedWith(Secretin.Errors.FriendNotFoundError));
 
-  it('Can\'t unshare to unknown user', () =>
-    this.secretin.unshareSecret(secretId, unknownUser)
-      .should.be.rejectedWith(Secretin.Errors.NotSharedWithUserError)
-  );
+  it("Can't unshare to unknown user", () =>
+    this.secretin
+      .unshareSecret(secretId, unknownUser)
+      .should.be.rejectedWith(Secretin.Errors.NotSharedWithUserError));
 
   it('Can move secret from folder to subfolder', () => {
     const expectedMetadatas = {
@@ -909,7 +1158,8 @@ describe('Logged user', () => {
       type: 'secret',
       id: secretInFolderId,
     };
-    return this.secretin.addSecretToFolder(secretInFolderId, folderInFolderId)
+    return this.secretin
+      .addSecretToFolder(secretInFolderId, folderInFolderId)
       .then(() => this.secretin.currentUser.metadatas[secretInFolderId])
       .should.eventually.deep.equal(expectedMetadatas)
       .then(() => this.secretin.getSecret(folderId))
@@ -1023,7 +1273,8 @@ describe('Logged user', () => {
         id: folderInFolderId,
       },
     };
-    return this.secretin.addSecretToFolder(folderId, otherFolderId)
+    return this.secretin
+      .addSecretToFolder(folderId, otherFolderId)
       .then(() => this.secretin.currentUser.metadatas)
       .should.eventually.deep.equal(expectedMetadatas)
       .then(() => this.secretin.getSecret(folderId))
@@ -1059,8 +1310,11 @@ describe('Logged user', () => {
       type: 'secret',
       id: otherSecretInOtherFolderId,
     };
-    return this.secretin.addSecretToFolder(otherSecretInOtherFolderId, folderInFolderId)
-      .then(() => this.secretin.currentUser.metadatas[otherSecretInOtherFolderId])
+    return this.secretin
+      .addSecretToFolder(otherSecretInOtherFolderId, folderInFolderId)
+      .then(
+        () => this.secretin.currentUser.metadatas[otherSecretInOtherFolderId]
+      )
       .should.eventually.deep.equal(expectedMetadatas)
       .then(() => this.secretin.getSecret(otherFolderId))
       .should.eventually.deep.equal({
@@ -1074,13 +1328,16 @@ describe('Logged user', () => {
         this.secretin.currentUser.disconnect();
         return this.secretin.loginUser(username, password);
       })
-      .then(() => this.secretin.currentUser.metadatas[otherSecretInOtherFolderId])
+      .then(
+        () => this.secretin.currentUser.metadatas[otherSecretInOtherFolderId]
+      )
       .should.eventually.deep.equal(expectedMetadatas);
   });
 
   if (__karma__.config.args[0] === 'server') {
     it('Can activate shortlogin and use it', () =>
-      this.secretin.activateShortLogin(shortpass, deviceId)
+      this.secretin
+        .activateShortLogin(shortpass, deviceId)
         .then(() => {
           this.secretin.currentUser.disconnect();
           return this.secretin.shortLogin(shortpass);
@@ -1177,7 +1434,6 @@ describe('Logged user', () => {
             type: 'folder',
             id: folderInFolderId,
           },
-        })
-    );
+        }));
   }
 });

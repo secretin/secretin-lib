@@ -1,4 +1,4 @@
-function getDB(){
+function getDB() {
   if (__karma__.config.args[0] === 'server') {
     let server = 'http://127.0.0.1:3000';
     if (__karma__.config.args[1]) {
@@ -29,8 +29,9 @@ function resetAndGetDB() {
       xhr.send();
     });
   }
-  return new Promise((resolve) => {
-    this.secretin = new Secretin();
+  return new Promise(resolve => {
+    this.secretin = getDB();
+    // console.log(JSON.stringify(this.secretin));
     resolve();
   });
 }

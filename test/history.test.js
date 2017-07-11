@@ -4,22 +4,28 @@ describe('Test history', () => {
   Date.prototype.toISOString = () => now;
 
   const secretContent = {
-    fields: [{
-      label: 'a',
-      content: 'b',
-    }],
+    fields: [
+      {
+        label: 'a',
+        content: 'b',
+      },
+    ],
   };
   const newSecretContent = {
-    fields: [{
-      label: 'c',
-      content: 'd',
-    }],
+    fields: [
+      {
+        label: 'c',
+        content: 'd',
+      },
+    ],
   };
   const otherSecretInOtherFolderContent = {
-    fields: [{
-      label: 'e',
-      content: 'f',
-    }],
+    fields: [
+      {
+        label: 'e',
+        content: 'f',
+      },
+    ],
   };
 
   const secretTitle = 'secret';
@@ -57,7 +63,7 @@ describe('Test history', () => {
 
   // eslint-disable-next-line
   beforeEach(() => {
-    localStorage.removeItem(`${Secretin.prefix}cache`);
+    localStorage.clear();
     // eslint-disable-next-line
     availableKeyCounter = 0;
     // eslint-disable-next-line
@@ -65,35 +71,39 @@ describe('Test history', () => {
       .then(() => this.secretin.newUser(username2, password2))
       .then(() => this.secretin.newUser(username, password))
       .then(() => this.secretin.addSecret(secretTitle, secretContent))
-      .then((hashedTitle) => {
+      .then(hashedTitle => {
         secretId = hashedTitle;
         return this.secretin.addFolder(folderTitle);
       })
-      .then((hashedTitle) => {
+      .then(hashedTitle => {
         folderId = hashedTitle;
         return this.secretin.addFolder(folderInFolderTitle);
       })
-      .then((hashedTitle) => {
+      .then(hashedTitle => {
         folderInFolderId = hashedTitle;
         return this.secretin.addFolder(otherFolderTitle);
       })
-      .then((hashedTitle) => {
+      .then(hashedTitle => {
         otherFolderId = hashedTitle;
         return this.secretin.addSecret(secretInFolderTitle, secretContent);
       })
-      .then((hashedTitle) => {
+      .then(hashedTitle => {
         secretInFolderId = hashedTitle;
         return this.secretin.addSecret(
           otherSecretInOtherFolderTitle,
           otherSecretInOtherFolderContent
         );
       })
-      .then((hashedTitle) => {
+      .then(hashedTitle => {
         otherSecretInOtherFolderId = hashedTitle;
         return this.secretin.addSecretToFolder(secretInFolderId, folderId);
       })
       .then(() => this.secretin.addSecretToFolder(folderInFolderId, folderId))
-      .then(() => this.secretin.addSecretToFolder(otherSecretInOtherFolderId, otherFolderId))
+      .then(() =>
+        this.secretin.addSecretToFolder(
+          otherSecretInOtherFolderId,
+          otherFolderId
+        ))
       .then(() => this.secretin.shareSecret(secretInFolderId, username2, 0))
       .then(() => {
         this.secretin.currentUser.disconnect();
@@ -102,51 +112,61 @@ describe('Test history', () => {
   });
 
   it('Can retrieve history', () =>
-    this.secretin.getHistory(secretId)
-      .should.eventually.deep.equal([{
-        secret: secretContent,
-        lastModifiedAt: now,
-        lastModifiedBy: username
-      }])
+    this.secretin
+      .getHistory(secretId)
+      .should.eventually.deep.equal([
+        {
+          secret: secretContent,
+          lastModifiedAt: now,
+          lastModifiedBy: username,
+        },
+      ])
       .then(() => this.secretin.editSecret(secretId, newSecretContent))
       .then(() => this.secretin.getHistory(secretId))
-      .should.eventually.deep.equal([{
-        secret: newSecretContent,
-        lastModifiedAt: now,
-        lastModifiedBy: username
-      },
-      {
-        secret: secretContent,
-        lastModifiedAt: now,
-        lastModifiedBy: username
-      }])
+      .should.eventually.deep.equal([
+        {
+          secret: newSecretContent,
+          lastModifiedAt: now,
+          lastModifiedBy: username,
+        },
+        {
+          secret: secretContent,
+          lastModifiedAt: now,
+          lastModifiedBy: username,
+        },
+      ])
       .then(() => this.secretin.editSecret(secretId, newSecretContent))
       .then(() => this.secretin.getHistory(secretId))
-      .should.eventually.deep.equal([{
-        secret: newSecretContent,
-        lastModifiedAt: now,
-        lastModifiedBy: username
-      },
-      {
-        secret: secretContent,
-        lastModifiedAt: now,
-        lastModifiedBy: username
-      }])
-  );
+      .should.eventually.deep.equal([
+        {
+          secret: newSecretContent,
+          lastModifiedAt: now,
+          lastModifiedBy: username,
+        },
+        {
+          secret: secretContent,
+          lastModifiedAt: now,
+          lastModifiedBy: username,
+        },
+      ]));
 
   it('Can unshare and retrieve history', () =>
-    this.secretin.getHistory(secretInFolderId)
-      .should.eventually.deep.equal([{
-        secret: secretContent,
-        lastModifiedAt: now,
-        lastModifiedBy: username
-      }])
+    this.secretin
+      .getHistory(secretInFolderId)
+      .should.eventually.deep.equal([
+        {
+          secret: secretContent,
+          lastModifiedAt: now,
+          lastModifiedBy: username,
+        },
+      ])
       .then(() => this.secretin.unshareSecret(secretInFolderId, username2))
       .then(() => this.secretin.getHistory(secretId))
-      .should.eventually.deep.equal([{
-        secret: secretContent,
-        lastModifiedAt: now,
-        lastModifiedBy: username
-      }])
-  );
+      .should.eventually.deep.equal([
+        {
+          secret: secretContent,
+          lastModifiedAt: now,
+          lastModifiedBy: username,
+        },
+      ]));
 });

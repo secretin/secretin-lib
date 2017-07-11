@@ -18,6 +18,7 @@ import {
   DecryptPrivateKeyStatus,
   DecryptUserOptionsStatus,
   GetProtectKeyStatus,
+  ImportSecretStatus,
 } from './Statuses';
 
 import {
@@ -77,7 +78,10 @@ class Secretin {
             this.api = this.oldApi;
             this.editableDB = true;
             this.dispatchEvent('connectionChange', { connection: 'online' });
-            if (typeof this.currentUser.username !== 'undefined' && typeof window.process !== 'undefined') {
+            if (
+              typeof this.currentUser.username !== 'undefined' &&
+              typeof window.process !== 'undefined'
+            ) {
               this.getDb().then(() => this.doCacheActions());
             }
             return Promise.resolve();
@@ -470,7 +474,7 @@ class Secretin {
   }
 
   editSecret(hashedTitle, content) {
-    let secretObject
+    let secretObject;
     return this.api
       .getHistory(this.currentUser, hashedTitle)
       .then(history =>
@@ -1490,6 +1494,107 @@ class Secretin {
         }
         const wrapper = new WrappingError(err);
         throw wrapper.error;
+      });
+  }
+
+  importDb(username, password, jsonDB, progress = defaultProgress) {
+    if (!this.editableDB) {
+      return Promise.reject(new OfflineError());
+    }
+    const oldSecretin = new Secretin(APIStandalone, JSON.parse(jsonDB));
+    let key;
+    let hash;
+    let remoteUser;
+    let parameters;
+    let encryptedMetadata;
+    return oldSecretin.api
+      .getDerivationParameters(username)
+      .then(rParameters => {
+        parameters = rParameters;
+        return derivePassword(password, parameters);
+      })
+      .then(dKey => {
+        hash = dKey.hash;
+        key = dKey.key;
+        return oldSecretin.api.getUser(username, hash);
+      })
+      .then(user => {
+        oldSecretin.currentUser = new User(username);
+        oldSecretin.currentUser.totp = parameters.totp;
+        oldSecretin.currentUser.hash = hash;
+        remoteUser = user;
+        return oldSecretin.currentUser.importPrivateKey(
+          key,
+          remoteUser.privateKey
+        );
+      })
+      .then(() => oldSecretin.currentUser.importPublicKey(remoteUser.publicKey))
+      .then(() => oldSecretin.api.getUserWithSignature(oldSecretin.currentUser))
+      .then(user => {
+        encryptedMetadata = user.metadatas;
+        oldSecretin.currentUser.keys = user.keys;
+        const hashedTitles = Object.keys(oldSecretin.currentUser.keys);
+        const progressStatus = new ImportSecretStatus(0, hashedTitles.length);
+        progress(progressStatus);
+        return hashedTitles.reduce(
+          (promise, hashedTitle) => {
+            let encryptedSecret;
+            let newMetadata;
+            return promise.then(() =>
+              oldSecretin.api
+                .getSecret(hashedTitle, oldSecretin.currentUser)
+                .then(rEncryptedSecret => {
+                  encryptedSecret = rEncryptedSecret;
+                  return oldSecretin.api.getHistory(
+                    oldSecretin.currentUser,
+                    hashedTitle
+                  );
+                })
+                .then(encryptedHistory =>
+                  oldSecretin.currentUser.exportSecret(
+                    hashedTitle,
+                    encryptedSecret,
+                    encryptedMetadata[hashedTitle],
+                    encryptedHistory
+                  ))
+                .then(({ secret, metadata, history }) => {
+                  newMetadata = metadata;
+                  const folders = newMetadata.users[
+                    oldSecretin.currentUser.username
+                  ].folders;
+                  const now = new Date();
+                  newMetadata.users = {
+                    [this.currentUser.username]: {
+                      username: this.currentUser.username,
+                      rights: 2,
+                      folders,
+                    },
+                  };
+                  newMetadata.lastModifiedAt = now.toISOString();
+                  newMetadata.lastModifiedBy = this.currentUser.username;
+
+                  return this.currentUser.importSecret(
+                    hashedTitle,
+                    secret,
+                    newMetadata,
+                    history
+                  );
+                })
+                .then(secretObject => {
+                  this.currentUser.keys[secretObject.hashedTitle] = {
+                    key: secretObject.wrappedKey,
+                    rights: newMetadata.users[this.currentUser.username].rights,
+                  };
+                  this.currentUser.metadatas[hashedTitle] = newMetadata;
+                  return this.api.addSecret(this.currentUser, secretObject);
+                })
+                .then(() => {
+                  progressStatus.step();
+                  progress(progressStatus);
+                }));
+          },
+          Promise.resolve()
+        );
       });
   }
 }
