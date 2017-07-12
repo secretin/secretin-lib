@@ -1,7 +1,7 @@
 function reqData(path, datas, type) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.timeout = 5750;
+    xhr.timeout = 10000;
     xhr.open(type, encodeURI(path));
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.onload = () => {
@@ -25,7 +25,7 @@ function reqData(path, datas, type) {
 export function doGET(path) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.timeout = 5750;
+    xhr.timeout = 6000;
     xhr.open('GET', encodeURI(path));
     xhr.onload = () => {
       const datas = JSON.parse(xhr.responseText);

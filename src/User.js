@@ -232,14 +232,64 @@ class User {
       });
   }
 
+  exportSecret(
+    hashedTitle,
+    encryptedSecret,
+    encryptedMetadata,
+    encryptedHistory
+  ) {
+    let secret;
+    let metadata;
+    return this.decryptSecret(hashedTitle, encryptedSecret)
+      .then(rSecret => {
+        secret = rSecret;
+        return this.decryptSecret(hashedTitle, encryptedMetadata);
+      })
+      .then(rMetadata => {
+        metadata = rMetadata;
+        return this.decryptSecret(hashedTitle, encryptedHistory);
+      })
+      .then(history => ({
+        secret,
+        metadata,
+        history,
+      }));
+  }
+
+  importSecret(hashedTitle, secret, metadata, history) {
+    const result = {};
+    return this.encryptSecret(metadata, secret, history)
+      .then(secretObject => {
+        result.secret = secretObject.secret;
+        result.iv = secretObject.iv;
+        result.metadatas = secretObject.metadatas;
+        result.iv_meta = secretObject.iv_meta;
+        result.history = secretObject.history;
+        result.iv_history = secretObject.iv_history;
+        result.hashedUsername = secretObject.hashedUsername;
+        result.hashedTitle = hashedTitle;
+        return this.wrapKey(secretObject.key, this.publicKey);
+      })
+      .then(wrappedKey => {
+        result.wrappedKey = wrappedKey;
+        return result;
+      });
+  }
+
   encryptSecret(metadatas, secret, history, key) {
     const result = {};
     let newHistory;
     return Promise.resolve()
       .then(() => {
+        if (Array.isArray(history)) {
+          // history already decrypted
+          return Promise.resolve(history);
+        }
         if (typeof history !== 'undefined') {
+          // history must be decrypted
           return this.decryptSecret(metadatas.id, history);
         }
+        // no history yet
         return Promise.resolve([]);
       })
       .then(rHistory => {

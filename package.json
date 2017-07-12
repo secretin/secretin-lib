@@ -10,7 +10,7 @@
     "lint": "eslint src/ test/",
     "karma": "./node_modules/karma/bin/karma start karma.conf.js",
     "test": "npm run build && npm run karma",
-    "prettier": "prettier --print-width 80 --trailing-comma es5 --single-quote --write \"src/**/*.js\""
+    "prettier": "prettier --print-width 80 --trailing-comma es5 --single-quote --write \"src/**/*.js\" \"test/*.js\""
   },
   "repository": {
     "type": "git",

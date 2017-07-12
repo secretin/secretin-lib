@@ -149,7 +149,9 @@ describe('Password generation', () => {
           symbols: false,
         },
       };
-      const expectedCharset = [...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'];
+      const expectedCharset = [
+        ...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+      ];
       const actualCharset = pw.buildCharset(options);
       for (const char of expectedCharset) {
         (actualCharset.indexOf(char) >= 0).should.equal(true);
@@ -167,7 +169,9 @@ describe('Password generation', () => {
         },
       };
       // eslint-disable-next-line
-      const expectedCharset = [...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()+_=}{[]|:;"?.><,`~'];
+      const expectedCharset = [
+        ...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()+_=}{[]|:;"?.><,`~',
+      ];
       const actualCharset = pw.buildCharset(options);
       for (const char of expectedCharset) {
         (actualCharset.indexOf(char) >= 0).should.equal(true);
@@ -184,7 +188,9 @@ describe('Password generation', () => {
         },
       };
       // eslint-disable-next-line
-      const expectedCharset = [...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()+_=}{[]|:;"?.><,`~0123456789'];
+      const expectedCharset = [
+        ...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()+_=}{[]|:;"?.><,`~0123456789',
+      ];
       const actualCharset = pw.buildCharset(options);
       for (const char of expectedCharset) {
         (actualCharset.indexOf(char) >= 0).should.equal(true);
@@ -201,7 +207,9 @@ describe('Password generation', () => {
         },
       };
       // eslint-disable-next-line
-      const expectedCharset = [...'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ!@#$%^&*()+_=}{:;"?.><,~123456789'];
+      const expectedCharset = [
+        ...'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ!@#$%^&*()+_=}{:;"?.><,~123456789',
+      ];
       const actualCharset = pw.buildCharset(options);
       for (const char of expectedCharset) {
         (actualCharset.indexOf(char) >= 0).should.equal(true);
