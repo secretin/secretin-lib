@@ -285,7 +285,7 @@ class User {
           // history already decrypted
           return Promise.resolve(history);
         }
-        if (typeof history !== 'undefined') {
+        if (typeof history !== 'undefined' && typeof history.iv !== 'undefined' && typeof history.secret !== 'undefined') {
           // history must be decrypted
           return this.decryptSecret(metadatas.id, history);
         }

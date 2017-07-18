@@ -227,204 +227,31 @@ describe('Logged user', () => {
   it('Can import database', () => {
     const usernameOld = 'user_old';
     const passwordOld = 'password_old';
-    const expectedMetadatas = {
-      [secretId]: {
-        id: secretId,
-        lastModifiedAt: now,
-        lastModifiedBy: username,
-        title: secretTitle,
-        type: 'secret',
-        users: {
-          [username]: {
-            username,
-            rights: 2,
-            folders: { ROOT: true },
-          },
-        },
-      },
-      [folderId]: {
-        id: folderId,
-        lastModifiedAt: now,
-        lastModifiedBy: username,
-        title: folderTitle,
-        type: 'folder',
-        users: {
-          [username]: {
-            username,
-            rights: 2,
-            folders: { ROOT: true },
-          },
-        },
-      },
-      [otherFolderId]: {
-        id: otherFolderId,
-        lastModifiedAt: now,
-        lastModifiedBy: username,
-        title: otherFolderTitle,
-        type: 'folder',
-        users: {
-          [username]: {
-            username,
-            rights: 2,
-            folders: { ROOT: true },
-          },
-        },
-      },
-      [secretInFolderId]: {
-        users: {
-          [username]: {
-            username,
-            rights: 2,
-            folders: {
-              [folderId]: true,
-            },
-          },
-        },
-        lastModifiedAt: now,
-        lastModifiedBy: username,
-        title: secretInFolderTitle,
-        type: 'secret',
-        id: secretInFolderId,
-      },
-      [otherSecretInOtherFolderId]: {
-        users: {
-          [username]: {
-            username,
-            rights: 2,
-            folders: {
-              [otherFolderId]: true,
-            },
-          },
-        },
-        lastModifiedAt: now,
-        lastModifiedBy: username,
-        title: otherSecretInOtherFolderTitle,
-        type: 'secret',
-        id: otherSecretInOtherFolderId,
-      },
-      [folderInFolderId]: {
-        users: {
-          [username]: {
-            username,
-            rights: 2,
-            folders: {
-              [folderId]: true,
-            },
-          },
-        },
-        lastModifiedAt: now,
-        lastModifiedBy: username,
-        title: folderInFolderTitle,
-        type: 'folder',
-        id: folderInFolderId,
-      },
-      '00905719c739fcccc8b45613d3bf4da69e2c036f37e77f2f40b23c1d174ce2b5': {
-        id: '00905719c739fcccc8b45613d3bf4da69e2c036f37e77f2f40b23c1d174ce2b5',
-        lastModifiedAt: now,
-        lastModifiedBy: username,
-        title: `${secretInFolderTitle}_old`,
-        type: 'secret',
-        users: {
-          [username]: {
-            folders: {
-              f0d578bd1227b874178621f8a7b2298aca6442b782d399fa42affaa5efdc0cb4: true,
-            },
-            rights: 2,
-            username,
-          },
-        },
-      },
-      '1095e5806f1217be96d35c24193bbc65c355dd6d1e58269fb4bd8f9ecee23a1e': {
-        id: '1095e5806f1217be96d35c24193bbc65c355dd6d1e58269fb4bd8f9ecee23a1e',
-        lastModifiedAt: now,
-        lastModifiedBy: username,
-        title: `${otherFolderTitle}_old`,
-        type: 'folder',
-        users: {
-          [username]: {
-            folders: { ROOT: true },
-            rights: 2,
-            username,
-          },
-        },
-      },
-      '49d78edb5095243ed23e43d45c22fdd9b1ee8aef2711b5d3cd62f9706383dc0b': {
-        id: '49d78edb5095243ed23e43d45c22fdd9b1ee8aef2711b5d3cd62f9706383dc0b',
-        lastModifiedAt: now,
-        lastModifiedBy: username,
-        title: `${folderInFolderTitle}_old`,
-        type: 'folder',
-        users: {
-          [username]: {
-            folders: {
-              f0d578bd1227b874178621f8a7b2298aca6442b782d399fa42affaa5efdc0cb4: true,
-            },
-            rights: 2,
-            username,
-          },
-        },
-      },
-      '5dec92bdbdb9284463226e571c8fe953402dfd2426389a1e369c49c2c954bc38': {
-        id: '5dec92bdbdb9284463226e571c8fe953402dfd2426389a1e369c49c2c954bc38',
-        lastModifiedAt: now,
-        lastModifiedBy: username,
-        title: `${secretTitle}_old`,
-        type: 'secret',
-        users: {
-          [username]: {
-            folders: {
-              ROOT: true,
-            },
-            rights: 2,
-            username,
-          },
-        },
-      },
-      bb8b69ef509350f7be31d26e9b656d57657518549da5934a0ffaf3a99883d9e3: {
-        id: 'bb8b69ef509350f7be31d26e9b656d57657518549da5934a0ffaf3a99883d9e3',
-        lastModifiedAt: now,
-        lastModifiedBy: username,
-        title: `${otherSecretInOtherFolderTitle}_old`,
-        type: 'secret',
-        users: {
-          [username]: {
-            folders: {
-              '1095e5806f1217be96d35c24193bbc65c355dd6d1e58269fb4bd8f9ecee23a1e': true,
-            },
-            rights: 2,
-            username,
-          },
-        },
-      },
-      f0d578bd1227b874178621f8a7b2298aca6442b782d399fa42affaa5efdc0cb4: {
-        id: 'f0d578bd1227b874178621f8a7b2298aca6442b782d399fa42affaa5efdc0cb4',
-        lastModifiedAt: now,
-        lastModifiedBy: username,
-        title: `${folderTitle}_old`,
-        type: 'folder',
-        users: {
-          [username]: {
-            folders: {
-              ROOT: true,
-            },
-            rights: 2,
-            username,
-          },
-        },
-      },
-    };
+
     return (
       this.secretin
         // eslint-disable-next-line
         .importDb(usernameOld, passwordOld, mockedExportedDB)
-        .then(() => this.secretin.currentUser.metadatas)
-        .should.eventually.deep.equal(expectedMetadatas)
+        .then(() =>
+          Object.keys(this.secretin.currentUser.metadatas).length
+        )
+        .should.eventually.equal(12)
         .then(() => {
           this.secretin.currentUser.disconnect();
           return this.secretin.loginUser(username, password);
         })
-        .then(() => this.secretin.currentUser.metadatas)
-        .should.eventually.deep.equal(expectedMetadatas)
+        .then(() =>
+          Object.keys(this.secretin.currentUser.metadatas).length
+        )
+        .should.eventually.equal(12)
+        .then(() =>
+          // eslint-disable-next-line
+          this.secretin.importDb(usernameOld, passwordOld, mockedExportedDB)
+        )
+        .then(() =>
+          Object.keys(this.secretin.currentUser.metadatas).length
+        )
+        .should.eventually.equal(18)
     );
   });
 

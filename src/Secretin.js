@@ -1,4 +1,4 @@
-import { derivePassword, encryptRSAOAEP, decryptRSAOAEP } from './lib/crypto';
+import { derivePassword, encryptRSAOAEP, decryptRSAOAEP, getSHA256 } from './lib/crypto';
 
 import {
   WrappingError,
@@ -1507,6 +1507,7 @@ class Secretin {
     let remoteUser;
     let parameters;
     let encryptedMetadata;
+    const newHashedTitles = {};
     return oldSecretin.api
       .getDerivationParameters(username)
       .then(rParameters => {
@@ -1534,8 +1535,24 @@ class Secretin {
         encryptedMetadata = user.metadatas;
         oldSecretin.currentUser.keys = user.keys;
         const hashedTitles = Object.keys(oldSecretin.currentUser.keys);
+        const newHashedTitlePromises = [];
+        hashedTitles.forEach(hashedTitle => {
+          const now = Date.now();
+          const saltedTitle = `${now}|${hashedTitle}`;
+          newHashedTitlePromises.push(getSHA256(saltedTitle).then(newHashedTitle => ({ old: hashedTitle, new: newHashedTitle })));
+        });
+
+        return Promise.all(newHashedTitlePromises);
+      })
+      .then(rNewHashedTitles => {
+        rNewHashedTitles.forEach(newHashedTitle => {
+          newHashedTitles[newHashedTitle.old] = newHashedTitle.new;
+        });
+
+        const hashedTitles = Object.keys(oldSecretin.currentUser.keys);
         const progressStatus = new ImportSecretStatus(0, hashedTitles.length);
         progress(progressStatus);
+
         return hashedTitles.reduce(
           (promise, hashedTitle) => {
             let encryptedSecret;
@@ -1559,23 +1576,42 @@ class Secretin {
                   ))
                 .then(({ secret, metadata, history }) => {
                   newMetadata = metadata;
-                  const folders = newMetadata.users[
+                  const newSecret = secret;
+                  const oldFolders = Object.keys(newMetadata.users[
                     oldSecretin.currentUser.username
-                  ].folders;
-                  const now = new Date();
+                  ].folders);
+                  const newFolders = {}
+                  oldFolders.forEach(oldFolder => {
+                    if (oldFolder !== 'ROOT') {
+                      newFolders[newHashedTitles[oldFolder]] = true;
+                    }
+                  });
+
+                  newMetadata.id = newHashedTitles[metadata.id];
                   newMetadata.users = {
                     [this.currentUser.username]: {
                       username: this.currentUser.username,
                       rights: 2,
-                      folders,
+                      folders: newFolders,
                     },
                   };
+
+                  const now = new Date();
                   newMetadata.lastModifiedAt = now.toISOString();
                   newMetadata.lastModifiedBy = this.currentUser.username;
 
+                  if (metadata.type === 'folder') {
+                    const oldSecrets = Object.keys(secret);
+                    oldSecrets.forEach(oldSecret => {
+                      const newSecretTitle = newHashedTitles[oldSecret];
+                      newSecret[newSecretTitle] = 1;
+                      delete newSecret[oldSecret];
+                    });
+                  }
+
                   return this.currentUser.importSecret(
-                    hashedTitle,
-                    secret,
+                    newHashedTitles[hashedTitle],
+                    newSecret,
                     newMetadata,
                     history
                   );
@@ -1585,7 +1621,7 @@ class Secretin {
                     key: secretObject.wrappedKey,
                     rights: newMetadata.users[this.currentUser.username].rights,
                   };
-                  this.currentUser.metadatas[hashedTitle] = newMetadata;
+                  this.currentUser.metadatas[secretObject.hashedTitle] = newMetadata;
                   return this.api.addSecret(this.currentUser, secretObject);
                 })
                 .then(() => {
