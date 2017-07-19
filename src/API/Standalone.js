@@ -152,9 +152,8 @@ class API {
                 typeof this.db.users[wrappedKey.user].keys[hashedTitle] !==
                 'undefined'
               ) {
-                this.db.users[wrappedKey.user].keys[
-                  hashedTitle
-                ].key = wrappedKey.key;
+                this.db.users[wrappedKey.user].keys[hashedTitle].key =
+                  wrappedKey.key;
               }
             }
           });
@@ -253,9 +252,8 @@ class API {
                     key: sharedSecretObject.wrappedKey,
                     rights: sharedSecretObject.rights,
                   };
-                  const users = this.db.secrets[
-                    sharedSecretObject.hashedTitle
-                  ].users;
+                  const users = this.db.secrets[sharedSecretObject.hashedTitle]
+                    .users;
                   if (users.indexOf(sharedSecretObject.friendName) < 0) {
                     users.push(sharedSecretObject.friendName);
                   }

@@ -26,7 +26,8 @@ class API {
         publicKey,
         keys: {},
         options,
-      }));
+      })
+    );
   }
 
   addSecret(user, secretObject) {
@@ -44,7 +45,8 @@ class API {
       doPOST(`${this.db}/secret/${secretObject.hashedUsername}`, {
         json,
         sig: signature,
-      }));
+      })
+    );
   }
 
   deleteSecret(user, hashedTitle) {
@@ -57,7 +59,8 @@ class API {
       .then(signature =>
         doDELETE(`${this.db}${url}`, {
           sig: signature,
-        }));
+        })
+      );
   }
 
   editSecret(user, secretObject, hashedTitle) {
@@ -80,7 +83,8 @@ class API {
         doPUT(`${this.db}/secret/${hashedUsername}`, {
           json,
           sig: signature,
-        }));
+        })
+      );
   }
 
   newKey(user, hashedTitle, secret, wrappedKeys) {
@@ -99,7 +103,8 @@ class API {
         doPOST(`${this.db}/newKey/${hashedUsername}`, {
           json,
           sig: signature,
-        }));
+        })
+      );
   }
 
   unshareSecret(user, friendNames, hashedTitle) {
@@ -130,7 +135,8 @@ class API {
         doPOST(`${this.db}/unshare/${hashedUsername}`, {
           json,
           sig: signature,
-        }));
+        })
+      );
   }
 
   shareSecret(user, sharedSecretObjects) {
@@ -147,7 +153,8 @@ class API {
         doPOST(`${this.db}/share/${hashedUsername}`, {
           json,
           sig: signature,
-        }));
+        })
+      );
   }
 
   retrieveUser(username, hash, hashed) {
@@ -161,7 +168,8 @@ class API {
         });
     }
     return isHashed.then(() =>
-      doGET(`${this.db}/user/${hashedUsername}/${hash}`));
+      doGET(`${this.db}/user/${hashedUsername}/${hash}`)
+    );
   }
 
   getDerivationParameters(username, isHashed) {
@@ -181,7 +189,8 @@ class API {
 
   getUser(username, hash, otp) {
     return getSHA256(username).then(hashedUsername =>
-      doGET(`${this.db}/user/${hashedUsername}/${hash}?otp=${otp}`));
+      doGET(`${this.db}/user/${hashedUsername}/${hash}?otp=${otp}`)
+    );
   }
 
   getUserWithSignature(user) {
@@ -226,7 +235,8 @@ class API {
         return getSHA256(deviceName);
       })
       .then(deviceId =>
-        doGET(`${this.db}/protectKey/${hashedUsername}/${deviceId}/${hash}`))
+        doGET(`${this.db}/protectKey/${hashedUsername}/${deviceId}/${hash}`)
+      )
       .then(result => {
         if (hash === 'undefined') {
           return result;
@@ -251,7 +261,8 @@ class API {
         doPOST(`${this.db}${url}`, {
           json,
           sig: signature,
-        }));
+        })
+      );
   }
 
   getRescueCodes(user) {
@@ -276,7 +287,8 @@ class API {
         doPUT(`${this.db}/user/${hashedUsername}?type=${type}`, {
           json,
           sig: signature,
-        }));
+        })
+      );
   }
 
   changePassword(user, privateKey, pass) {
@@ -294,7 +306,8 @@ class API {
         doPUT(`${this.db}/user/${hashedUsername}`, {
           json,
           sig: signature,
-        }));
+        })
+      );
   }
 
   testTotp(seed, token) {
@@ -315,7 +328,8 @@ class API {
         doPUT(`${this.db}/activateTotp/${hashedUsername}`, {
           json,
           sig: signature,
-        }));
+        })
+      );
   }
 
   deactivateTotp(user) {
@@ -342,7 +356,8 @@ class API {
         doPUT(`${this.db}/activateShortLogin/${hashedUsername}`, {
           json,
           sig: signature,
-        }));
+        })
+      );
   }
 
   isOnline() {

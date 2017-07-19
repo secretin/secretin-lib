@@ -50,7 +50,8 @@ describe('Logged user', () => {
   const secretInFolderTitle = 'secret in folder';
   let secretInFolderId = '';
 
-  const unknownSecretId = 'b23a6a8439c0dde5515893e7c90c1e3233b8616e634470f20dc4928bcf3609bc';
+  const unknownSecretId =
+    'b23a6a8439c0dde5515893e7c90c1e3233b8616e634470f20dc4928bcf3609bc';
   const unknownUser = 'unknownUser';
 
   const username = 'user';
@@ -60,9 +61,11 @@ describe('Logged user', () => {
   const dataToExport = 'test';
   const exportedData = {
     // eslint-disable-next-line
-    data: '8bf52e1c2ddef3a4c6bd257b57fb3be67f2a2ff6ab23f180c153de1fe7b2478544195bc437ee280f9692e8c28bed90316b4a46edf1140ec4093bb2634e9416e506747182d8494a24adee742a132ac01d5de873050e94333539c24dd0f7ff1f8799de4f25b09e3ee7451bbc633f1444d793e4bf70d915d0d1bda61aa8f62bcef31f08be6f66095283980bf6f576c7d1101827a3b8edccba12233f488e5419a339e66903fb9e5338c5a0a54db11389a66012a11c170355c0b0426341e731bd60eda06834b724a9cfc475f9311dd14ec0b45b9d28c184d147ed8a0007a0491b0cd70a5d126ed82601b6989f8ff3bb23ff6b4af616788ae4b5a1b29210bf3f808f18313eaec43de625aa3e0428a9506613f061822bfb390c33c5d51193a440dcd8646750cce5b926abaa32b68dba0ec49321f042da3753502d99d6816dd9c0be9b29e938966ae8b9e5073ec3be8f8d123ddf3cd83146f76c066ae54a479472ad298073d78b9b1b604f23dd4b3e79cf4eb55714539ef5e198b0b0466d26ad9d61fa25027e175814e7b97704e6c76d69db2eba7b9e31b62fdcb26a7ba870612388f2bc1fbd6c3f47985eadeab360f454e3ff2ff68e7f6bb6de942c959b773a962081ccafeff78f37e4152fc594073b96297eabe062c1ef237bba75caf67f73f2eefa6ac9835967fdc079c15727c172400edcc112a0f78cfbd2753df356c60388d9e2af',
+    data:
+      '8bf52e1c2ddef3a4c6bd257b57fb3be67f2a2ff6ab23f180c153de1fe7b2478544195bc437ee280f9692e8c28bed90316b4a46edf1140ec4093bb2634e9416e506747182d8494a24adee742a132ac01d5de873050e94333539c24dd0f7ff1f8799de4f25b09e3ee7451bbc633f1444d793e4bf70d915d0d1bda61aa8f62bcef31f08be6f66095283980bf6f576c7d1101827a3b8edccba12233f488e5419a339e66903fb9e5338c5a0a54db11389a66012a11c170355c0b0426341e731bd60eda06834b724a9cfc475f9311dd14ec0b45b9d28c184d147ed8a0007a0491b0cd70a5d126ed82601b6989f8ff3bb23ff6b4af616788ae4b5a1b29210bf3f808f18313eaec43de625aa3e0428a9506613f061822bfb390c33c5d51193a440dcd8646750cce5b926abaa32b68dba0ec49321f042da3753502d99d6816dd9c0be9b29e938966ae8b9e5073ec3be8f8d123ddf3cd83146f76c066ae54a479472ad298073d78b9b1b604f23dd4b3e79cf4eb55714539ef5e198b0b0466d26ad9d61fa25027e175814e7b97704e6c76d69db2eba7b9e31b62fdcb26a7ba870612388f2bc1fbd6c3f47985eadeab360f454e3ff2ff68e7f6bb6de942c959b773a962081ccafeff78f37e4152fc594073b96297eabe062c1ef237bba75caf67f73f2eefa6ac9835967fdc079c15727c172400edcc112a0f78cfbd2753df356c60388d9e2af',
     // eslint-disable-next-line
-    signature: '6dfb8544f56accf650e71c6b5a9f0933931d9f034b8ba9f76b656267302ba765bd1158e247c9abe076ca9371cd19852b52ca7314f1c4d5087e9162fc72b454d4507056f7ed790e1ab94cc06204c829e8e23907d459f6047ddbc5ccd9f0e2d661a3f91ba5e9f904dab1efe920aa58afa8ff30b949fa7295dcc67811ab2d98c78a46632916c8e01ddc97658f2af43c491a8680826df384672d3473f0203aa2dc914ef827674b0522b4960e76d52aa60e7b017286f3236bc0193f34b48bbcdd013b0ab8dcc81e54c0bef66c1ef775aa4fb58d8621ee2b870bd5ee2d746242c18095af058f1f2cc546dade6886b3a5d8437b7b6f1bb8d6d1413f4e8a9bfcf79e8da49bf33038ea98de55fa11d77e88a1bcf03616da2d100ff24a90d9b64567f88f84f3f8e10e8ffec2c62bc2121ffed9cfc1040f331481d8c25c4ba3d57bbd36a2e3071efd254c0833f06573cb8707f8554e175f947180f9637a93795b16e2f3176710dbed1841a7eb568c4da32e14c7e051e7a282e1ff632c926a4277df7396cd4c29d33f1338eb2762011f97a18208f09712ced9ae8fef403c8fb1206ea9be7dbd2988cbc36ca342cab360fefe622b4be92d04d2cf8e455fc3c763b741a41ca9a8424a86f33867398dc246a76f5047dccf3c3c54449016fdd52a112f8d729ff08f2c64276c95d88e1e3568374aa68228eeea7c026d72751bc873dfe8bee0260102',
+    signature:
+      '6dfb8544f56accf650e71c6b5a9f0933931d9f034b8ba9f76b656267302ba765bd1158e247c9abe076ca9371cd19852b52ca7314f1c4d5087e9162fc72b454d4507056f7ed790e1ab94cc06204c829e8e23907d459f6047ddbc5ccd9f0e2d661a3f91ba5e9f904dab1efe920aa58afa8ff30b949fa7295dcc67811ab2d98c78a46632916c8e01ddc97658f2af43c491a8680826df384672d3473f0203aa2dc914ef827674b0522b4960e76d52aa60e7b017286f3236bc0193f34b48bbcdd013b0ab8dcc81e54c0bef66c1ef775aa4fb58d8621ee2b870bd5ee2d746242c18095af058f1f2cc546dade6886b3a5d8437b7b6f1bb8d6d1413f4e8a9bfcf79e8da49bf33038ea98de55fa11d77e88a1bcf03616da2d100ff24a90d9b64567f88f84f3f8e10e8ffec2c62bc2121ffed9cfc1040f331481d8c25c4ba3d57bbd36a2e3071efd254c0833f06573cb8707f8554e175f947180f9637a93795b16e2f3176710dbed1841a7eb568c4da32e14c7e051e7a282e1ff632c926a4277df7396cd4c29d33f1338eb2762011f97a18208f09712ced9ae8fef403c8fb1206ea9be7dbd2988cbc36ca342cab360fefe622b4be92d04d2cf8e455fc3c763b741a41ca9a8424a86f33867398dc246a76f5047dccf3c3c54449016fdd52a112f8d729ff08f2c64276c95d88e1e3568374aa68228eeea7c026d72751bc873dfe8bee0260102',
   };
 
   const shortpass = 'test';
@@ -119,7 +122,8 @@ describe('Logged user', () => {
         this.secretin.addSecretToFolder(
           otherSecretInOtherFolderId,
           otherFolderId
-        ))
+        )
+      )
       .then(() => {
         this.secretin.currentUser.disconnect();
         return this.secretin.loginUser(username, password);
@@ -232,25 +236,19 @@ describe('Logged user', () => {
       this.secretin
         // eslint-disable-next-line
         .importDb(usernameOld, passwordOld, mockedExportedDB)
-        .then(() =>
-          Object.keys(this.secretin.currentUser.metadatas).length
-        )
+        .then(() => Object.keys(this.secretin.currentUser.metadatas).length)
         .should.eventually.equal(12)
         .then(() => {
           this.secretin.currentUser.disconnect();
           return this.secretin.loginUser(username, password);
         })
-        .then(() =>
-          Object.keys(this.secretin.currentUser.metadatas).length
-        )
+        .then(() => Object.keys(this.secretin.currentUser.metadatas).length)
         .should.eventually.equal(12)
         .then(() =>
           // eslint-disable-next-line
           this.secretin.importDb(usernameOld, passwordOld, mockedExportedDB)
         )
-        .then(() =>
-          Object.keys(this.secretin.currentUser.metadatas).length
-        )
+        .then(() => Object.keys(this.secretin.currentUser.metadatas).length)
         .should.eventually.equal(18)
     );
   });
@@ -296,7 +294,8 @@ describe('Logged user', () => {
       };
     }
 
-    const cacheKey = `${Secretin.prefix}cache_${this.secretin.currentUser.username}`;
+    const cacheKey = `${Secretin.prefix}cache_${this.secretin.currentUser
+      .username}`;
     return this.secretin
       .getDb()
       .then(DbCacheStr => {
@@ -322,7 +321,8 @@ describe('Logged user', () => {
             });
             return revs;
           })
-          .should.eventually.deep.equal(expected2));
+          .should.eventually.deep.equal(expected2)
+      );
   });
 
   it('Can refresh infos', () =>
