@@ -285,7 +285,11 @@ class User {
           // history already decrypted
           return Promise.resolve(history);
         }
-        if (typeof history !== 'undefined') {
+        if (
+          typeof history !== 'undefined' &&
+          typeof history.iv !== 'undefined' &&
+          typeof history.secret !== 'undefined'
+        ) {
           // history must be decrypted
           return this.decryptSecret(metadatas.id, history);
         }
@@ -334,7 +338,8 @@ class User {
     }
     const wrappedKey = this.keys[hashedTitle].key;
     return this.unwrapKey(wrappedKey).then(key =>
-      decryptAESGCM256(secret, key));
+      decryptAESGCM256(secret, key)
+    );
   }
 
   unwrapKey(wrappedKey) {
@@ -361,7 +366,8 @@ class User {
             progressStatus.step();
             progress(progressStatus);
             this.metadatas[hashedTitle] = metadatas;
-          })),
+          })
+        ),
       Promise.resolve()
     );
   }

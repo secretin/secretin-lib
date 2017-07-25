@@ -68,7 +68,7 @@ export function generateSeed() {
   for (i = 0; i < buf.length; i++) {
     byte = buf[i];
 
-    symbol = carry | byte >> shift;
+    symbol = carry | (byte >> shift);
     output += alphabet[symbol & 0x1f];
 
     if (shift > 5) {

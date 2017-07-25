@@ -103,7 +103,8 @@ describe('Test history', () => {
         this.secretin.addSecretToFolder(
           otherSecretInOtherFolderId,
           otherFolderId
-        ))
+        )
+      )
       .then(() => this.secretin.shareSecret(secretInFolderId, username2, 0))
       .then(() => {
         this.secretin.currentUser.disconnect();

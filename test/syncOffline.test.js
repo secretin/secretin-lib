@@ -103,14 +103,16 @@ if (__karma__.config.args[0] === 'server') {
       syncThenOffline().then(() =>
         this.secretin.currentUser.options.should.deep.equal({
           timeToClose: 30,
-        })));
+        })
+      ));
 
     it("Can't edit options", () =>
       syncThenOffline()
         .then(() =>
           this.secretin.editOptions({
             timeToClose: 60,
-          }))
+          })
+        )
         .should.be.rejectedWith(Secretin.Errors.OfflineError));
 
     it('Can create secret', () => {

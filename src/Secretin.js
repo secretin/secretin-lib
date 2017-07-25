@@ -1,4 +1,9 @@
-import { derivePassword, encryptRSAOAEP, decryptRSAOAEP } from './lib/crypto';
+import {
+  derivePassword,
+  encryptRSAOAEP,
+  decryptRSAOAEP,
+  getSHA256,
+} from './lib/crypto';
 
 import {
   WrappingError,
@@ -56,7 +61,8 @@ class Secretin {
 
   offlineDB(username) {
     if (this.editableDB) {
-      const cacheKey = `${Secretin.prefix}cache_${username || this.currentUser.username}`;
+      const cacheKey = `${Secretin.prefix}cache_${username ||
+        this.currentUser.username}`;
       const DbCacheStr = localStorage.getItem(cacheKey);
       const DbCache = DbCacheStr
         ? JSON.parse(DbCacheStr)
@@ -70,36 +76,34 @@ class Secretin {
   }
 
   testOnline() {
-    setTimeout(
-      () => {
-        this.oldApi
-          .isOnline()
-          .then(() => {
-            this.api = this.oldApi;
-            this.editableDB = true;
-            this.dispatchEvent('connectionChange', { connection: 'online' });
-            if (
-              typeof this.currentUser.username !== 'undefined' &&
-              typeof window.process !== 'undefined'
-            ) {
-              this.getDb().then(() => this.doCacheActions());
-            }
-            return Promise.resolve();
-          })
-          .catch(err => {
-            if (err === 'Offline') {
-              this.testOnline();
-            } else {
-              throw err;
-            }
-          });
-      },
-      10000
-    );
+    setTimeout(() => {
+      this.oldApi
+        .isOnline()
+        .then(() => {
+          this.api = this.oldApi;
+          this.editableDB = true;
+          this.dispatchEvent('connectionChange', { connection: 'online' });
+          if (
+            typeof this.currentUser.username !== 'undefined' &&
+            typeof window.process !== 'undefined'
+          ) {
+            this.getDb().then(() => this.doCacheActions());
+          }
+          return Promise.resolve();
+        })
+        .catch(err => {
+          if (err === 'Offline') {
+            this.testOnline();
+          } else {
+            throw err;
+          }
+        });
+    }, 10000);
   }
 
   setConflict(remote, local) {
-    const conflictSecretsKey = `${Secretin.prefix}conflictSecrets${this.currentUser.username}`;
+    const conflictSecretsKey = `${Secretin.prefix}conflictSecrets${this
+      .currentUser.username}`;
     const conflictSecretsStr = localStorage.getItem(conflictSecretsKey);
     const conflictSecrets = conflictSecretsStr
       ? JSON.parse(conflictSecretsStr)
@@ -112,7 +116,8 @@ class Secretin {
   }
 
   getConflict(remote) {
-    const conflictSecretsKey = `${Secretin.prefix}conflictSecrets${this.currentUser.username}`;
+    const conflictSecretsKey = `${Secretin.prefix}conflictSecrets${this
+      .currentUser.username}`;
     const conflictSecretsStr = localStorage.getItem(conflictSecretsKey);
     const conflictSecrets = conflictSecretsStr
       ? JSON.parse(conflictSecretsStr)
@@ -124,7 +129,8 @@ class Secretin {
   }
 
   popCacheAction() {
-    const cacheActionsKey = `${Secretin.prefix}cacheActions_${this.currentUser.username}`;
+    const cacheActionsKey = `${Secretin.prefix}cacheActions_${this.currentUser
+      .username}`;
     const cacheActionsStr = localStorage.getItem(cacheActionsKey);
     const updatedCacheActions = JSON.parse(cacheActionsStr);
     updatedCacheActions.shift();
@@ -135,7 +141,8 @@ class Secretin {
   }
 
   pushCacheAction(action, args) {
-    const cacheActionsKey = `${Secretin.prefix}cacheActions_${this.currentUser.username}`;
+    const cacheActionsKey = `${Secretin.prefix}cacheActions_${this.currentUser
+      .username}`;
     const cacheActionsStr = localStorage.getItem(cacheActionsKey);
     const cacheActions = cacheActionsStr ? JSON.parse(cacheActionsStr) : [];
     cacheActions.push({
@@ -147,70 +154,71 @@ class Secretin {
   }
 
   doCacheActions() {
-    const cacheActionsKey = `${Secretin.prefix}cacheActions_${this.currentUser.username}`;
+    const cacheActionsKey = `${Secretin.prefix}cacheActions_${this.currentUser
+      .username}`;
     const cacheActionsStr = localStorage.getItem(cacheActionsKey);
     const cacheActions = cacheActionsStr ? JSON.parse(cacheActionsStr) : [];
-    return cacheActions.reduce(
-      (promise, cacheAction) => {
-        if (cacheAction.action === 'addSecret') {
-          return promise.then(() =>
-            this.api
-              .addSecret(this.currentUser, cacheAction.args[0])
-              .then(() => {
-                this.currentUser.keys[cacheAction.args[0].hashedTitle] = {
-                  key: cacheAction.args[0].wrappedKey,
-                  rights: 2,
-                };
-                return decryptRSAOAEP(
-                  cacheAction.args[1],
-                  this.currentUser.privateKey
+    return cacheActions.reduce((promise, cacheAction) => {
+      if (cacheAction.action === 'addSecret') {
+        return promise.then(() =>
+          this.api
+            .addSecret(this.currentUser, cacheAction.args[0])
+            .then(() => {
+              this.currentUser.keys[cacheAction.args[0].hashedTitle] = {
+                key: cacheAction.args[0].wrappedKey,
+                rights: 2,
+              };
+              return decryptRSAOAEP(
+                cacheAction.args[1],
+                this.currentUser.privateKey
+              );
+            })
+            .then(metadatas => {
+              this.currentUser.metadatas[
+                cacheAction.args[0].hashedTitle
+              ] = metadatas;
+              return this.popCacheAction();
+            })
+        );
+      } else if (cacheAction.action === 'editSecret') {
+        return promise.then(() => {
+          const secretId = this.getConflict(cacheAction.args[0]);
+          const encryptedContent = cacheAction.args[1];
+          return decryptRSAOAEP(encryptedContent, this.currentUser.privateKey)
+            .then(content => {
+              if (typeof this.currentUser.keys[secretId] === 'undefined') {
+                return this.addSecret(
+                  `${content.title} (Conflict)`,
+                  content.secret
+                ).then(conflictSecretId =>
+                  this.setConflict(cacheAction.args[0], conflictSecretId)
                 );
-              })
-              .then(metadatas => {
-                this.currentUser.metadatas[
-                  cacheAction.args[0].hashedTitle
-                ] = metadatas;
-                return this.popCacheAction();
-              }));
-        } else if (cacheAction.action === 'editSecret') {
-          return promise.then(() => {
-            const secretId = this.getConflict(cacheAction.args[0]);
-            const encryptedContent = cacheAction.args[1];
-            return decryptRSAOAEP(encryptedContent, this.currentUser.privateKey)
-              .then(content => {
-                if (typeof this.currentUser.keys[secretId] === 'undefined') {
-                  return this.addSecret(
-                    `${content.title} (Conflict)`,
-                    content.secret
-                  ).then(conflictSecretId =>
-                    this.setConflict(cacheAction.args[0], conflictSecretId));
-                }
-                return this.editSecret(secretId, content.secret);
-              })
-              .then(() => this.popCacheAction());
-          });
-        } else if (cacheAction.action === 'renameSecret') {
-          return promise.then(() => {
-            const secretId = this.getConflict(cacheAction.args[0]);
-            const encryptedContent = cacheAction.args[1];
-            return decryptRSAOAEP(encryptedContent, this.currentUser.privateKey)
-              .then(content => {
-                if (typeof this.currentUser.keys[secretId] === 'undefined') {
-                  return this.addSecret(
-                    `${content.title} (Conflict)`,
-                    content.secret
-                  ).then(conflictSecretId =>
-                    this.setConflict(cacheAction.args[0], conflictSecretId));
-                }
-                return this.renameSecret(secretId, content.title);
-              })
-              .then(() => this.popCacheAction());
-          });
-        }
-        return promise;
-      },
-      Promise.resolve()
-    );
+              }
+              return this.editSecret(secretId, content.secret);
+            })
+            .then(() => this.popCacheAction());
+        });
+      } else if (cacheAction.action === 'renameSecret') {
+        return promise.then(() => {
+          const secretId = this.getConflict(cacheAction.args[0]);
+          const encryptedContent = cacheAction.args[1];
+          return decryptRSAOAEP(encryptedContent, this.currentUser.privateKey)
+            .then(content => {
+              if (typeof this.currentUser.keys[secretId] === 'undefined') {
+                return this.addSecret(
+                  `${content.title} (Conflict)`,
+                  content.secret
+                ).then(conflictSecretId =>
+                  this.setConflict(cacheAction.args[0], conflictSecretId)
+                );
+              }
+              return this.renameSecret(secretId, content.title);
+            })
+            .then(() => this.popCacheAction());
+        });
+      }
+      return promise;
+    }, Promise.resolve());
   }
 
   newUser(username, password) {
@@ -253,7 +261,8 @@ class Secretin {
           publicKey,
           pass,
           options
-        ))
+        )
+      )
       .then(() => {
         if (typeof window.process !== 'undefined') {
           // Electron
@@ -366,7 +375,8 @@ class Secretin {
         return this.currentUser.importOptions(remoteUser.options);
       })
       .then(() =>
-        this.currentUser.decryptAllMetadatas(remoteUser.metadatas, progress))
+        this.currentUser.decryptAllMetadatas(remoteUser.metadatas, progress)
+      )
       .catch(err => {
         if (err === 'Offline') {
           this.offlineDB();
@@ -456,7 +466,8 @@ class Secretin {
     return this.currentUser
       .exportPrivateKey(password)
       .then(objectPrivateKey =>
-        this.api.editUser(this.currentUser, objectPrivateKey, 'password'))
+        this.api.editUser(this.currentUser, objectPrivateKey, 'password')
+      )
       .then(() => {
         if (typeof window.process !== 'undefined') {
           // Electron
@@ -478,7 +489,8 @@ class Secretin {
     return this.api
       .getHistory(this.currentUser, hashedTitle)
       .then(history =>
-        this.currentUser.editSecret(hashedTitle, content, history))
+        this.currentUser.editSecret(hashedTitle, content, history)
+      )
       .then(rSecretObject => {
         secretObject = rSecretObject;
         if (!this.editableDB) {
@@ -504,7 +516,8 @@ class Secretin {
         return Promise.resolve();
       })
       .then(() =>
-        this.api.editSecret(this.currentUser, secretObject, hashedTitle))
+        this.api.editSecret(this.currentUser, secretObject, hashedTitle)
+      )
       .then(() => {
         if (typeof window.process !== 'undefined') {
           // Electron
@@ -545,7 +558,8 @@ class Secretin {
     return this.currentUser
       .exportOptions()
       .then(encryptedOptions =>
-        this.api.editUser(this.currentUser, encryptedOptions, 'options'))
+        this.api.editUser(this.currentUser, encryptedOptions, 'options')
+      )
       .then(() => {
         if (typeof window.process !== 'undefined') {
           // Electron
@@ -580,7 +594,8 @@ class Secretin {
                 folderMetadatas.users[friend.username].rights,
                 [],
                 true
-              ));
+              )
+            );
         })()
       );
     });
@@ -590,7 +605,8 @@ class Secretin {
     return this.api
       .getSecret(hashedFolder, this.currentUser)
       .then(encryptedSecret =>
-        this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
+        this.currentUser.decryptSecret(hashedFolder, encryptedSecret)
+      )
       .then(secret => {
         const folders = secret;
         folders[hashedSecretTitle] = 1;
@@ -690,7 +706,8 @@ class Secretin {
               this.api
                 .getSecret(parentFolder, this.currentUser)
                 .then(encryptedSecret =>
-                  this.currentUser.decryptSecret(parentFolder, encryptedSecret))
+                  this.currentUser.decryptSecret(parentFolder, encryptedSecret)
+                )
                 .then(secret => {
                   const folders = secret;
                   delete folders[hashedSecretTitle];
@@ -737,7 +754,8 @@ class Secretin {
         isFolder = isFolder
           .then(() => this.api.getSecret(hashedTitle, this.currentUser))
           .then(encryptedSecret =>
-            this.currentUser.decryptSecret(hashedTitle, encryptedSecret))
+            this.currentUser.decryptSecret(hashedTitle, encryptedSecret)
+          )
           .then(secrets => {
             Object.keys(secrets).forEach(hash => {
               sharedSecretObjectPromises.push(
@@ -761,7 +779,8 @@ class Secretin {
             friend,
             this.currentUser.keys[hashedTitle].key,
             hashedTitle
-          ))
+          )
+        )
         .then(secretObject => {
           const newSecretObject = secretObject;
           newSecretObject.rights = rights;
@@ -904,12 +923,14 @@ class Secretin {
     }
     if (secretMetadatas.type === 'folder') {
       isFolder = isFolder.then(() =>
-        this.unshareFolderSecrets(hashedTitle, friendName));
+        this.unshareFolderSecrets(hashedTitle, friendName)
+      );
     }
 
     return isFolder
       .then(() =>
-        this.api.unshareSecret(this.currentUser, [friendName], hashedTitle))
+        this.api.unshareSecret(this.currentUser, [friendName], hashedTitle)
+      )
       .then(result => {
         if (result !== 'Secret unshared') {
           const wrapper = new WrappingError(result);
@@ -943,13 +964,15 @@ class Secretin {
     return this.api
       .getSecret(hashedFolder, this.currentUser)
       .then(encryptedSecret =>
-        this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
+        this.currentUser.decryptSecret(hashedFolder, encryptedSecret)
+      )
       .then(secrets =>
         Object.keys(secrets).reduce(
           (promise, hashedTitle) =>
             promise.then(() => this.unshareSecret(hashedTitle, friendName)),
           Promise.resolve()
-        ))
+        )
+      )
       .then(() => {
         if (typeof window.process !== 'undefined') {
           // Electron
@@ -1016,7 +1039,8 @@ class Secretin {
           this.currentUser.metadatas[hashedTitle],
           rawSecret,
           history
-        ))
+        )
+      )
       .then(secretObject => {
         secret.secret = secretObject.secret;
         secret.iv = secretObject.iv;
@@ -1124,7 +1148,8 @@ class Secretin {
       .then(() => this.resetMetadatas(hashedTitle))
       .then(() => this.api.getSecret(hashedFolder, this.currentUser))
       .then(encryptedSecret =>
-        this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
+        this.currentUser.decryptSecret(hashedFolder, encryptedSecret)
+      )
       .then(secret => {
         const folder = secret;
         delete folder[hashedTitle];
@@ -1151,7 +1176,8 @@ class Secretin {
     return this.api
       .getSecret(hashedTitle, this.currentUser)
       .then(encryptedSecret =>
-        this.currentUser.decryptSecret(hashedTitle, encryptedSecret))
+        this.currentUser.decryptSecret(hashedTitle, encryptedSecret)
+      )
       .then(secret => secret)
       .catch(err => {
         if (err === 'Offline') {
@@ -1167,7 +1193,8 @@ class Secretin {
     return this.api
       .getHistory(this.currentUser, hashedTitle)
       .then(encryptedHistory =>
-        this.currentUser.decryptSecret(hashedTitle, encryptedHistory))
+        this.currentUser.decryptSecret(hashedTitle, encryptedHistory)
+      )
       .then(history => {
         if (typeof index === 'undefined') {
           return history;
@@ -1198,7 +1225,8 @@ class Secretin {
     }
     if (secretMetadatas.type === 'folder' && list.indexOf(hashedTitle) === -1) {
       isFolder = isFolder.then(() =>
-        this.deleteFolderSecrets(hashedTitle, list));
+        this.deleteFolderSecrets(hashedTitle, list)
+      );
     }
 
     return isFolder
@@ -1216,7 +1244,8 @@ class Secretin {
               this.api
                 .getSecret(hashedFolder, this.currentUser)
                 .then(encryptedSecret =>
-                  this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
+                  this.currentUser.decryptSecret(hashedFolder, encryptedSecret)
+                )
                 .then(secret => {
                   const folder = secret;
                   delete folder[hashedTitle];
@@ -1251,13 +1280,15 @@ class Secretin {
     return this.api
       .getSecret(hashedFolder, this.currentUser)
       .then(encryptedSecret =>
-        this.currentUser.decryptSecret(hashedFolder, encryptedSecret))
+        this.currentUser.decryptSecret(hashedFolder, encryptedSecret)
+      )
       .then(secrets =>
         Object.keys(secrets).reduce(
           (promise, hashedTitle) =>
             promise.then(() => this.deleteSecret(hashedTitle, list)),
           Promise.resolve()
-        ))
+        )
+      )
       .then(() => {
         if (typeof window.process !== 'undefined') {
           // Electron
@@ -1432,9 +1463,11 @@ class Secretin {
   }
 
   canITryShortLogin() {
-    return this.editableDB &&
+    return (
+      this.editableDB &&
       localStorageAvailable() &&
-      localStorage.getItem(`${Secretin.prefix}username`) !== null;
+      localStorage.getItem(`${Secretin.prefix}username`) !== null
+    );
   }
 
   getSavedUsername() {
@@ -1507,6 +1540,7 @@ class Secretin {
     let remoteUser;
     let parameters;
     let encryptedMetadata;
+    const newHashedTitles = {};
     return oldSecretin.api
       .getDerivationParameters(username)
       .then(rParameters => {
@@ -1534,67 +1568,110 @@ class Secretin {
         encryptedMetadata = user.metadatas;
         oldSecretin.currentUser.keys = user.keys;
         const hashedTitles = Object.keys(oldSecretin.currentUser.keys);
+        const newHashedTitlePromises = [];
+        hashedTitles.forEach(hashedTitle => {
+          const now = Date.now();
+          const saltedTitle = `${now}|${hashedTitle}`;
+          newHashedTitlePromises.push(
+            getSHA256(saltedTitle).then(newHashedTitle => ({
+              old: hashedTitle,
+              new: newHashedTitle,
+            }))
+          );
+        });
+
+        return Promise.all(newHashedTitlePromises);
+      })
+      .then(rNewHashedTitles => {
+        rNewHashedTitles.forEach(newHashedTitle => {
+          newHashedTitles[newHashedTitle.old] = newHashedTitle.new;
+        });
+
+        const hashedTitles = Object.keys(oldSecretin.currentUser.keys);
         const progressStatus = new ImportSecretStatus(0, hashedTitles.length);
         progress(progressStatus);
-        return hashedTitles.reduce(
-          (promise, hashedTitle) => {
-            let encryptedSecret;
-            let newMetadata;
-            return promise.then(() =>
-              oldSecretin.api
-                .getSecret(hashedTitle, oldSecretin.currentUser)
-                .then(rEncryptedSecret => {
-                  encryptedSecret = rEncryptedSecret;
-                  return oldSecretin.api.getHistory(
-                    oldSecretin.currentUser,
-                    hashedTitle
-                  );
-                })
-                .then(encryptedHistory =>
-                  oldSecretin.currentUser.exportSecret(
-                    hashedTitle,
-                    encryptedSecret,
-                    encryptedMetadata[hashedTitle],
-                    encryptedHistory
-                  ))
-                .then(({ secret, metadata, history }) => {
-                  newMetadata = metadata;
-                  const folders = newMetadata.users[
-                    oldSecretin.currentUser.username
-                  ].folders;
-                  const now = new Date();
-                  newMetadata.users = {
-                    [this.currentUser.username]: {
-                      username: this.currentUser.username,
-                      rights: 2,
-                      folders,
-                    },
-                  };
-                  newMetadata.lastModifiedAt = now.toISOString();
-                  newMetadata.lastModifiedBy = this.currentUser.username;
 
-                  return this.currentUser.importSecret(
-                    hashedTitle,
-                    secret,
-                    newMetadata,
-                    history
-                  );
-                })
-                .then(secretObject => {
-                  this.currentUser.keys[secretObject.hashedTitle] = {
-                    key: secretObject.wrappedKey,
-                    rights: newMetadata.users[this.currentUser.username].rights,
-                  };
-                  this.currentUser.metadatas[hashedTitle] = newMetadata;
-                  return this.api.addSecret(this.currentUser, secretObject);
-                })
-                .then(() => {
-                  progressStatus.step();
-                  progress(progressStatus);
-                }));
-          },
-          Promise.resolve()
-        );
+        return hashedTitles.reduce((promise, hashedTitle) => {
+          let encryptedSecret;
+          let newMetadata;
+          return promise.then(() =>
+            oldSecretin.api
+              .getSecret(hashedTitle, oldSecretin.currentUser)
+              .then(rEncryptedSecret => {
+                encryptedSecret = rEncryptedSecret;
+                return oldSecretin.api.getHistory(
+                  oldSecretin.currentUser,
+                  hashedTitle
+                );
+              })
+              .then(encryptedHistory =>
+                oldSecretin.currentUser.exportSecret(
+                  hashedTitle,
+                  encryptedSecret,
+                  encryptedMetadata[hashedTitle],
+                  encryptedHistory
+                )
+              )
+              .then(({ secret, metadata, history }) => {
+                newMetadata = metadata;
+                const newSecret = secret;
+                const oldFolders = Object.keys(
+                  newMetadata.users[oldSecretin.currentUser.username].folders
+                );
+                const newFolders = {};
+                oldFolders.forEach(oldFolder => {
+                  if (oldFolder !== 'ROOT') {
+                    newFolders[newHashedTitles[oldFolder]] = true;
+                  } else {
+                    newFolders.ROOT = true;
+                  }
+                });
+
+                newMetadata.id = newHashedTitles[metadata.id];
+                newMetadata.users = {
+                  [this.currentUser.username]: {
+                    username: this.currentUser.username,
+                    rights: 2,
+                    folders: newFolders,
+                  },
+                };
+
+                const now = new Date();
+                newMetadata.lastModifiedAt = now.toISOString();
+                newMetadata.lastModifiedBy = this.currentUser.username;
+
+                if (metadata.type === 'folder') {
+                  const oldSecrets = Object.keys(secret);
+                  oldSecrets.forEach(oldSecret => {
+                    const newSecretTitle = newHashedTitles[oldSecret];
+                    newSecret[newSecretTitle] = 1;
+                    delete newSecret[oldSecret];
+                  });
+                }
+
+                return this.currentUser.importSecret(
+                  newHashedTitles[hashedTitle],
+                  newSecret,
+                  newMetadata,
+                  history
+                );
+              })
+              .then(secretObject => {
+                this.currentUser.keys[secretObject.hashedTitle] = {
+                  key: secretObject.wrappedKey,
+                  rights: newMetadata.users[this.currentUser.username].rights,
+                };
+                this.currentUser.metadatas[
+                  secretObject.hashedTitle
+                ] = newMetadata;
+                return this.api.addSecret(this.currentUser, secretObject);
+              })
+              .then(() => {
+                progressStatus.step();
+                progress(progressStatus);
+              })
+          );
+        }, Promise.resolve());
       });
   }
 }

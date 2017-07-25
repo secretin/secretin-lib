@@ -132,12 +132,14 @@ describe('Sharing hell', () => {
         this.secretin.addSecretToFolder(
           otherSecretInOtherFolderId,
           otherFolderId
-        ))
+        )
+      )
       .then(() =>
         this.secretin.addSecretToFolder(
           otherSecretInOtherFolderId2,
           otherFolderId
-        ))
+        )
+      )
       .then(() => this.secretin.shareSecret(secretId, user4, 0))
       .then(() => this.secretin.shareSecret(otherFolderId, user4, 0))
       .then(() => this.secretin.shareSecret(folderId, user1, 0))
@@ -319,9 +321,8 @@ describe('Sharing hell', () => {
     return this.secretin
       .loginUser(user3, password3)
       .then(() =>
-        this.secretin.currentUser.metadatas.should.deep.equal(
-          expectedMetadatas
-        ));
+        this.secretin.currentUser.metadatas.should.deep.equal(expectedMetadatas)
+      );
   });
 
   it('Add secret to a folder with multiple users', () => {
@@ -366,7 +367,8 @@ describe('Sharing hell', () => {
       .then(() =>
         this.secretin.currentUser.metadatas[secretId].should.deep.equal(
           expectedMetadatas
-        ))
+        )
+      )
       .then(() => {
         this.secretin.currentUser.disconnect();
         return this.secretin.loginUser(user1, password1);
@@ -417,7 +419,8 @@ describe('Sharing hell', () => {
       .then(() =>
         this.secretin.currentUser.metadatas[secretInFolderId].should.deep.equal(
           expectedMetadatas
-        ))
+        )
+      )
       .then(() => {
         this.secretin.currentUser.disconnect();
         return this.secretin.loginUser(user2, password2);

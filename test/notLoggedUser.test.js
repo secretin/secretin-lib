@@ -60,9 +60,8 @@ describe('Not logged user', () => {
       .then(() => this.secretin.currentUser.disconnect())
       .then(() => this.secretin.loginUser(username, wrongPassword))
       .should.be.rejectedWith(Secretin.Errors.InvalidPasswordError)
-      .then(
-        () => this.secretin.currentUser.privateKey
-      ).should.eventually.be.null);
+      .then(() => this.secretin.currentUser.privateKey).should.eventually.be
+      .null);
 
   it("Can't login with invalid username", () =>
     this.secretin
@@ -70,9 +69,8 @@ describe('Not logged user', () => {
       .then(() => this.secretin.currentUser.disconnect())
       .then(() => this.secretin.loginUser(username, wrongPassword))
       .should.be.rejectedWith(Secretin.Errors.UserNotFoundError)
-      .then(
-        () => this.secretin.currentUser.privateKey
-      ).should.eventually.be.undefined);
+      .then(() => this.secretin.currentUser.privateKey).should.eventually.be
+      .undefined);
 
   it("Can't create user with existing username", () =>
     this.secretin
@@ -80,7 +78,6 @@ describe('Not logged user', () => {
       .then(() => this.secretin.currentUser.disconnect())
       .then(() => this.secretin.newUser(username, password))
       .should.be.rejectedWith(Secretin.Errors.UsernameAlreadyExistsError)
-      .then(
-        () => this.secretin.currentUser.privateKey
-      ).should.eventually.be.null);
+      .then(() => this.secretin.currentUser.privateKey).should.eventually.be
+      .null);
 });
