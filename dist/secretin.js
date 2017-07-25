@@ -2039,7 +2039,7 @@ var User = function () {
         // history already decrypted
         return Promise.resolve(history);
       }
-      if (typeof history !== 'undefined') {
+      if (typeof history !== 'undefined' && typeof history.iv !== 'undefined' && typeof history.secret !== 'undefined') {
         // history must be decrypted
         return _this13.decryptSecret(metadatas.id, history);
       }
@@ -3493,6 +3493,7 @@ var Secretin = function () {
     var remoteUser = void 0;
     var parameters = void 0;
     var encryptedMetadata = void 0;
+    var newHashedTitles = {};
     return oldSecretin.api.getDerivationParameters(username).then(function (rParameters) {
       parameters = rParameters;
       return derivePassword(password, parameters);
@@ -3514,8 +3515,28 @@ var Secretin = function () {
       encryptedMetadata = user.metadatas;
       oldSecretin.currentUser.keys = user.keys;
       var hashedTitles = Object.keys(oldSecretin.currentUser.keys);
+      var newHashedTitlePromises = [];
+      hashedTitles.forEach(function (hashedTitle) {
+        var now = Date.now();
+        var saltedTitle = now + '|' + hashedTitle;
+        newHashedTitlePromises.push(getSHA256(saltedTitle).then(function (newHashedTitle) {
+          return {
+            old: hashedTitle,
+            new: newHashedTitle
+          };
+        }));
+      });
+
+      return Promise.all(newHashedTitlePromises);
+    }).then(function (rNewHashedTitles) {
+      rNewHashedTitles.forEach(function (newHashedTitle) {
+        newHashedTitles[newHashedTitle.old] = newHashedTitle.new;
+      });
+
+      var hashedTitles = Object.keys(oldSecretin.currentUser.keys);
       var progressStatus = new ImportSecretStatus(0, hashedTitles.length);
       progress(progressStatus);
+
       return hashedTitles.reduce(function (promise, hashedTitle) {
         var encryptedSecret = void 0;
         var newMetadata = void 0;
@@ -3531,23 +3552,44 @@ var Secretin = function () {
                 history = _ref.history;
 
             newMetadata = metadata;
-            var folders = newMetadata.users[oldSecretin.currentUser.username].folders;
-            var now = new Date();
+            var newSecret = secret;
+            var oldFolders = Object.keys(newMetadata.users[oldSecretin.currentUser.username].folders);
+            var newFolders = {};
+            oldFolders.forEach(function (oldFolder) {
+              if (oldFolder !== 'ROOT') {
+                newFolders[newHashedTitles[oldFolder]] = true;
+              } else {
+                newFolders.ROOT = true;
+              }
+            });
+
+            newMetadata.id = newHashedTitles[metadata.id];
             newMetadata.users = defineProperty({}, _this30.currentUser.username, {
               username: _this30.currentUser.username,
               rights: 2,
-              folders: folders
+              folders: newFolders
             });
+
+            var now = new Date();
             newMetadata.lastModifiedAt = now.toISOString();
             newMetadata.lastModifiedBy = _this30.currentUser.username;
 
-            return _this30.currentUser.importSecret(hashedTitle, secret, newMetadata, history);
+            if (metadata.type === 'folder') {
+              var oldSecrets = Object.keys(secret);
+              oldSecrets.forEach(function (oldSecret) {
+                var newSecretTitle = newHashedTitles[oldSecret];
+                newSecret[newSecretTitle] = 1;
+                delete newSecret[oldSecret];
+              });
+            }
+
+            return _this30.currentUser.importSecret(newHashedTitles[hashedTitle], newSecret, newMetadata, history);
           }).then(function (secretObject) {
             _this30.currentUser.keys[secretObject.hashedTitle] = {
               key: secretObject.wrappedKey,
               rights: newMetadata.users[_this30.currentUser.username].rights
             };
-            _this30.currentUser.metadatas[hashedTitle] = newMetadata;
+            _this30.currentUser.metadatas[secretObject.hashedTitle] = newMetadata;
             return _this30.api.addSecret(_this30.currentUser, secretObject);
           }).then(function () {
             progressStatus.step();
