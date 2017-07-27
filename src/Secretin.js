@@ -1534,14 +1534,18 @@ class Secretin {
     let oldSecretin;
     return this.getDb()
       .then(jsonDB => {
+        if (typeof password === 'undefined') {
+          return Promise.resolve(JSON.parse(jsonDB));
+        }
         oldSecretin = new Secretin(APIStandalone, JSON.parse(jsonDB));
         oldSecretin.currentUser = this.currentUser;
-        return oldSecretin.changePassword(password);
+        return oldSecretin
+          .changePassword(password)
+          .then(() => oldSecretin.api.getDb(oldSecretin.currentUser, {}));
       })
-      .then(() => oldSecretin.api.getDb(oldSecretin.currentUser, {}))
       .then(rDB => {
         const db = rDB;
-        db.username = oldSecretin.currentUser.username;
+        db.username = this.currentUser.username;
         return JSON.stringify(db);
       });
   }

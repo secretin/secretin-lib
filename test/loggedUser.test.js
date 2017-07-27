@@ -252,7 +252,7 @@ describe('Logged user', () => {
     );
   });
 
-  it('Can export database', () => {
+  it('Can export database with password', () => {
     const passwordExport = 'password_export';
     let jsonDB;
     Object.keys(this.secretin.currentUser.metadatas).length.should.equal(6);
@@ -264,6 +264,21 @@ describe('Logged user', () => {
         return this.secretin.loginUser(username, password);
       })
       .then(() => this.secretin.importDb(passwordExport, jsonDB))
+      .then(() => Object.keys(this.secretin.currentUser.metadatas).length)
+      .should.eventually.equal(12);
+  });
+
+  it('Can export database without password', () => {
+    let jsonDB;
+    Object.keys(this.secretin.currentUser.metadatas).length.should.equal(6);
+    return this.secretin
+      .exportDb()
+      .then(rJsonDB => {
+        jsonDB = rJsonDB;
+        this.secretin.currentUser.disconnect();
+        return this.secretin.loginUser(username, password);
+      })
+      .then(() => this.secretin.importDb(password, jsonDB))
       .then(() => Object.keys(this.secretin.currentUser.metadatas).length)
       .should.eventually.equal(12);
   });
