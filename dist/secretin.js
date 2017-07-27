@@ -3484,14 +3484,17 @@ var Secretin = function () {
 
     var oldSecretin = void 0;
     return this.getDb().then(function (jsonDB) {
+      if (typeof password === 'undefined') {
+        return Promise.resolve(JSON.parse(jsonDB));
+      }
       oldSecretin = new Secretin(API, JSON.parse(jsonDB));
       oldSecretin.currentUser = _this30.currentUser;
-      return oldSecretin.changePassword(password);
-    }).then(function () {
-      return oldSecretin.api.getDb(oldSecretin.currentUser, {});
+      return oldSecretin.changePassword(password).then(function () {
+        return oldSecretin.api.getDb(oldSecretin.currentUser, {});
+      });
     }).then(function (rDB) {
       var db = rDB;
-      db.username = oldSecretin.currentUser.username;
+      db.username = _this30.currentUser.username;
       return JSON.stringify(db);
     });
   };
