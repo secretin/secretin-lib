@@ -229,13 +229,12 @@ describe('Logged user', () => {
   });
 
   it('Can import database', () => {
-    const usernameOld = 'user_old';
     const passwordOld = 'password_old';
 
     return (
       this.secretin
         // eslint-disable-next-line
-        .importDb(usernameOld, passwordOld, mockedExportedDB)
+        .importDb(passwordOld, mockedExportedDB)
         .then(() => Object.keys(this.secretin.currentUser.metadatas).length)
         .should.eventually.equal(12)
         .then(() => {
@@ -246,11 +245,99 @@ describe('Logged user', () => {
         .should.eventually.equal(12)
         .then(() =>
           // eslint-disable-next-line
-          this.secretin.importDb(usernameOld, passwordOld, mockedExportedDB)
+          this.secretin.importDb(passwordOld, mockedExportedDB)
         )
         .then(() => Object.keys(this.secretin.currentUser.metadatas).length)
         .should.eventually.equal(18)
     );
+  });
+
+  it('Can export database', () => {
+    const passwordExport = 'password_export';
+    let jsonDB;
+    Object.keys(this.secretin.currentUser.metadatas).length.should.equal(6);
+    return this.secretin
+      .exportDb(passwordExport)
+      .then(rJsonDB => {
+        jsonDB = rJsonDB;
+        this.secretin.currentUser.disconnect();
+        return this.secretin.loginUser(username, password);
+      })
+      .then(() => this.secretin.importDb(passwordExport, jsonDB))
+      .then(() => Object.keys(this.secretin.currentUser.metadatas).length)
+      .should.eventually.equal(12);
+  });
+
+  it('Can get database', () => {
+    let expected;
+    let expected2;
+    if (__karma__.config.args[0] === 'server') {
+      expected = {
+        [secretId]: '1',
+        [folderId]: '3',
+        [otherFolderId]: '2',
+        [secretInFolderId]: '2',
+        [otherSecretInOtherFolderId]: '2',
+        [folderInFolderId]: '2',
+      };
+
+      expected2 = {
+        [secretId]: '2',
+        [folderId]: '3',
+        [otherFolderId]: '2',
+        [secretInFolderId]: '2',
+        [otherSecretInOtherFolderId]: '2',
+        [folderInFolderId]: '2',
+      };
+    } else {
+      expected = {
+        [secretId]: 'Standalone',
+        [folderId]: 'Standalone',
+        [otherFolderId]: 'Standalone',
+        [secretInFolderId]: 'Standalone',
+        [otherSecretInOtherFolderId]: 'Standalone',
+        [folderInFolderId]: 'Standalone',
+      };
+
+      expected2 = {
+        [secretId]: 'Standalone',
+        [folderId]: 'Standalone',
+        [otherFolderId]: 'Standalone',
+        [secretInFolderId]: 'Standalone',
+        [otherSecretInOtherFolderId]: 'Standalone',
+        [folderInFolderId]: 'Standalone',
+      };
+    }
+
+    const cacheKey = `${Secretin.prefix}cache_${this.secretin.currentUser
+      .username}`;
+    return this.secretin
+      .getDb()
+      .then(DbCacheStr => {
+        const DbCache = JSON.parse(DbCacheStr);
+        const revs = {};
+        Object.keys(DbCache.secrets).forEach(key => {
+          revs[key] = DbCache.secrets[key].rev.split('-')[0];
+        });
+        return revs;
+      })
+      .should.eventually.deep.equal(expected)
+      .then(() =>
+        this.secretin
+          .editSecret(secretId, newSecretContent)
+          .then(() => this.secretin.getSecret(secretId))
+          .then(() => this.secretin.getDb())
+          .then(() => localStorage.getItem(cacheKey))
+          .then(DbCacheStr => {
+            const DbCache = JSON.parse(DbCacheStr);
+            const revs = {};
+            Object.keys(DbCache.secrets).forEach(key => {
+              revs[key] = DbCache.secrets[key].rev.split('-')[0];
+            });
+            return revs;
+          })
+          .should.eventually.deep.equal(expected2)
+      );
   });
 
   it('Can get database', () => {
