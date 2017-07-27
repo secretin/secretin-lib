@@ -3482,15 +3482,34 @@ var Secretin = function () {
     });
   };
 
-  Secretin.prototype.importDb = function importDb(username, password, jsonDB) {
+  Secretin.prototype.exportDb = function exportDb(password) {
     var _this30 = this;
 
-    var progress = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : defaultProgress;
+    var oldSecretin = void 0;
+    return this.getDb().then(function (jsonDB) {
+      oldSecretin = new Secretin(API, JSON.parse(jsonDB));
+      oldSecretin.currentUser = _this30.currentUser;
+      return oldSecretin.changePassword(password);
+    }).then(function () {
+      return oldSecretin.api.getDb(oldSecretin.currentUser, {});
+    }).then(function (rDB) {
+      var db = rDB;
+      db.username = oldSecretin.currentUser.username;
+      return JSON.stringify(db);
+    });
+  };
+
+  Secretin.prototype.importDb = function importDb(password, jsonDB) {
+    var _this31 = this;
+
+    var progress = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : defaultProgress;
 
     if (!this.editableDB) {
       return Promise.reject(new OfflineError());
     }
-    var oldSecretin = new Secretin(API, JSON.parse(jsonDB));
+    var oldDB = JSON.parse(jsonDB);
+    var username = oldDB.username;
+    var oldSecretin = new Secretin(API, oldDB);
     var key = void 0;
     var hash = void 0;
     var remoteUser = void 0;
@@ -3567,15 +3586,15 @@ var Secretin = function () {
             });
 
             newMetadata.id = newHashedTitles[metadata.id];
-            newMetadata.users = defineProperty({}, _this30.currentUser.username, {
-              username: _this30.currentUser.username,
+            newMetadata.users = defineProperty({}, _this31.currentUser.username, {
+              username: _this31.currentUser.username,
               rights: 2,
               folders: newFolders
             });
 
             var now = new Date();
             newMetadata.lastModifiedAt = now.toISOString();
-            newMetadata.lastModifiedBy = _this30.currentUser.username;
+            newMetadata.lastModifiedBy = _this31.currentUser.username;
 
             if (metadata.type === 'folder') {
               var oldSecrets = Object.keys(secret);
@@ -3586,14 +3605,14 @@ var Secretin = function () {
               });
             }
 
-            return _this30.currentUser.importSecret(newHashedTitles[hashedTitle], newSecret, newMetadata, history);
+            return _this31.currentUser.importSecret(newHashedTitles[hashedTitle], newSecret, newMetadata, history);
           }).then(function (secretObject) {
-            _this30.currentUser.keys[secretObject.hashedTitle] = {
+            _this31.currentUser.keys[secretObject.hashedTitle] = {
               key: secretObject.wrappedKey,
-              rights: newMetadata.users[_this30.currentUser.username].rights
+              rights: newMetadata.users[_this31.currentUser.username].rights
             };
-            _this30.currentUser.metadatas[secretObject.hashedTitle] = newMetadata;
-            return _this30.api.addSecret(_this30.currentUser, secretObject);
+            _this31.currentUser.metadatas[secretObject.hashedTitle] = newMetadata;
+            return _this31.api.addSecret(_this31.currentUser, secretObject);
           }).then(function () {
             progressStatus.step();
             progress(progressStatus);
