@@ -1530,11 +1530,29 @@ class Secretin {
       });
   }
 
-  importDb(username, password, jsonDB, progress = defaultProgress) {
+  exportDb(password) {
+    let oldSecretin;
+    return this.getDb()
+      .then(jsonDB => {
+        oldSecretin = new Secretin(APIStandalone, JSON.parse(jsonDB));
+        oldSecretin.currentUser = this.currentUser;
+        return oldSecretin.changePassword(password);
+      })
+      .then(() => oldSecretin.api.getDb(oldSecretin.currentUser, {}))
+      .then(rDB => {
+        const db = rDB;
+        db.username = oldSecretin.currentUser.username;
+        return JSON.stringify(db);
+      });
+  }
+
+  importDb(password, jsonDB, progress = defaultProgress) {
     if (!this.editableDB) {
       return Promise.reject(new OfflineError());
     }
-    const oldSecretin = new Secretin(APIStandalone, JSON.parse(jsonDB));
+    const oldDB = JSON.parse(jsonDB);
+    const username = oldDB.username;
+    const oldSecretin = new Secretin(APIStandalone, oldDB);
     let key;
     let hash;
     let remoteUser;
