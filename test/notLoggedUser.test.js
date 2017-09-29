@@ -29,7 +29,8 @@ describe('Not logged user', () => {
         'keys',
         'hash',
         'metadatas',
-        'options'
+        'options',
+        'cryptoAdapter'
       )
       .then(currentUser => currentUser.privateKey)
       .should.eventually.be.instanceOf(CryptoKey));
@@ -49,7 +50,8 @@ describe('Not logged user', () => {
         'keys',
         'hash',
         'metadatas',
-        'options'
+        'options',
+        'cryptoAdapter'
       )
       .then(currentUser => currentUser.privateKey)
       .should.eventually.be.instanceOf(CryptoKey));

@@ -174,551 +174,6 @@ var toConsumableArray = function (arr) {
   }
 };
 
-var symbols = '!@#$%^&*()+_=}{[]|:;"?.><,`~';
-var vowels = 'aeiouy';
-var consonants = 'bcdfghjklmnpqrstvwxz';
-var numbers = '0123456789';
-
-var similarChars = '[ilLI|`oO0';
-
-var hasNumber = function hasNumber(str) {
-  return str.match(/\d+/g) != null;
-};
-var hasMixedCase = function hasMixedCase(str) {
-  return str.toUpperCase() !== str && str.toLowerCase() !== str;
-};
-var hasSymbol = function hasSymbol(str) {
-  var regexString = '[' + escapeRegExp(symbols) + ']';
-  var symbolRegex = new RegExp(regexString);
-  return str.match(symbolRegex) != null;
-};
-
-var checkStrictRules = function checkStrictRules(str, rules) {
-  return rules.numbers === hasNumber(str) && rules.mixedCase === hasMixedCase(str) && rules.symbols === hasSymbol(str);
-};
-
-var buildCharset = function buildCharset(options) {
-  var charset = [];
-
-  var letters = vowels + consonants;
-
-  charset.push.apply(charset, [].concat(toConsumableArray(letters)));
-
-  if (options.contentRules.mixedCase) {
-    charset.push.apply(charset, [].concat(toConsumableArray(letters.toUpperCase())));
-  }
-  if (options.contentRules.numbers) {
-    charset.push.apply(charset, [].concat(toConsumableArray(numbers)));
-  }
-  if (options.contentRules.symbols) {
-    charset.push.apply(charset, [].concat(toConsumableArray(symbols)));
-  }
-
-  if (options.contentRules.similarChars === false) {
-    charset.filter(function (character) {
-      return similarChars.indexOf(character) >= 0;
-    });
-  }
-
-  return charset;
-};
-
-var getRandomPassword = function getRandomPassword(options) {
-  var password = '';
-
-  if (options.readable) {
-    var lastCharWasVocal = false; // TODO : rand
-
-    for (var i = 0; i < options.length; i += 1) {
-      var charset = lastCharWasVocal ? consonants : vowels;
-      lastCharWasVocal = !lastCharWasVocal;
-      var randomIndex = generateRandomNumber(charset.length);
-      password += charset[randomIndex];
-    }
-  } else {
-    var _charset = buildCharset(options);
-
-    for (var _i = 0; _i < options.length; _i += 1) {
-      var _randomIndex = generateRandomNumber(_charset.length);
-      password += _charset[_randomIndex];
-    }
-  }
-
-  return password;
-};
-
-var generatePassword = function generatePassword(customOptions) {
-  var defaults = {
-    length: 20,
-    readable: false,
-    allowSimilarChars: false,
-    strictRules: true,
-    contentRules: {
-      numbers: true,
-      mixedCase: true,
-      symbols: true
-    }
-  };
-
-  var options = Object.assign({}, defaults, customOptions);
-  var contentRules = options.contentRules;
-
-  var password = getRandomPassword(options);
-
-  if (options.strictRules) {
-    return checkStrictRules(password, contentRules) ? password : generatePassword(customOptions);
-  }
-
-  return password;
-};
-
-var PasswordGenerator = {
-  hasNumber: hasNumber,
-  hasMixedCase: hasMixedCase,
-  hasSymbol: hasSymbol,
-  checkStrictRules: checkStrictRules,
-  buildCharset: buildCharset,
-  getRandomPassword: getRandomPassword,
-  generatePassword: generatePassword
-};
-
-function hexStringToUint8Array(hexString) {
-  if (hexString.length % 2 !== 0) {
-    throw 'Invalid hexString';
-  }
-  var arrayBuffer = new Uint8Array(hexString.length / 2);
-
-  for (var i = 0; i < hexString.length; i += 2) {
-    var byteValue = parseInt(hexString.substr(i, 2), 16);
-    if (isNaN(byteValue)) {
-      throw 'Invalid hexString';
-    }
-    arrayBuffer[i / 2] = byteValue;
-  }
-
-  return arrayBuffer;
-}
-
-function bytesToHexString(givenBytes) {
-  if (!givenBytes) {
-    return null;
-  }
-
-  var bytes = new Uint8Array(givenBytes);
-  var hexBytes = [];
-
-  for (var i = 0; i < bytes.length; ++i) {
-    var byteString = bytes[i].toString(16);
-    if (byteString.length < 2) {
-      byteString = '0' + byteString;
-    }
-    hexBytes.push(byteString);
-  }
-  return hexBytes.join('');
-}
-
-function asciiToUint8Array(str) {
-  var chars = [];
-  for (var i = 0; i < str.length; ++i) {
-    chars.push(str.charCodeAt(i));
-  }
-  return new Uint8Array(chars);
-}
-
-function bytesToASCIIString(bytes) {
-  return String.fromCharCode.apply(null, new Uint8Array(bytes));
-}
-
-function generateRandomNumber(max) {
-  var randomValues = new Uint8Array(1);
-  crypto.getRandomValues(randomValues);
-  return randomValues[0] % max;
-}
-
-function generateSeed() {
-  var buf = new Uint8Array(32);
-  crypto.getRandomValues(buf);
-
-  var shift = 3;
-  var carry = 0;
-  var symbol = void 0;
-  var byte = void 0;
-  var i = void 0;
-  var output = '';
-  var alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-
-  for (i = 0; i < buf.length; i++) {
-    byte = buf[i];
-
-    symbol = carry | byte >> shift;
-    output += alphabet[symbol & 0x1f];
-
-    if (shift > 5) {
-      shift -= 5;
-      symbol = byte >> shift;
-      output += alphabet[symbol & 0x1f];
-    }
-
-    shift = 5 - shift;
-    carry = byte << shift;
-    shift = 8 - shift;
-  }
-
-  if (shift !== 3) {
-    output += alphabet[carry & 0x1f];
-    shift = 3;
-    carry = 0;
-  }
-
-  return { b32: output, raw: buf };
-}
-
-function localStorageAvailable() {
-  try {
-    var storage = window.localStorage;
-    var x = '__storage_test__';
-    storage.setItem(x, x);
-    storage.removeItem(x);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
-function xorSeed(byteArray1, byteArray2) {
-  if (byteArray1 instanceof Uint8Array && byteArray2 instanceof Uint8Array && byteArray1.length === 32 && byteArray2.length === 32) {
-    var buf = new Uint8Array(32);
-    var i = void 0;
-    for (i = 0; i < 32; i++) {
-      buf[i] = byteArray1[i] ^ byteArray2[i];
-    }
-    return bytesToHexString(buf);
-  }
-  throw 'Utils.xorSeed expect 32 bytes Uint8Arrays';
-}
-
-function escapeRegExp(s) {
-  return s.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-}
-
-function defaultProgress(status) {
-  var seconds = Math.trunc(Date.now());
-  if (status.total < 2) {
-    // eslint-disable-next-line no-console
-    console.log(seconds + ' : ' + status.message);
-  } else {
-    // eslint-disable-next-line no-console
-    console.log(seconds + ' : ' + status.message + ' (' + status.state + '/' + status.total + ')');
-  }
-}
-
-var Utils = {
-  generateRandomNumber: generateRandomNumber,
-  generateSeed: generateSeed,
-  hexStringToUint8Array: hexStringToUint8Array,
-  bytesToHexString: bytesToHexString,
-  asciiToUint8Array: asciiToUint8Array,
-  bytesToASCIIString: bytesToASCIIString,
-  xorSeed: xorSeed,
-  escapeRegExp: escapeRegExp,
-  PasswordGenerator: PasswordGenerator,
-  defaultProgress: defaultProgress
-};
-
-function getSHA256(str) {
-  var algorithm = 'SHA-256';
-  var data = asciiToUint8Array(str);
-  return crypto.subtle.digest(algorithm, data).then(function (hashedStr) {
-    return bytesToHexString(hashedStr);
-  });
-}
-
-function genRSAOAEP() {
-  var algorithm = {
-    name: 'RSA-OAEP',
-    modulusLength: 4096,
-    publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
-    hash: { name: 'SHA-256' }
-  };
-  var extractable = true;
-  var keyUsages = ['wrapKey', 'unwrapKey', 'encrypt', 'decrypt'];
-  return crypto.subtle.generateKey(algorithm, extractable, keyUsages);
-}
-
-function generateWrappingKey() {
-  var algorithm = {
-    name: 'AES-CBC',
-    length: 256
-  };
-
-  var extractable = true;
-  var keyUsages = ['wrapKey', 'unwrapKey'];
-
-  return crypto.subtle.generateKey(algorithm, extractable, keyUsages);
-}
-
-function encryptAESGCM256(secret, key) {
-  var result = {};
-  var algorithm = {};
-  if (typeof key === 'undefined') {
-    algorithm = {
-      name: 'AES-GCM',
-      length: 256
-    };
-    var extractable = true;
-    var keyUsages = ['encrypt'];
-    return crypto.subtle.generateKey(algorithm, extractable, keyUsages).then(function (newKey) {
-      var iv = new Uint8Array(12);
-      crypto.getRandomValues(iv);
-      algorithm = {
-        name: 'AES-GCM',
-        iv: iv,
-        tagLength: 128
-      };
-      var data = asciiToUint8Array(JSON.stringify(secret));
-      result.key = newKey;
-      result.iv = bytesToHexString(iv);
-      return crypto.subtle.encrypt(algorithm, newKey, data);
-    }).then(function (encryptedSecret) {
-      result.secret = bytesToHexString(encryptedSecret);
-      return result;
-    });
-  }
-
-  result.key = key;
-  var iv = new Uint8Array(12);
-  crypto.getRandomValues(iv);
-  algorithm = {
-    name: 'AES-GCM',
-    iv: iv,
-    tagLength: 128
-  };
-  var data = asciiToUint8Array(JSON.stringify(secret));
-  result.iv = bytesToHexString(iv);
-  return crypto.subtle.encrypt(algorithm, key, data).then(function (encryptedSecret) {
-    result.secret = bytesToHexString(encryptedSecret);
-    return result;
-  });
-}
-
-function decryptAESGCM256(secretObject, key) {
-  var algorithm = {
-    name: 'AES-GCM',
-    iv: hexStringToUint8Array(secretObject.iv),
-    tagLength: 128
-  };
-  var data = hexStringToUint8Array(secretObject.secret);
-  return crypto.subtle.decrypt(algorithm, key, data).then(function (decryptedSecret) {
-    return JSON.parse(bytesToASCIIString(decryptedSecret));
-  });
-}
-
-function encryptRSAOAEP(secret, publicKey) {
-  var algorithm = {
-    name: 'RSA-OAEP',
-    hash: { name: 'SHA-256' }
-  };
-  var data = asciiToUint8Array(JSON.stringify(secret));
-  return crypto.subtle.encrypt(algorithm, publicKey, data).then(function (encryptedSecret) {
-    return bytesToHexString(encryptedSecret);
-  });
-}
-
-function decryptRSAOAEP(secret, privateKey) {
-  var algorithm = {
-    name: 'RSA-OAEP',
-    hash: { name: 'SHA-256' }
-  };
-  var data = hexStringToUint8Array(secret);
-  return crypto.subtle.decrypt(algorithm, privateKey, data).then(function (decryptedSecret) {
-    return JSON.parse(bytesToASCIIString(decryptedSecret));
-  });
-}
-
-function wrapRSAOAEP(key, wrappingPublicKey) {
-  var format = 'raw';
-  var wrapAlgorithm = {
-    name: 'RSA-OAEP',
-    hash: { name: 'SHA-256' }
-  };
-  return crypto.subtle.wrapKey(format, key, wrappingPublicKey, wrapAlgorithm).then(function (wrappedKey) {
-    return bytesToHexString(wrappedKey);
-  });
-}
-
-function _sign(datas, key) {
-  var signAlgorithm = {
-    name: 'RSA-PSS',
-    saltLength: 32 };
-  return crypto.subtle.sign(signAlgorithm, key, asciiToUint8Array(datas)).then(function (signature) {
-    return bytesToHexString(signature);
-  });
-}
-
-function _verify(datas, signature, key) {
-  var signAlgorithm = {
-    name: 'RSA-PSS',
-    saltLength: 32 };
-  return crypto.subtle.verify(signAlgorithm, key, hexStringToUint8Array(signature), asciiToUint8Array(datas));
-}
-
-function unwrapRSAOAEP(wrappedKeyHex, unwrappingPrivateKey) {
-  var format = 'raw';
-  var wrappedKey = hexStringToUint8Array(wrappedKeyHex);
-  var unwrapAlgorithm = {
-    name: 'RSA-OAEP',
-    hash: { name: 'SHA-256' }
-  };
-  var unwrappedKeyAlgorithm = {
-    name: 'AES-GCM',
-    length: 256
-  };
-  var extractable = true;
-  var usages = ['decrypt', 'encrypt'];
-
-  return crypto.subtle.unwrapKey(format, wrappedKey, unwrappingPrivateKey, unwrapAlgorithm, unwrappedKeyAlgorithm, extractable, usages);
-}
-
-function exportClearKey(key) {
-  var format = 'jwk';
-  return crypto.subtle.exportKey(format, key);
-}
-
-function convertOAEPToPSS(key, keyUsage) {
-  return exportClearKey(key).then(function (OAEPKey) {
-    var format = 'jwk';
-    var algorithm = {
-      name: 'RSA-PSS',
-      hash: { name: 'SHA-256' }
-    };
-    var extractable = false;
-    var keyUsages = [keyUsage];
-
-    var PSSKey = OAEPKey;
-    PSSKey.alg = 'PS256';
-    PSSKey.key_ops = keyUsages;
-
-    return crypto.subtle.importKey(format, PSSKey, algorithm, extractable, keyUsages);
-  });
-}
-
-function _importPublicKey(jwkPublicKey) {
-  var format = 'jwk';
-  var algorithm = {
-    name: 'RSA-OAEP',
-    hash: { name: 'SHA-256' }
-  };
-  var extractable = true;
-  var keyUsages = ['wrapKey', 'encrypt'];
-  return crypto.subtle.importKey(format, jwkPublicKey, algorithm, extractable, keyUsages);
-}
-
-function derivePassword(password, parameters) {
-  var result = {};
-
-  var passwordBuf = asciiToUint8Array(password);
-  var extractable = false;
-  var usages = ['deriveKey', 'deriveBits'];
-
-  return crypto.subtle.importKey('raw', passwordBuf, { name: 'PBKDF2' }, extractable, usages).then(function (key) {
-    var saltBuf = void 0;
-    var iterations = void 0;
-    if (typeof parameters === 'undefined') {
-      saltBuf = new Uint8Array(32);
-      crypto.getRandomValues(saltBuf);
-      var iterationsBuf = new Uint8Array(1);
-      crypto.getRandomValues(iterationsBuf);
-      iterations = 100000 + iterationsBuf[0];
-    } else {
-      saltBuf = hexStringToUint8Array(parameters.salt);
-      if (typeof parameters.iterations === 'undefined') {
-        iterations = 10000; // retrocompatibility
-      } else {
-        iterations = parameters.iterations;
-      }
-    }
-
-    result.salt = bytesToHexString(saltBuf);
-    result.iterations = iterations;
-
-    var algorithm = {
-      name: 'PBKDF2',
-      salt: saltBuf,
-      iterations: iterations,
-      hash: { name: 'SHA-256' }
-    };
-
-    var deriveKeyAlgorithm = {
-      name: 'AES-CBC',
-      length: 256
-    };
-
-    extractable = true;
-    usages = ['wrapKey', 'unwrapKey'];
-
-    return crypto.subtle.deriveKey(algorithm, key, deriveKeyAlgorithm, extractable, usages);
-  }).then(function (dKey) {
-    result.key = dKey;
-    return crypto.subtle.exportKey('raw', dKey);
-  }).then(function (rawKey) {
-    return crypto.subtle.digest('SHA-256', rawKey);
-  }).then(function (hashedKey) {
-    result.hash = bytesToHexString(hashedKey);
-    return result;
-  });
-}
-
-function exportKey(wrappingKey, key) {
-  var result = {};
-  var format = 'jwk';
-  var iv = new Uint8Array(16);
-  crypto.getRandomValues(iv);
-  var wrapAlgorithm = {
-    name: 'AES-CBC',
-    iv: iv
-  };
-  result.iv = bytesToHexString(iv);
-  return crypto.subtle.wrapKey(format, key, wrappingKey, wrapAlgorithm).then(function (wrappedKey) {
-    result.key = bytesToHexString(wrappedKey);
-    return result;
-  });
-}
-
-function _importPrivateKey(key, privateKeyObject) {
-  var format = 'jwk';
-  var wrappedPrivateKey = hexStringToUint8Array(privateKeyObject.privateKey);
-  var unwrapAlgorithm = {
-    name: 'AES-CBC',
-    iv: hexStringToUint8Array(privateKeyObject.iv)
-  };
-  var unwrappedKeyAlgorithm = {
-    name: 'RSA-OAEP',
-    hash: { name: 'sha-256' }
-  };
-  var extractable = true;
-  var keyUsages = ['unwrapKey', 'decrypt'];
-
-  return crypto.subtle.unwrapKey(format, wrappedPrivateKey, key, unwrapAlgorithm, unwrappedKeyAlgorithm, extractable, keyUsages).catch(function () {
-    return Promise.reject('Invalid Password');
-  });
-}
-
-function importKey(key, keyObject) {
-  var format = 'jwk';
-  var wrappedKey = hexStringToUint8Array(keyObject.key);
-  var unwrapAlgorithm = {
-    name: 'AES-CBC',
-    iv: hexStringToUint8Array(keyObject.iv)
-  };
-  var unwrappedKeyAlgorithm = unwrapAlgorithm;
-  var extractable = true;
-  var keyUsages = ['wrapKey', 'unwrapKey'];
-
-  return crypto.subtle.unwrapKey(format, wrappedKey, key, unwrapAlgorithm, unwrappedKeyAlgorithm, extractable, keyUsages).catch(function () {
-    return Promise.reject('Invalid Password');
-  });
-}
-
 var Error = function Error(errorObject) {
   classCallCheck(this, Error);
 
@@ -1325,8 +780,276 @@ var Statuses = {
   ImportSecretStatus: ImportSecretStatus
 };
 
+var symbols = '!@#$%^&*()+_=}{[]|:;"?.><,`~';
+var vowels = 'aeiouy';
+var consonants = 'bcdfghjklmnpqrstvwxz';
+var numbers = '0123456789';
+
+var similarChars = '[ilLI|`oO0';
+
+var hasNumber = function hasNumber(str) {
+  return str.match(/\d+/g) != null;
+};
+var hasMixedCase = function hasMixedCase(str) {
+  return str.toUpperCase() !== str && str.toLowerCase() !== str;
+};
+var hasSymbol = function hasSymbol(str) {
+  var regexString = '[' + escapeRegExp(symbols) + ']';
+  var symbolRegex = new RegExp(regexString);
+  return str.match(symbolRegex) != null;
+};
+
+var checkStrictRules = function checkStrictRules(str, rules) {
+  return rules.numbers === hasNumber(str) && rules.mixedCase === hasMixedCase(str) && rules.symbols === hasSymbol(str);
+};
+
+var buildCharset = function buildCharset(options) {
+  var charset = [];
+
+  var letters = vowels + consonants;
+
+  charset.push.apply(charset, [].concat(toConsumableArray(letters)));
+
+  if (options.contentRules.mixedCase) {
+    charset.push.apply(charset, [].concat(toConsumableArray(letters.toUpperCase())));
+  }
+  if (options.contentRules.numbers) {
+    charset.push.apply(charset, [].concat(toConsumableArray(numbers)));
+  }
+  if (options.contentRules.symbols) {
+    charset.push.apply(charset, [].concat(toConsumableArray(symbols)));
+  }
+
+  if (options.contentRules.similarChars === false) {
+    charset.filter(function (character) {
+      return similarChars.indexOf(character) >= 0;
+    });
+  }
+
+  return charset;
+};
+
+var getRandomPassword = function getRandomPassword(options) {
+  var password = '';
+
+  if (options.readable) {
+    var lastCharWasVocal = false; // TODO : rand
+
+    for (var i = 0; i < options.length; i += 1) {
+      var charset = lastCharWasVocal ? consonants : vowels;
+      lastCharWasVocal = !lastCharWasVocal;
+      var randomIndex = generateRandomNumber(charset.length);
+      password += charset[randomIndex];
+    }
+  } else {
+    var _charset = buildCharset(options);
+
+    for (var _i = 0; _i < options.length; _i += 1) {
+      var _randomIndex = generateRandomNumber(_charset.length);
+      password += _charset[_randomIndex];
+    }
+  }
+
+  return password;
+};
+
+var generatePassword = function generatePassword(customOptions) {
+  var defaults = {
+    length: 20,
+    readable: false,
+    allowSimilarChars: false,
+    strictRules: true,
+    contentRules: {
+      numbers: true,
+      mixedCase: true,
+      symbols: true
+    }
+  };
+
+  var options = Object.assign({}, defaults, customOptions);
+  var contentRules = options.contentRules;
+
+  var password = getRandomPassword(options);
+
+  if (options.strictRules) {
+    return checkStrictRules(password, contentRules) ? password : generatePassword(customOptions);
+  }
+
+  return password;
+};
+
+var PasswordGenerator = {
+  hasNumber: hasNumber,
+  hasMixedCase: hasMixedCase,
+  hasSymbol: hasSymbol,
+  checkStrictRules: checkStrictRules,
+  buildCharset: buildCharset,
+  getRandomPassword: getRandomPassword,
+  generatePassword: generatePassword
+};
+
+function hexStringToUint8Array(hexString) {
+  if (hexString.length % 2 !== 0) {
+    throw 'Invalid hexString';
+  }
+  var arrayBuffer = new Uint8Array(hexString.length / 2);
+
+  for (var i = 0; i < hexString.length; i += 2) {
+    var byteValue = parseInt(hexString.substr(i, 2), 16);
+    if (isNaN(byteValue)) {
+      throw 'Invalid hexString';
+    }
+    arrayBuffer[i / 2] = byteValue;
+  }
+
+  return arrayBuffer;
+}
+
+function bytesToHexString(givenBytes) {
+  if (!givenBytes) {
+    return null;
+  }
+
+  var bytes = new Uint8Array(givenBytes);
+  var hexBytes = [];
+
+  for (var i = 0; i < bytes.length; ++i) {
+    var byteString = bytes[i].toString(16);
+    if (byteString.length < 2) {
+      byteString = '0' + byteString;
+    }
+    hexBytes.push(byteString);
+  }
+  return hexBytes.join('');
+}
+
+function asciiToUint8Array(str) {
+  var chars = [];
+  for (var i = 0; i < str.length; ++i) {
+    chars.push(str.charCodeAt(i));
+  }
+  return new Uint8Array(chars);
+}
+
+function asciiToHexString(str) {
+  return str.split('').map(function (c) {
+    return ('0' + c.charCodeAt(0).toString(16)).slice(-2);
+  }).join('');
+}
+
+function hexStringToAscii(hexx) {
+  var hex = hexx.toString();
+  var str = '';
+  for (var i = 0; i < hex.length; i += 2) {
+    str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+  }
+  return str;
+}
+
+function bytesToASCIIString(bytes) {
+  return String.fromCharCode.apply(null, new Uint8Array(bytes));
+}
+
+function generateRandomNumber(max) {
+  var randomValues = new Uint8Array(1);
+  crypto.getRandomValues(randomValues);
+  return randomValues[0] % max;
+}
+
+function generateSeed() {
+  var buf = new Uint8Array(32);
+  crypto.getRandomValues(buf);
+
+  var shift = 3;
+  var carry = 0;
+  var symbol = void 0;
+  var byte = void 0;
+  var i = void 0;
+  var output = '';
+  var alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+  for (i = 0; i < buf.length; i++) {
+    byte = buf[i];
+
+    symbol = carry | byte >> shift;
+    output += alphabet[symbol & 0x1f];
+
+    if (shift > 5) {
+      shift -= 5;
+      symbol = byte >> shift;
+      output += alphabet[symbol & 0x1f];
+    }
+
+    shift = 5 - shift;
+    carry = byte << shift;
+    shift = 8 - shift;
+  }
+
+  if (shift !== 3) {
+    output += alphabet[carry & 0x1f];
+    shift = 3;
+    carry = 0;
+  }
+
+  return { b32: output, raw: buf };
+}
+
+function localStorageAvailable() {
+  try {
+    var storage = window.localStorage;
+    var x = '__storage_test__';
+    storage.setItem(x, x);
+    storage.removeItem(x);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function xorSeed(byteArray1, byteArray2) {
+  if (byteArray1 instanceof Uint8Array && byteArray2 instanceof Uint8Array && byteArray1.length === 32 && byteArray2.length === 32) {
+    var buf = new Uint8Array(32);
+    var i = void 0;
+    for (i = 0; i < 32; i++) {
+      buf[i] = byteArray1[i] ^ byteArray2[i];
+    }
+    return bytesToHexString(buf);
+  }
+  throw 'Utils.xorSeed expect 32 bytes Uint8Arrays';
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+}
+
+function defaultProgress(status) {
+  var seconds = Math.trunc(Date.now());
+  if (status.total < 2) {
+    // eslint-disable-next-line no-console
+    console.log(seconds + ' : ' + status.message);
+  } else {
+    // eslint-disable-next-line no-console
+    console.log(seconds + ' : ' + status.message + ' (' + status.state + '/' + status.total + ')');
+  }
+}
+
+var Utils = {
+  generateRandomNumber: generateRandomNumber,
+  generateSeed: generateSeed,
+  hexStringToUint8Array: hexStringToUint8Array,
+  bytesToHexString: bytesToHexString,
+  asciiToUint8Array: asciiToUint8Array,
+  bytesToASCIIString: bytesToASCIIString,
+  xorSeed: xorSeed,
+  escapeRegExp: escapeRegExp,
+  PasswordGenerator: PasswordGenerator,
+  defaultProgress: defaultProgress,
+  asciiToHexString: asciiToHexString,
+  hexStringToAscii: hexStringToAscii
+};
+
 var API = function () {
-  function API(db) {
+  function API(db, getSHA256) {
     classCallCheck(this, API);
 
     if (typeof db === 'object') {
@@ -1334,6 +1057,7 @@ var API = function () {
     } else {
       this.db = { users: {}, secrets: {} };
     }
+    this.getSHA256 = getSHA256;
   }
 
   API.prototype.userExists = function userExists(username, isHashed) {
@@ -1348,11 +1072,11 @@ var API = function () {
     var _this = this;
 
     var hashedUsername = void 0;
-    return getSHA256(username).then(function (rHashedUsername) {
+    return this.getSHA256(username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       return new Promise(function (resolve, reject) {
         if (typeof _this.db.users[hashedUsername] === 'undefined') {
-          resolve(getSHA256(pass.hash));
+          resolve(_this.getSHA256(pass.hash));
         } else {
           reject('Username already exists');
         }
@@ -1405,7 +1129,7 @@ var API = function () {
     var _this3 = this;
 
     var hashedUsername = void 0;
-    return getSHA256(user.username).then(function (rHashedUsername) {
+    return this.getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       if (typeof _this3.db.users[hashedUsername] !== 'undefined') {
         if (typeof _this3.db.secrets[hashedTitle] === 'undefined') {
@@ -1429,7 +1153,7 @@ var API = function () {
     var _this4 = this;
 
     var hashedUsername = void 0;
-    return getSHA256(user.username).then(function (rHashedUsername) {
+    return this.getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       if (typeof _this4.db.users[hashedUsername] !== 'undefined') {
         if (typeof _this4.db.secrets[hashedTitle] !== 'undefined') {
@@ -1455,7 +1179,7 @@ var API = function () {
     var _this5 = this;
 
     var hashedUsername = void 0;
-    return getSHA256(user.username).then(function (rHashedUsername) {
+    return this.getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       if (typeof _this5.db.users[hashedUsername] !== 'undefined') {
         if (typeof _this5.db.secrets[hashedTitle] !== 'undefined') {
@@ -1488,11 +1212,11 @@ var API = function () {
 
     var hashedUsername = void 0;
     var hashedFriendUsernames = [];
-    return getSHA256(user.username).then(function (rHashedUsername) {
+    return this.getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       var hashedFriendUseramePromises = [];
       friendNames.forEach(function (username) {
-        hashedFriendUseramePromises.push(getSHA256(username));
+        hashedFriendUseramePromises.push(_this6.getSHA256(username));
       });
       return Promise.all(hashedFriendUseramePromises);
     }).then(function (rHashedFriendUserames) {
@@ -1544,7 +1268,7 @@ var API = function () {
     var _this7 = this;
 
     var hashedUsername = void 0;
-    return getSHA256(user.username).then(function (rHashedUsername) {
+    return this.getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       var dbUser = _this7.db.users[hashedUsername];
       if (typeof dbUser !== 'undefined') {
@@ -1595,7 +1319,7 @@ var API = function () {
 
     if (!hashed) {
       isHashed = isHashed.then(function () {
-        return getSHA256(username);
+        return _this8.getSHA256(username);
       }).then(function (rHashedUsername) {
         hashedUsername = rHashedUsername;
       });
@@ -1606,7 +1330,7 @@ var API = function () {
         return Promise.reject('User not found');
       }
       user = JSON.parse(JSON.stringify(_this8.db.users[hashedUsername]));
-      return getSHA256(hash);
+      return _this8.getSHA256(hash);
     }).then(function (hashedHash) {
       delete user.keys;
       if (hashedHash === user.pass.hash) {
@@ -1651,7 +1375,7 @@ var API = function () {
     var _this9 = this;
 
     var hashedUsername = void 0;
-    return getSHA256(user.username).then(function (rHashedUsername) {
+    return this.getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       return new Promise(function (resolve, reject) {
         if (typeof _this9.db.users[hashedUsername] === 'undefined') {
@@ -1736,7 +1460,7 @@ var API = function () {
     var _this14 = this;
 
     var hashedUsername = void 0;
-    return getSHA256(user.username).then(function (rHashedUsername) {
+    return this.getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       return new Promise(function (resolve, reject) {
         if (typeof _this14.db.users[hashedUsername] !== 'undefined') {
@@ -1756,7 +1480,7 @@ var API = function () {
   API.prototype.changePassword = function changePassword(hashedUsername, privateKey, pass) {
     var _this15 = this;
 
-    return getSHA256(pass.hash).then(function (hashedHash) {
+    return this.getSHA256(pass.hash).then(function (hashedHash) {
       var newPass = pass;
       newPass.hash = hashedHash;
       _this15.db.users[hashedUsername].privateKey = privateKey;
@@ -1774,9 +1498,10 @@ var API = function () {
 }();
 
 var User = function () {
-  function User(username) {
+  function User(username, cryptoAdapter) {
     classCallCheck(this, User);
 
+    this.cryptoAdapter = cryptoAdapter;
     this.username = username;
     this.publicKey = null;
     this.publicKeySign = null;
@@ -1803,38 +1528,38 @@ var User = function () {
   };
 
   User.prototype.sign = function sign(datas) {
-    return _sign(datas, this.privateKeySign);
+    return this.cryptoAdapter.sign(datas, this.privateKeySign);
   };
 
   User.prototype.verify = function verify(datas, signature) {
-    return _verify(datas, signature, this.publicKeySign);
+    return this.cryptoAdapter.verify(datas, signature, this.publicKeySign);
   };
 
   User.prototype.generateMasterKey = function generateMasterKey() {
     var _this = this;
 
-    return genRSAOAEP().then(function (keyPair) {
+    return this.cryptoAdapter.genRSAOAEP().then(function (keyPair) {
       _this.publicKey = keyPair.publicKey;
       _this.privateKey = keyPair.privateKey;
-      return convertOAEPToPSS(_this.privateKey, 'sign');
+      return _this.cryptoAdapter.convertOAEPToPSS(_this.privateKey, 'sign');
     }).then(function (privateKeySign) {
       _this.privateKeySign = privateKeySign;
-      return convertOAEPToPSS(_this.publicKey, 'verify');
+      return _this.cryptoAdapter.convertOAEPToPSS(_this.publicKey, 'verify');
     }).then(function (publicKeySign) {
       _this.publicKeySign = publicKeySign;
     });
   };
 
   User.prototype.exportPublicKey = function exportPublicKey() {
-    return exportClearKey(this.publicKey);
+    return this.cryptoAdapter.exportClearKey(this.publicKey);
   };
 
   User.prototype.importPublicKey = function importPublicKey(jwkPublicKey) {
     var _this2 = this;
 
-    return _importPublicKey(jwkPublicKey).then(function (publicKey) {
+    return this.cryptoAdapter.importPublicKey(jwkPublicKey).then(function (publicKey) {
       _this2.publicKey = publicKey;
-      return convertOAEPToPSS(_this2.publicKey, 'verify');
+      return _this2.cryptoAdapter.convertOAEPToPSS(_this2.publicKey, 'verify');
     }).then(function (publicKeySign) {
       _this2.publicKeySign = publicKeySign;
     });
@@ -1844,12 +1569,12 @@ var User = function () {
     var _this3 = this;
 
     var pass = {};
-    return derivePassword(password).then(function (dKey) {
+    return this.cryptoAdapter.derivePassword(password).then(function (dKey) {
       pass.salt = dKey.salt;
       _this3.hash = dKey.hash;
       pass.hash = _this3.hash;
       pass.iterations = dKey.iterations;
-      return exportKey(dKey.key, _this3.privateKey);
+      return _this3.cryptoAdapter.exportKey(dKey.key, _this3.privateKey);
     }).then(function (keyObject) {
       return {
         privateKey: {
@@ -1864,9 +1589,9 @@ var User = function () {
   User.prototype.importPrivateKey = function importPrivateKey(dKey, privateKeyObject) {
     var _this4 = this;
 
-    return _importPrivateKey(dKey, privateKeyObject).then(function (privateKey) {
+    return this.cryptoAdapter.importPrivateKey(dKey, privateKeyObject).then(function (privateKey) {
       _this4.privateKey = privateKey;
-      return convertOAEPToPSS(_this4.privateKey, 'sign');
+      return _this4.cryptoAdapter.convertOAEPToPSS(_this4.privateKey, 'sign');
     }).then(function (privateKeySign) {
       _this4.privateKeySign = privateKeySign;
     });
@@ -1876,7 +1601,7 @@ var User = function () {
     var _this5 = this;
 
     var result = {};
-    return encryptRSAOAEP(data, this.publicKey).then(function (encryptedOptions) {
+    return this.cryptoAdapter.encryptRSAOAEP(data, this.publicKey).then(function (encryptedOptions) {
       result.data = encryptedOptions;
       return _this5.sign(result.data);
     }).then(function (signature) {
@@ -1890,7 +1615,7 @@ var User = function () {
 
     return this.verify(data, signature).then(function (verified) {
       if (verified) {
-        return decryptRSAOAEP(data, _this6.privateKey);
+        return _this6.cryptoAdapter.decryptRSAOAEP(data, _this6.privateKey);
       }
       return null;
     });
@@ -1930,7 +1655,7 @@ var User = function () {
       return _this8.wrapKey(key, friend.publicKey);
     }).then(function (friendWrappedKey) {
       result.wrappedKey = friendWrappedKey;
-      return getSHA256(friend.username);
+      return _this8.cryptoAdapter.getSHA256(friend.username);
     }).then(function (hashedUsername) {
       result.friendName = hashedUsername;
       return result;
@@ -1969,7 +1694,7 @@ var User = function () {
     var saltedTitle = now + '|' + metadatas.title;
     var result = {};
     var newMetadas = metadatas;
-    return getSHA256(saltedTitle).then(function (hashedTitle) {
+    return this.cryptoAdapter.getSHA256(saltedTitle).then(function (hashedTitle) {
       result.hashedTitle = hashedTitle;
       newMetadas.id = result.hashedTitle;
       return _this10.encryptSecret(newMetadas, secret);
@@ -2053,20 +1778,20 @@ var User = function () {
           lastModifiedBy: metadatas.lastModifiedBy
         });
       }
-      return encryptAESGCM256(secret, key);
+      return _this13.cryptoAdapter.encryptAESGCM256(secret, key);
     }).then(function (secretObject) {
       result.secret = secretObject.secret;
       result.iv = secretObject.iv;
       result.key = secretObject.key;
-      return encryptAESGCM256(metadatas, secretObject.key);
+      return _this13.cryptoAdapter.encryptAESGCM256(metadatas, secretObject.key);
     }).then(function (secretObject) {
       result.metadatas = secretObject.secret;
       result.iv_meta = secretObject.iv;
-      return encryptAESGCM256(newHistory, secretObject.key);
+      return _this13.cryptoAdapter.encryptAESGCM256(newHistory, secretObject.key);
     }).then(function (secretObject) {
       result.history = secretObject.secret;
       result.iv_history = secretObject.iv;
-      return getSHA256(_this13.username);
+      return _this13.cryptoAdapter.getSHA256(_this13.username);
     }).then(function (hashedUsername) {
       result.hashedUsername = hashedUsername;
       return result;
@@ -2074,25 +1799,27 @@ var User = function () {
   };
 
   User.prototype.decryptSecret = function decryptSecret(hashedTitle, secret) {
+    var _this14 = this;
+
     if (typeof this.keys[hashedTitle] === 'undefined') {
       return Promise.reject("You don't have this secret");
     }
     var wrappedKey = this.keys[hashedTitle].key;
     return this.unwrapKey(wrappedKey).then(function (key) {
-      return decryptAESGCM256(secret, key);
+      return _this14.cryptoAdapter.decryptAESGCM256(secret, key);
     });
   };
 
   User.prototype.unwrapKey = function unwrapKey(wrappedKey) {
-    return unwrapRSAOAEP(wrappedKey, this.privateKey);
+    return this.cryptoAdapter.unwrapRSAOAEP(wrappedKey, this.privateKey);
   };
 
   User.prototype.wrapKey = function wrapKey(key, publicKey) {
-    return wrapRSAOAEP(key, publicKey);
+    return this.cryptoAdapter.wrapRSAOAEP(key, publicKey);
   };
 
   User.prototype.decryptAllMetadatas = function decryptAllMetadatas(allMetadatas) {
-    var _this14 = this;
+    var _this15 = this;
 
     var progress = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : defaultProgress;
 
@@ -2103,37 +1830,37 @@ var User = function () {
     this.metadatas = {};
     return hashedTitles.reduce(function (promise, hashedTitle) {
       return promise.then(function () {
-        return _this14.decryptSecret(hashedTitle, allMetadatas[hashedTitle]).then(function (metadatas) {
+        return _this15.decryptSecret(hashedTitle, allMetadatas[hashedTitle]).then(function (metadatas) {
           progressStatus.step();
           progress(progressStatus);
-          _this14.metadatas[hashedTitle] = metadatas;
+          _this15.metadatas[hashedTitle] = metadatas;
         });
       });
     }, Promise.resolve());
   };
 
   User.prototype.activateShortLogin = function activateShortLogin(shortpass, deviceName) {
-    var _this15 = this;
+    var _this16 = this;
 
     var protectKey = void 0;
     var toSend = {};
-    return generateWrappingKey().then(function (key) {
+    return this.cryptoAdapter.generateWrappingKey().then(function (key) {
       protectKey = key;
-      return exportKey(protectKey, _this15.privateKey);
+      return _this16.cryptoAdapter.exportKey(protectKey, _this16.privateKey);
     }).then(function (object) {
       localStorage.setItem(Secretin.prefix + 'privateKey', object.key);
       localStorage.setItem(Secretin.prefix + 'privateKeyIv', object.iv);
-      return derivePassword(shortpass);
+      return _this16.cryptoAdapter.derivePassword(shortpass);
     }).then(function (derived) {
       toSend.salt = derived.salt;
       toSend.iterations = derived.iterations;
       toSend.hash = derived.hash;
-      return exportKey(derived.key, protectKey);
+      return _this16.cryptoAdapter.exportKey(derived.key, protectKey);
     }).then(function (keyObject) {
       toSend.protectKey = keyObject.key;
       localStorage.setItem(Secretin.prefix + 'iv', keyObject.iv);
-      localStorage.setItem(Secretin.prefix + 'username', _this15.username);
-      return getSHA256(deviceName);
+      localStorage.setItem(Secretin.prefix + 'username', _this16.username);
+      return _this16.cryptoAdapter.getSHA256(deviceName);
     }).then(function (deviceId) {
       toSend.deviceId = deviceId;
       localStorage.setItem(Secretin.prefix + 'deviceName', deviceName);
@@ -2142,18 +1869,18 @@ var User = function () {
   };
 
   User.prototype.shortLogin = function shortLogin(shortpass, wrappedProtectKey) {
-    var _this16 = this;
+    var _this17 = this;
 
     var keyObject = {
       key: wrappedProtectKey,
       iv: localStorage.getItem(Secretin.prefix + 'iv')
     };
-    return importKey(shortpass, keyObject).then(function (protectKey) {
+    return this.cryptoAdapter.importKey(shortpass, keyObject).then(function (protectKey) {
       var privateKeyObject = {
         privateKey: localStorage.getItem(Secretin.prefix + 'privateKey'),
         iv: localStorage.getItem(Secretin.prefix + 'privateKeyIv')
       };
-      return _this16.importPrivateKey(protectKey, privateKeyObject);
+      return _this17.cryptoAdapter.importPrivateKey(protectKey, privateKeyObject);
     });
   };
 
@@ -2170,12 +1897,13 @@ Object.defineProperty(User, 'defaultOptions', {
 });
 
 var Secretin = function () {
-  function Secretin() {
-    var API$$ = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : API;
-    var db = arguments[1];
+  function Secretin(cryptoAdapter) {
+    var API$$ = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : API;
+    var db = arguments[2];
     classCallCheck(this, Secretin);
 
-    this.api = new API$$(db);
+    this.cryptoAdapter = cryptoAdapter;
+    this.api = new API$$(db, this.cryptoAdapter.getSHA256);
     this.editableDB = true;
     this.currentUser = {};
     this.listeners = {
@@ -2204,7 +1932,7 @@ var Secretin = function () {
       var DbCacheStr = localStorage.getItem(cacheKey);
       var DbCache = DbCacheStr ? JSON.parse(DbCacheStr) : { users: {}, secrets: {} };
       this.oldApi = this.api;
-      this.api = new API(DbCache);
+      this.api = new API(DbCache, this.cryptoAdapter.getSHA256);
       this.editableDB = false;
       this.dispatchEvent('connectionChange', { connection: 'offline' });
       this.testOnline();
@@ -2287,7 +2015,7 @@ var Secretin = function () {
               key: cacheAction.args[0].wrappedKey,
               rights: 2
             };
-            return decryptRSAOAEP(cacheAction.args[1], _this2.currentUser.privateKey);
+            return _this2.cryptoAdapter.decryptRSAOAEP(cacheAction.args[1], _this2.currentUser.privateKey);
           }).then(function (metadatas) {
             _this2.currentUser.metadatas[cacheAction.args[0].hashedTitle] = metadatas;
             return _this2.popCacheAction();
@@ -2297,7 +2025,7 @@ var Secretin = function () {
         return promise.then(function () {
           var secretId = _this2.getConflict(cacheAction.args[0]);
           var encryptedContent = cacheAction.args[1];
-          return decryptRSAOAEP(encryptedContent, _this2.currentUser.privateKey).then(function (content) {
+          return _this2.cryptoAdapter.decryptRSAOAEP(encryptedContent, _this2.currentUser.privateKey).then(function (content) {
             if (typeof _this2.currentUser.keys[secretId] === 'undefined') {
               return _this2.addSecret(content.title + ' (Conflict)', content.secret).then(function (conflictSecretId) {
                 return _this2.setConflict(cacheAction.args[0], conflictSecretId);
@@ -2312,7 +2040,7 @@ var Secretin = function () {
         return promise.then(function () {
           var secretId = _this2.getConflict(cacheAction.args[0]);
           var encryptedContent = cacheAction.args[1];
-          return decryptRSAOAEP(encryptedContent, _this2.currentUser.privateKey).then(function (content) {
+          return _this2.cryptoAdapter.decryptRSAOAEP(encryptedContent, _this2.currentUser.privateKey).then(function (content) {
             if (typeof _this2.currentUser.keys[secretId] === 'undefined') {
               return _this2.addSecret(content.title + ' (Conflict)', content.secret).then(function (conflictSecretId) {
                 return _this2.setConflict(cacheAction.args[0], conflictSecretId);
@@ -2337,7 +2065,7 @@ var Secretin = function () {
     var privateKey = void 0;
     var pass = void 0;
     var options = void 0;
-    this.currentUser = new User(username);
+    this.currentUser = new User(username, this.cryptoAdapter);
     return this.api.userExists(username).then(function (exists) {
       return new Promise(function (resolve, reject) {
         if (!exists) {
@@ -2393,14 +2121,14 @@ var Secretin = function () {
         throw new NeedTOTPTokenError();
       }
       progress(new PasswordDerivationStatus());
-      return derivePassword(password, parameters);
+      return _this4.cryptoAdapter.derivePassword(password, parameters);
     }).then(function (dKey) {
       hash = dKey.hash;
       key = dKey.key;
       progress(new GetUserStatus());
       return _this4.api.getUser(username, hash, otp);
     }).then(function (user) {
-      _this4.currentUser = new User(username);
+      _this4.currentUser = new User(username, _this4.cryptoAdapter);
       _this4.currentUser.totp = parameters.totp;
       _this4.currentUser.hash = hash;
       remoteUser = user;
@@ -2512,7 +2240,7 @@ var Secretin = function () {
         rights: metadatas.users[_this6.currentUser.username].rights
       };
       if (!_this6.editableDB) {
-        return encryptRSAOAEP(metadatas, _this6.currentUser.publicKey).then(function (encryptedMetadatas) {
+        return _this6.cryptoAdapter.encryptRSAOAEP(metadatas, _this6.currentUser.publicKey).then(function (encryptedMetadatas) {
           _this6.pushCacheAction('addSecret', [secretObject, encryptedMetadatas]);
         });
       }
@@ -2583,7 +2311,7 @@ var Secretin = function () {
           secret: content,
           title: _this8.currentUser.metadatas[hashedTitle].title
         };
-        return encryptRSAOAEP(toEncrypt, _this8.currentUser.publicKey).then(function (encryptedContent) {
+        return _this8.cryptoAdapter.encryptRSAOAEP(toEncrypt, _this8.currentUser.publicKey).then(function (encryptedContent) {
           args.push(encryptedContent);
           return _this8.pushCacheAction('editSecret', args);
         });
@@ -2654,7 +2382,7 @@ var Secretin = function () {
     var secretMetadatas = this.currentUser.metadatas[hashedSecretTitle];
     Object.keys(folderMetadatas.users).forEach(function (friendName) {
       sharedSecretObjectsPromises = sharedSecretObjectsPromises.concat(function () {
-        var friend = new User(friendName);
+        var friend = new User(friendName, _this10.cryptoAdapter);
         return _this10.api.getPublicKey(friend.username).then(function (publicKey) {
           return friend.importPublicKey(publicKey);
         }).then(function () {
@@ -2837,7 +2565,7 @@ var Secretin = function () {
           secret: secret,
           title: newTitle
         };
-        return encryptRSAOAEP(toEncrypt, _this12.currentUser.publicKey);
+        return _this12.cryptoAdapter.encryptRSAOAEP(toEncrypt, _this12.currentUser.publicKey);
       }).then(function (encryptedContent) {
         args.push(encryptedContent);
         return _this12.pushCacheAction('renameSecret', args);
@@ -2879,7 +2607,7 @@ var Secretin = function () {
     }
     var sharedSecretObjects = void 0;
     var rights = parseInt(sRights, 10);
-    var friend = new User(friendName);
+    var friend = new User(friendName, this.cryptoAdapter);
     return this.api.getPublicKey(friend.username).then(function (publicKey) {
       return friend.importPublicKey(publicKey);
     }, function () {
@@ -3005,7 +2733,7 @@ var Secretin = function () {
     }
     var friend = void 0;
     return this.api.getPublicKey(hashedUsername, true).then(function (publicKey) {
-      friend = new User(hashedUsername);
+      friend = new User(hashedUsername, _this17.cryptoAdapter);
       return friend.importPublicKey(publicKey);
     }).then(function () {
       return _this17.currentUser.wrapKey(key, friend.publicKey);
@@ -3370,13 +3098,13 @@ var Secretin = function () {
     var deviceName = localStorage.getItem(Secretin.prefix + 'deviceName');
     var shortpassKey = void 0;
     var parameters = void 0;
-    this.currentUser = new User(username);
+    this.currentUser = new User(username, this.cryptoAdapter);
     progress(new GetDerivationStatus());
     return this.api.getProtectKeyParameters(username, deviceName).then(function (rParameters) {
       parameters = rParameters;
       _this27.currentUser.totp = parameters.totp;
       progress(new PasswordDerivationStatus());
-      return derivePassword(shortpass, parameters);
+      return _this27.cryptoAdapter.derivePassword(shortpass, parameters);
     }).then(function (dKey) {
       shortpassKey = dKey.key;
       progress(new GetProtectKeyStatus());
@@ -3486,7 +3214,7 @@ var Secretin = function () {
       if (typeof password === 'undefined') {
         return Promise.resolve(JSON.parse(jsonDB));
       }
-      oldSecretin = new Secretin(API, JSON.parse(jsonDB));
+      oldSecretin = new Secretin(_this30.cryptoAdapter, API, JSON.parse(jsonDB));
       oldSecretin.currentUser = _this30.currentUser;
       return oldSecretin.changePassword(password).then(function () {
         return oldSecretin.api.getDb(oldSecretin.currentUser, {});
@@ -3508,7 +3236,7 @@ var Secretin = function () {
     }
     var oldDB = JSON.parse(jsonDB);
     var username = oldDB.username;
-    var oldSecretin = new Secretin(API, oldDB);
+    var oldSecretin = new Secretin(this.cryptoAdapter, API, oldDB);
     var key = void 0;
     var hash = void 0;
     var remoteUser = void 0;
@@ -3517,13 +3245,13 @@ var Secretin = function () {
     var newHashedTitles = {};
     return oldSecretin.api.getDerivationParameters(username).then(function (rParameters) {
       parameters = rParameters;
-      return derivePassword(password, parameters);
+      return _this31.cryptoAdapter.derivePassword(password, parameters);
     }).then(function (dKey) {
       hash = dKey.hash;
       key = dKey.key;
       return oldSecretin.api.getUser(username, hash);
     }).then(function (user) {
-      oldSecretin.currentUser = new User(username);
+      oldSecretin.currentUser = new User(username, _this31.cryptoAdapter);
       oldSecretin.currentUser.totp = parameters.totp;
       oldSecretin.currentUser.hash = hash;
       remoteUser = user;
@@ -3540,7 +3268,7 @@ var Secretin = function () {
       hashedTitles.forEach(function (hashedTitle) {
         var now = Date.now();
         var saltedTitle = now + '|' + hashedTitle;
-        newHashedTitlePromises.push(getSHA256(saltedTitle).then(function (newHashedTitle) {
+        newHashedTitlePromises.push(_this31.cryptoAdapter.getSHA256(saltedTitle).then(function (newHashedTitle) {
           return {
             old: hashedTitle,
             new: newHashedTitle
@@ -3691,7 +3419,7 @@ function doDELETE(path, datas) {
 }
 
 var API$1 = function () {
-  function API(link) {
+  function API(link, getSHA256) {
     classCallCheck(this, API);
 
     if (link) {
@@ -3699,6 +3427,7 @@ var API$1 = function () {
     } else {
       this.db = window.location.origin;
     }
+    this.getSHA256 = getSHA256;
   }
 
   API.prototype.userExists = function userExists(username, isHashed) {
@@ -3712,7 +3441,7 @@ var API$1 = function () {
   API.prototype.addUser = function addUser(username, privateKey, publicKey, pass, options) {
     var _this = this;
 
-    return getSHA256(username).then(function (hashedUsername) {
+    return this.getSHA256(username).then(function (hashedUsername) {
       return doPOST(_this.db + '/user/' + hashedUsername, {
         pass: pass,
         privateKey: privateKey,
@@ -3751,7 +3480,7 @@ var API$1 = function () {
 
     var url = void 0;
     var now = Date.now();
-    return getSHA256(user.username).then(function (hashedUsername) {
+    return this.getSHA256(user.username).then(function (hashedUsername) {
       url = '/secret/' + hashedUsername + '/' + hashedTitle;
       return user.sign('DELETE ' + url + '|' + now);
     }).then(function (signature) {
@@ -3776,7 +3505,7 @@ var API$1 = function () {
       title: hashedTitle
     });
     var now = Date.now();
-    return getSHA256(user.username).then(function (rHashedUsername) {
+    return this.getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       return user.sign(json + '|' + now);
     }).then(function (signature) {
@@ -3798,7 +3527,7 @@ var API$1 = function () {
       title: hashedTitle
     });
     var now = Date.now();
-    return getSHA256(user.username).then(function (rHashedUsername) {
+    return this.getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       return user.sign(json + '|' + now);
     }).then(function (signature) {
@@ -3820,11 +3549,11 @@ var API$1 = function () {
     };
     var json = void 0;
     var now = Date.now();
-    return getSHA256(user.username).then(function (rHashedUsername) {
+    return this.getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       var hashedFriendUseramePromises = [];
       friendNames.forEach(function (username) {
-        hashedFriendUseramePromises.push(getSHA256(username));
+        hashedFriendUseramePromises.push(_this6.getSHA256(username));
       });
       return Promise.all(hashedFriendUseramePromises);
     }).then(function (rHashedFriendUserames) {
@@ -3851,7 +3580,7 @@ var API$1 = function () {
       secretObjects: sharedSecretObjects
     });
     var now = Date.now();
-    return getSHA256(user.username).then(function (rHashedUsername) {
+    return this.getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       return user.sign(json + '|' + now);
     }).then(function (signature) {
@@ -3870,7 +3599,7 @@ var API$1 = function () {
     var hashedUsername = username;
     if (!hashed) {
       isHashed = isHashed.then(function () {
-        return getSHA256(username);
+        return _this8.getSHA256(username);
       }).then(function (rHashedUsername) {
         hashedUsername = rHashedUsername;
       });
@@ -3900,7 +3629,7 @@ var API$1 = function () {
   API.prototype.getUser = function getUser(username, hash, otp) {
     var _this9 = this;
 
-    return getSHA256(username).then(function (hashedUsername) {
+    return this.getSHA256(username).then(function (hashedUsername) {
       return doGET(_this9.db + '/user/' + hashedUsername + '/' + hash + '?otp=' + otp);
     });
   };
@@ -3910,7 +3639,7 @@ var API$1 = function () {
 
     var url = void 0;
     var now = Date.now();
-    return getSHA256(user.username).then(function (hashedUsername) {
+    return this.getSHA256(user.username).then(function (hashedUsername) {
       url = '/user/' + hashedUsername;
       return user.sign(url + '|' + now);
     }).then(function (signature) {
@@ -3923,7 +3652,7 @@ var API$1 = function () {
 
     var url = void 0;
     var now = Date.now();
-    return getSHA256(user.username).then(function (hashedUsername) {
+    return this.getSHA256(user.username).then(function (hashedUsername) {
       url = '/secret/' + hashedUsername + '/' + hashedTitle;
       return user.sign(url + '|' + now);
     }).then(function (signature) {
@@ -3936,7 +3665,7 @@ var API$1 = function () {
 
     var url = void 0;
     var now = Date.now();
-    return getSHA256(user.username).then(function (hashedUsername) {
+    return this.getSHA256(user.username).then(function (hashedUsername) {
       url = '/history/' + hashedUsername + '/' + hashedTitle;
       return user.sign(url + '|' + now);
     }).then(function (signature) {
@@ -3953,9 +3682,9 @@ var API$1 = function () {
     var _this13 = this;
 
     var hashedUsername = void 0;
-    return getSHA256(username).then(function (rHashedUsername) {
+    return this.getSHA256(username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
-      return getSHA256(deviceName);
+      return _this13.getSHA256(deviceName);
     }).then(function (deviceId) {
       return doGET(_this13.db + '/protectKey/' + hashedUsername + '/' + deviceId + '/' + hash);
     }).then(function (result) {
@@ -3976,7 +3705,7 @@ var API$1 = function () {
     var url = void 0;
     var json = JSON.stringify(revs);
     var now = Date.now();
-    return getSHA256(user.username).then(function (hashedUsername) {
+    return this.getSHA256(user.username).then(function (hashedUsername) {
       url = '/database/' + hashedUsername;
       return user.sign(json + '|' + now);
     }).then(function (signature) {
@@ -3993,7 +3722,7 @@ var API$1 = function () {
 
     var url = void 0;
     var now = Date.now();
-    return getSHA256(user.username).then(function (hashedUsername) {
+    return this.getSHA256(user.username).then(function (hashedUsername) {
       url = '/rescueCodes/' + hashedUsername;
       return user.sign(url + '|' + now);
     }).then(function (signature) {
@@ -4007,7 +3736,7 @@ var API$1 = function () {
     var hashedUsername = void 0;
     var json = JSON.stringify(datas);
     var now = Date.now();
-    return getSHA256(user.username).then(function (rHashedUsername) {
+    return this.getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       return user.sign(json + '|' + now);
     }).then(function (signature) {
@@ -4028,7 +3757,7 @@ var API$1 = function () {
       privateKey: privateKey
     });
     var now = Date.now();
-    return getSHA256(user.username).then(function (rHashedUsername) {
+    return this.getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       return user.sign(json + '|' + now);
     }).then(function (signature) {
@@ -4052,7 +3781,7 @@ var API$1 = function () {
       seed: seed
     });
     var now = Date.now();
-    return getSHA256(user.username).then(function (rHashedUsername) {
+    return this.getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       return user.sign(json + '|' + now);
     }).then(function (signature) {
@@ -4069,7 +3798,7 @@ var API$1 = function () {
 
     var url = void 0;
     var now = Date.now();
-    return getSHA256(user.username).then(function (hashedUsername) {
+    return this.getSHA256(user.username).then(function (hashedUsername) {
       url = '/deactivateTotp/' + hashedUsername;
       return user.sign(url + '|' + now);
     }).then(function (signature) {
@@ -4085,7 +3814,7 @@ var API$1 = function () {
       shortpass: shortpass
     });
     var now = Date.now();
-    return getSHA256(user.username).then(function (rHashedUsername) {
+    return this.getSHA256(user.username).then(function (rHashedUsername) {
       hashedUsername = rHashedUsername;
       return user.sign(json + '|' + now);
     }).then(function (signature) {

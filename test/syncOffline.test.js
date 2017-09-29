@@ -66,6 +66,7 @@ if (__karma__.config.args[0] === 'server') {
       return this.secretin.loginUser(username, password).then(() => {
         this.secretin.currentUser.disconnect();
         this.secretin = new Secretin(
+          SecretinBrowserAdapter,
           Secretin.API.Server,
           'http://doesntexist.secret-in.me'
         );
