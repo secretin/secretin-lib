@@ -365,17 +365,14 @@ class API {
     });
   }
 
-  getSecret(hash, user) {
-    return user.sign(hash).then(
-      () =>
-        new Promise((resolve, reject) => {
-          if (typeof this.db.secrets[hash] === 'undefined') {
-            reject("You don't have this secret");
-          } else {
-            resolve(this.db.secrets[hash]);
-          }
-        })
-    );
+  getSecret(hash) {
+    return new Promise((resolve, reject) => {
+      if (typeof this.db.secrets[hash] === 'undefined') {
+        reject("You don't have this secret");
+      } else {
+        resolve(this.db.secrets[hash]);
+      }
+    });
   }
 
   getAllMetadatas(user) {
@@ -394,21 +391,18 @@ class API {
   }
 
   getHistory(user, hash) {
-    return user.sign(hash).then(
-      () =>
-        new Promise((resolve, reject) => {
-          if (typeof this.db.secrets[hash] === 'undefined') {
-            reject("You don't have this secret");
-          } else {
-            const secret = this.db.secrets[hash];
-            const history = {
-              iv: secret.iv_history,
-              secret: secret.history,
-            };
-            resolve(history);
-          }
-        })
-    );
+    return new Promise((resolve, reject) => {
+      if (typeof this.db.secrets[hash] === 'undefined') {
+        reject("You don't have this secret");
+      } else {
+        const secret = this.db.secrets[hash];
+        const history = {
+          iv: secret.iv_history,
+          secret: secret.history,
+        };
+        resolve(history);
+      }
+    });
   }
 
   getProtectKeyParameters() {
@@ -421,13 +415,16 @@ class API {
     });
   }
 
-  editUser(user, datas, type) {
+  editUser(user, datas) {
     let hashedUsername;
     return this.getSHA256(user.username).then(rHashedUsername => {
       hashedUsername = rHashedUsername;
       return new Promise((resolve, reject) => {
         if (typeof this.db.users[hashedUsername] !== 'undefined') {
-          if (type === 'password') {
+          if (
+            typeof datas.privateKey !== 'undefined' &&
+            typeof datas.pass !== 'undefined'
+          ) {
             resolve(
               this.changePassword(hashedUsername, datas.privateKey, datas.pass)
             );
