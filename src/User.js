@@ -406,7 +406,7 @@ class User {
           privateKey: localStorage.getItem(`${Secretin.prefix}privateKey`),
           iv: localStorage.getItem(`${Secretin.prefix}privateKeyIv`),
         };
-        return this.cryptoAdapter.importPrivateKey(
+        return this.importPrivateKey(
           protectKey,
           privateKeyObject
         );
