@@ -1877,7 +1877,7 @@ var User = function () {
         privateKey: localStorage.getItem(Secretin.prefix + 'privateKey'),
         iv: localStorage.getItem(Secretin.prefix + 'privateKeyIv')
       };
-      return _this17.cryptoAdapter.importPrivateKey(protectKey, privateKeyObject);
+      return _this17.importPrivateKey(protectKey, privateKeyObject);
     });
   };
 
@@ -3207,11 +3207,11 @@ var Secretin = function () {
     var _this30 = this;
 
     var oldSecretin = void 0;
-    return this.getDb().then(function (jsonDB) {
+    return this.api.getDb(this.currentUser, {}).then(function (db) {
       if (typeof password === 'undefined') {
-        return Promise.resolve(JSON.parse(jsonDB));
+        return Promise.resolve(db);
       }
-      oldSecretin = new Secretin(_this30.cryptoAdapter, API, JSON.parse(jsonDB));
+      oldSecretin = new Secretin(_this30.cryptoAdapter, API, JSON.parse(JSON.stringify(db)));
       oldSecretin.currentUser = _this30.currentUser;
       return oldSecretin.changePassword(password).then(function () {
         return oldSecretin.api.getDb(oldSecretin.currentUser, {});
