@@ -4,9 +4,9 @@ function getDB() {
     if (__karma__.config.args[1]) {
       server = __karma__.config.args[1];
     }
-    return new Secretin(Secretin.API.Server, server);
+    return new Secretin(SecretinBrowserAdapter, Secretin.API.Server, server);
   }
-  return new Secretin();
+  return new Secretin(SecretinBrowserAdapter);
 }
 // eslint-disable-next-line
 function resetAndGetDB() {

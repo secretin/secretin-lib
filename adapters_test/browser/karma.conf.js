@@ -3,11 +3,12 @@
 
 module.exports = function exports(config) {
   const files = [
-    'dist/secretin.js',
-    'dist/adapters/browser.js',
-    'test/fixtures/keys.js',
-    'test/fixtures/exportedDB.js',
-    'test/*.js',
+    '../../dist/secretin.js',
+    '../../dist/adapters/browser.js',
+    '../../adapters_test/fixtures/browser.js',
+    '../../adapters_test/fixtures/node.js',
+    '../../adapters_test/test_input.js',
+    '../../adapters_test/browser/input.test.js',
   ];
 
   const karmaConfig = {
@@ -23,15 +24,11 @@ module.exports = function exports(config) {
 
     client: {
       mocha: {
-        timeout: '30000',
+        timeout: '10000',
       },
-      args: [
-        process.env.API_TYPE,
-        process.env.SERVER_URI,
-      ],
     },
 
-    browserNoActivityTimeout: '60000',
+    browserNoActivityTimeout: '30000',
 
 
     // list of files / patterns to load in the browser
@@ -80,6 +77,7 @@ module.exports = function exports(config) {
     customLaunchers: {
       ChromeOnTravis: {
         base: 'Chrome',
+        flags: ['--no-sandbox'],
       },
     },
 

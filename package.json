@@ -4,12 +4,20 @@
   "description": "Open source secret manager with groups managment based on webapi crypto https://developer.mozilla.org/en-US/docs/Web/API/Crypto",
   "main": "dist/secretin.umd.js",
   "scripts": {
-    "start": "npm run watch",
-    "build": "npm run lint && rollup -c config/rollup.config.js",
+    "start": "yarn run watch",
+    "build": "yarn run lint && rollup -c config/rollup.config.js && yarn run build-adapters",
+    "build-adapters": "yarn run build-browser-adapter && yarn run build-node-adapter",
+    "build-browser-adapter": "rollup -c config/rollup.browserAdapter.config.js",
+    "build-node-adapter": "rollup -c config/rollup.nodeAdapter.config.js",
     "watch": "rollup -c config/rollup.config.js --watch",
     "lint": "eslint src/ test/",
     "karma": "./node_modules/karma/bin/karma start karma.conf.js",
-    "test": "npm run build && npm run karma",
+    "test": "yarn run build && singleRun=true yarn run karma && yarn run test-adapters",
+    "test-adapters": "yarn run adapter-node-test && singleRun=true yarn run adapter-browser-test",
+    "adapter-node-test": "node_modules/mocha/bin/mocha adapters_test/node/input.test.js",
+    "adapter-node-output": "node adapters_test/node/output.js",
+    "adapter-browser-test": "./node_modules/karma/bin/karma start adapters_test/browser/karma.conf.js",
+    "adapter-browser-output": "google-chrome adapters_test/browser/output.html",
     "prettier": "prettier --print-width 80 --trailing-comma es5 --single-quote --write \"src/**/*.js\" \"test/*.js\""
   },
   "repository": {
@@ -48,5 +56,9 @@
     "rollup-plugin-eslint": "^3.0.0",
     "rollup-plugin-json": "^2.0.1",
     "rollup-watch": "^2.5.0"
-  }
+  },
+  "peerDependencies": {
+    "node-forge": "^0.7.0"
+  },
+  "dependencies": {}
 }

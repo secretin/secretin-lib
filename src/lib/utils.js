@@ -43,6 +43,22 @@ export function asciiToUint8Array(str) {
   return new Uint8Array(chars);
 }
 
+export function asciiToHexString(str) {
+  return str
+    .split('')
+    .map(c => `0${c.charCodeAt(0).toString(16)}`.slice(-2))
+    .join('');
+}
+
+export function hexStringToAscii(hexx) {
+  const hex = hexx.toString();
+  let str = '';
+  for (let i = 0; i < hex.length; i += 2) {
+    str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+  }
+  return str;
+}
+
 export function bytesToASCIIString(bytes) {
   return String.fromCharCode.apply(null, new Uint8Array(bytes));
 }
@@ -68,7 +84,7 @@ export function generateSeed() {
   for (i = 0; i < buf.length; i++) {
     byte = buf[i];
 
-    symbol = carry | (byte >> shift);
+    symbol = carry | byte >> shift;
     output += alphabet[symbol & 0x1f];
 
     if (shift > 5) {
@@ -148,6 +164,8 @@ const Utils = {
   escapeRegExp,
   PasswordGenerator,
   defaultProgress,
+  asciiToHexString,
+  hexStringToAscii,
 };
 
 export default Utils;

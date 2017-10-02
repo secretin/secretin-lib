@@ -12,8 +12,11 @@
     "mocha": true
   },
   "globals": {
+    "require": true,
+    "Buffer": true,
     "crypto": true,
     "Secretin": true,
+    "SecretinBrowserAdapter": true,
     "__karma__": true,
     "module": true,
     "process": true,
