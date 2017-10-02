@@ -1526,12 +1526,13 @@ class Secretin {
 
   exportDb(password) {
     let oldSecretin;
-    return this.getDb()
-      .then(jsonDB => {
+    return this.api
+      .getDb(this.currentUser, {})
+      .then(db => {
         if (typeof password === 'undefined') {
-          return Promise.resolve(JSON.parse(jsonDB));
+          return Promise.resolve(db);
         }
-        oldSecretin = new Secretin(this.cryptoAdapter, APIStandalone, JSON.parse(jsonDB));
+        oldSecretin = new Secretin(this.cryptoAdapter, APIStandalone, JSON.parse(JSON.stringify(db)));
         oldSecretin.currentUser = this.currentUser;
         return oldSecretin
           .changePassword(password)
