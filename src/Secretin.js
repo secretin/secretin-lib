@@ -15,6 +15,8 @@ import {
   ImportPublicKeyStatus,
   DecryptPrivateKeyStatus,
   DecryptUserOptionsStatus,
+  DecryptMetadataCacheStatus,
+  EndDecryptMetadataStatus,
   GetProtectKeyStatus,
   ImportSecretStatus,
 } from './Statuses';
@@ -275,7 +277,7 @@ class Secretin {
       });
   }
 
-  loginUser(username, password, otp, progress = defaultProgress) {
+  loginUser(username, password, otp, progress = defaultProgress, forceSync = true) {
     let key;
     let hash;
     let remoteUser;
@@ -328,7 +330,7 @@ class Secretin {
         }
         return Promise.resolve();
       })
-      .then(() => this.refreshUser(progress))
+      .then(() => this.refreshUser(forceSync, progress))
       .then(() => {
         if (typeof window.process !== 'undefined') {
           // Electron
@@ -352,7 +354,18 @@ class Secretin {
       });
   }
 
-  refreshUser(progress = defaultProgress) {
+  updateMetadataCache(newMetadata, progress = defaultProgress) {
+    return this.currentUser.decryptAllMetadatas(newMetadata, progress)
+    .then(metadata => {
+      this.currentUser.metadatas = metadata;
+      progress(new EndDecryptMetadataStatus());
+      return this.currentUser.exportBigPrivateData(metadata);
+    })
+    .then(objectMetadataCache => this.api.editUser(this.currentUser, objectMetadataCache))
+  }
+
+  refreshUser(rForceUpdate = false, progress = defaultProgress) {
+    let forceUpdate = rForceUpdate;
     let remoteUser;
     return this.api
       .getUserWithSignature(this.currentUser)
@@ -369,13 +382,26 @@ class Secretin {
         progress(new DecryptUserOptionsStatus());
         return this.currentUser.importOptions(remoteUser.options);
       })
-      .then(() =>
-        this.currentUser.decryptAllMetadatas(remoteUser.metadatas, progress)
-      )
+      .then(() => {
+        if (typeof remoteUser.metadataCache !== 'undefined') {
+          progress(new DecryptMetadataCacheStatus());
+          return this.currentUser.importBigPrivateData(remoteUser.metadataCache);
+        }
+        forceUpdate = true;
+        return Promise.resolve({});
+      })
+      .then(metadataCache => {
+        this.currentUser.metadatas = metadataCache;
+        if (forceUpdate) {
+          return this.updateMetadataCache(remoteUser.metadatas, progress);
+        }
+        this.updateMetadataCache(remoteUser.metadatas, progress);
+        return Promise.resolve();
+      })
       .catch(err => {
         if (err === 'Offline') {
           this.offlineDB();
-          return this.refreshUser(progress);
+          return this.refreshUser(rForceUpdate, progress);
         }
         const wrapper = new WrappingError(err);
         throw wrapper.error;
@@ -460,7 +486,7 @@ class Secretin {
     return this.currentUser
       .exportPrivateKey(password)
       .then(objectPrivateKey =>
-        this.api.editUser(this.currentUser, objectPrivateKey, 'password')
+        this.api.editUser(this.currentUser, objectPrivateKey)
       )
       .then(() => {
         if (typeof window.process !== 'undefined') {
@@ -551,7 +577,7 @@ class Secretin {
     return this.currentUser
       .exportOptions()
       .then(encryptedOptions =>
-        this.api.editUser(this.currentUser, encryptedOptions, 'options')
+        this.api.editUser(this.currentUser, encryptedOptions)
       )
       .then(() => {
         if (typeof window.process !== 'undefined') {
@@ -1397,7 +1423,7 @@ class Secretin {
     return Promise.reject(new LocalStorageUnavailableError());
   }
 
-  shortLogin(shortpass, progress = defaultProgress) {
+  shortLogin(shortpass, progress = defaultProgress, forceSync = true) {
     const username = localStorage.getItem(`${Secretin.prefix}username`);
     const deviceName = localStorage.getItem(`${Secretin.prefix}deviceName`);
     let shortpassKey;
@@ -1425,7 +1451,7 @@ class Secretin {
         progress(new ImportPublicKeyStatus());
         return this.currentUser.importPublicKey(parameters.publicKey);
       })
-      .then(() => this.refreshUser(progress))
+      .then(() => this.refreshUser(forceSync, progress))
       .then(() => {
         if (typeof window.process !== 'undefined') {
           // Electron

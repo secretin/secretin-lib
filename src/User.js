@@ -105,6 +105,26 @@ class User {
       });
   }
 
+  exportBigPrivateData(data) {
+    const result = {};
+    return this.cryptoAdapter.encryptAESGCM256(data)
+      .then(secretObject => {
+        result.secret = secretObject.secret;
+        result.iv = secretObject.iv;
+        return this.wrapKey(secretObject.key, this.publicKey);
+      })
+      .then(wrappedKey => {
+        result.wrappedKey = wrappedKey;
+        return result;
+      });
+  }
+
+  importBigPrivateData(data) {
+    return this.unwrapKey(data.wrappedKey).then(key =>
+      this.cryptoAdapter.decryptAESGCM256(data, key)
+    );
+  }
+
   exportPrivateData(data) {
     const result = {};
     return this.cryptoAdapter
@@ -233,6 +253,9 @@ class User {
       })
       .then(rMetadata => {
         metadata = rMetadata;
+        if (typeof encryptedHistory.iv === 'undefined') {
+          return Promise.resolve({})
+        }
         return this.decryptSecret(hashedTitle, encryptedHistory);
       })
       .then(history => ({
@@ -344,21 +367,21 @@ class User {
 
     const progressStatus = new DecryptMetadataStatus(0, hashedTitles.length);
     progress(progressStatus);
-    this.metadatas = {};
+    const metadatas = {};
     return hashedTitles.reduce(
       (promise, hashedTitle) =>
         promise.then(() =>
           this.decryptSecret(
             hashedTitle,
             allMetadatas[hashedTitle]
-          ).then(metadatas => {
+          ).then(metadata => {
             progressStatus.step();
             progress(progressStatus);
-            this.metadatas[hashedTitle] = metadatas;
+            metadatas[hashedTitle] = metadata;
           })
         ),
       Promise.resolve()
-    );
+    ).then(() => metadatas);
   }
 
   activateShortLogin(shortpass, deviceName) {

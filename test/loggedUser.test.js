@@ -429,7 +429,7 @@ describe('Logged user', () => {
 
   it('Can refresh infos', () =>
     this.secretin
-      .refreshUser()
+      .refreshUser(true)
       .then(() => this.secretin.currentUser.metadatas)
       .should.eventually.deep.equal({
         [secretId]: {
