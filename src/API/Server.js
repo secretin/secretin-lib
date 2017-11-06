@@ -358,7 +358,7 @@ class API {
         return user.sign(`${url}|${now}`);
       })
       .then(signature =>
-        doPUT(`${this.db}${url}?sig=${signature}&sigTime=now`, {}));
+        doPUT(`${this.db}${url}?sig=${signature}&sigTime=${now}`, {}));
   }
 
   activateShortLogin(shortpass, user) {
