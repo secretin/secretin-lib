@@ -55,6 +55,20 @@ export class DecryptUserOptionsStatus extends Status {
   }
 }
 
+export class DecryptMetadataCacheStatus extends Status {
+  constructor() {
+    super();
+    this.message = 'Decrypt metadata cache';
+  }
+}
+
+export class EndDecryptMetadataStatus extends Status {
+  constructor() {
+    super();
+    this.message = 'End decrypt metadata';
+  }
+}
+
 export class DecryptMetadataStatus extends Status {
   constructor(state, total) {
     super(state, total);
@@ -85,7 +99,9 @@ const Statuses = {
   ImportPublicKeyStatus,
   DecryptPrivateKeyStatus,
   DecryptUserOptionsStatus,
+  DecryptMetadataCacheStatus,
   DecryptMetadataStatus,
+  EndDecryptMetadataStatus,
   GetProtectKeyStatus,
   ImportSecretStatus,
 };
