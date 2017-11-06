@@ -429,7 +429,11 @@ class API {
               this.changePassword(hashedUsername, datas.privateKey, datas.pass)
             );
           } else {
-            this.db.users[hashedUsername].options = datas;
+            if (typeof datas.options === 'undefined') {
+              this.db.users[hashedUsername].metadataCache = datas;
+            } else {
+              this.db.users[hashedUsername].options = datas;
+            }
             resolve();
           }
         } else {
