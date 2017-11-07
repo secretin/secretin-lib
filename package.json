@@ -1,6 +1,6 @@
 {
   "name": "secretin",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Open source secret manager with groups managment based on webapi crypto https://developer.mozilla.org/en-US/docs/Web/API/Crypto",
   "main": "dist/secretin.umd.js",
   "scripts": {
