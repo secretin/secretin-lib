@@ -259,7 +259,8 @@ class Secretin {
           publicKey,
           pass,
           options
-        ))
+        )
+      )
       .then(() => {
         if (typeof window.process !== 'undefined') {
           // Electron
@@ -277,7 +278,13 @@ class Secretin {
       });
   }
 
-  loginUser(username, password, otp, progress = defaultProgress, forceSync = true) {
+  loginUser(
+    username,
+    password,
+    otp,
+    progress = defaultProgress,
+    forceSync = true
+  ) {
     let key;
     let hash;
     let remoteUser;
@@ -355,13 +362,16 @@ class Secretin {
   }
 
   updateMetadataCache(newMetadata, progress = defaultProgress) {
-    return this.currentUser.decryptAllMetadatas(newMetadata, progress)
-    .then(metadata => {
-      this.currentUser.metadatas = metadata;
-      progress(new EndDecryptMetadataStatus());
-      return this.currentUser.exportBigPrivateData(metadata);
-    })
-    .then(objectMetadataCache => this.api.editUser(this.currentUser, objectMetadataCache))
+    return this.currentUser
+      .decryptAllMetadatas(newMetadata, progress)
+      .then(metadata => {
+        this.currentUser.metadatas = metadata;
+        progress(new EndDecryptMetadataStatus());
+        return this.currentUser.exportBigPrivateData(metadata);
+      })
+      .then(objectMetadataCache =>
+        this.api.editUser(this.currentUser, objectMetadataCache)
+      );
   }
 
   refreshUser(rForceUpdate = false, progress = defaultProgress) {
@@ -385,7 +395,9 @@ class Secretin {
       .then(() => {
         if (typeof remoteUser.metadataCache !== 'undefined') {
           progress(new DecryptMetadataCacheStatus());
-          return this.currentUser.importBigPrivateData(remoteUser.metadataCache);
+          return this.currentUser.importBigPrivateData(
+            remoteUser.metadataCache
+          );
         }
         forceUpdate = true;
         return Promise.resolve({});
@@ -1485,9 +1497,11 @@ class Secretin {
   }
 
   canITryShortLogin() {
-    return this.editableDB &&
+    return (
+      this.editableDB &&
       localStorageAvailable() &&
-      localStorage.getItem(`${Secretin.prefix}username`) !== null;
+      localStorage.getItem(`${Secretin.prefix}username`) !== null
+    );
   }
 
   getSavedUsername() {
@@ -1558,7 +1572,11 @@ class Secretin {
         if (typeof password === 'undefined') {
           return Promise.resolve(db);
         }
-        oldSecretin = new Secretin(this.cryptoAdapter, APIStandalone, JSON.parse(JSON.stringify(db)));
+        oldSecretin = new Secretin(
+          this.cryptoAdapter,
+          APIStandalone,
+          JSON.parse(JSON.stringify(db))
+        );
         oldSecretin.currentUser = this.currentUser;
         return oldSecretin
           .changePassword(password)

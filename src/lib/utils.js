@@ -60,7 +60,12 @@ export function hexStringToAscii(hexx) {
 }
 
 export function bytesToASCIIString(bytes) {
-  return String.fromCharCode.apply(null, new Uint8Array(bytes));
+  // String.fromCharCode.apply(null, new Uint8Array(bytes)) trigger Maximum call stack size exceeded
+  const array = new Uint8Array(bytes);
+  return array.reduce(
+    (str, charIndex) => str + String.fromCharCode(charIndex),
+    ''
+  );
 }
 
 export function generateRandomNumber(max) {
@@ -84,7 +89,7 @@ export function generateSeed() {
   for (i = 0; i < buf.length; i++) {
     byte = buf[i];
 
-    symbol = carry | byte >> shift;
+    symbol = carry | (byte >> shift);
     output += alphabet[symbol & 0x1f];
 
     if (shift > 5) {

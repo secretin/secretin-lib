@@ -24,11 +24,11 @@ module.exports = function exports(config) {
 
     client: {
       mocha: {
-        timeout: '10000',
+        timeout: '120000',
       },
     },
 
-    browserNoActivityTimeout: '30000',
+    browserNoActivityTimeout: '240000',
 
 
     // list of files / patterns to load in the browser

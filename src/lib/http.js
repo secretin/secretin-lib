@@ -1,7 +1,10 @@
-function reqData(path, datas, type) {
+function reqData(path, datas, type, timeout = 10000) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.timeout = 10000;
+    if (typeof window.process !== 'undefined') {
+      // Electron
+      xhr.timeout = timeout;
+    }
     xhr.open(type, encodeURI(path));
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.onload = () => {
@@ -22,10 +25,13 @@ function reqData(path, datas, type) {
   });
 }
 
-export function doGET(path) {
+export function doGET(path, timeout = 6000) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.timeout = 6000;
+    if (typeof window.process !== 'undefined') {
+      // Electron
+      xhr.timeout = timeout;
+    }
     xhr.open('GET', encodeURI(path));
     xhr.onload = () => {
       const datas = JSON.parse(xhr.responseText);
@@ -45,14 +51,14 @@ export function doGET(path) {
   });
 }
 
-export function doPOST(path, datas) {
-  return reqData(path, datas, 'POST');
+export function doPOST(path, datas, timeout = 10000) {
+  return reqData(path, datas, 'POST', timeout);
 }
 
-export function doPUT(path, datas) {
-  return reqData(path, datas, 'PUT');
+export function doPUT(path, datas, timeout = 10000) {
+  return reqData(path, datas, 'PUT', timeout);
 }
 
-export function doDELETE(path, datas) {
-  return reqData(path, datas, 'DELETE');
+export function doDELETE(path, datas, timeout = 10000) {
+  return reqData(path, datas, 'DELETE', timeout);
 }
