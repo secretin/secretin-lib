@@ -976,7 +976,11 @@ function hexStringToAscii(hexx) {
 }
 
 function bytesToASCIIString(bytes) {
-  return String.fromCharCode.apply(null, new Uint8Array(bytes));
+  // String.fromCharCode.apply(null, new Uint8Array(bytes)) trigger Maximum call stack size exceeded
+  var array = new Uint8Array(bytes);
+  return array.reduce(function (str, charIndex) {
+    return str + String.fromCharCode(charIndex);
+  }, '');
 }
 
 function generateRandomNumber(max) {
@@ -3450,9 +3454,14 @@ Object.defineProperty(Secretin, 'prefix', {
 });
 
 function reqData(path, datas, type) {
+  var timeout = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 10000;
+
   return new Promise(function (resolve, reject) {
     var xhr = new XMLHttpRequest();
-    xhr.timeout = 10000;
+    if (typeof window.process !== 'undefined') {
+      // Electron
+      xhr.timeout = timeout;
+    }
     xhr.open(type, encodeURI(path));
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.onload = function () {
@@ -3474,9 +3483,14 @@ function reqData(path, datas, type) {
 }
 
 function doGET(path) {
+  var timeout = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 6000;
+
   return new Promise(function (resolve, reject) {
     var xhr = new XMLHttpRequest();
-    xhr.timeout = 6000;
+    if (typeof window.process !== 'undefined') {
+      // Electron
+      xhr.timeout = timeout;
+    }
     xhr.open('GET', encodeURI(path));
     xhr.onload = function () {
       var datas = JSON.parse(xhr.responseText);
@@ -3497,15 +3511,21 @@ function doGET(path) {
 }
 
 function doPOST(path, datas) {
-  return reqData(path, datas, 'POST');
+  var timeout = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 10000;
+
+  return reqData(path, datas, 'POST', timeout);
 }
 
 function doPUT(path, datas) {
-  return reqData(path, datas, 'PUT');
+  var timeout = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 10000;
+
+  return reqData(path, datas, 'PUT', timeout);
 }
 
 function doDELETE(path, datas) {
-  return reqData(path, datas, 'DELETE');
+  var timeout = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 10000;
+
+  return reqData(path, datas, 'DELETE', timeout);
 }
 
 var API$1 = function () {
@@ -3733,7 +3753,7 @@ var API$1 = function () {
       url = '/user/' + hashedUsername;
       return user.sign(url + '|' + now);
     }).then(function (signature) {
-      return doGET('' + _this10.db + url + '?sig=' + signature + '&sigTime=' + now);
+      return doGET('' + _this10.db + url + '?sig=' + signature + '&sigTime=' + now, 0);
     });
   };
 

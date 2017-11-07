@@ -294,7 +294,11 @@ function hexStringToAscii(hexx) {
 }
 
 function bytesToASCIIString(bytes) {
-  return String.fromCharCode.apply(null, new Uint8Array(bytes));
+  // String.fromCharCode.apply(null, new Uint8Array(bytes)) trigger Maximum call stack size exceeded
+  var array = new Uint8Array(bytes);
+  return array.reduce(function (str, charIndex) {
+    return str + String.fromCharCode(charIndex);
+  }, '');
 }
 
 function generateRandomNumber(max) {
