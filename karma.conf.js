@@ -23,7 +23,7 @@ module.exports = function exports(config) {
 
     client: {
       mocha: {
-        timeout: '30000',
+        timeout: '120000',
       },
       args: [
         process.env.API_TYPE,
@@ -31,7 +31,7 @@ module.exports = function exports(config) {
       ],
     },
 
-    browserNoActivityTimeout: '60000',
+    browserNoActivityTimeout: '240000',
 
 
     // list of files / patterns to load in the browser

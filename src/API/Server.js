@@ -46,7 +46,8 @@ class API {
         json,
         sig: signature,
         sigTime: now,
-      }));
+      })
+    );
   }
 
   deleteSecret(user, hashedTitle) {
@@ -61,7 +62,8 @@ class API {
         doDELETE(`${this.db}${url}`, {
           sig: signature,
           sigTime: now,
-        }));
+        })
+      );
   }
 
   editSecret(user, secretObject, hashedTitle) {
@@ -86,7 +88,8 @@ class API {
           json,
           sig: signature,
           sigTime: now,
-        }));
+        })
+      );
   }
 
   newKey(user, hashedTitle, secret, wrappedKeys) {
@@ -107,7 +110,8 @@ class API {
           json,
           sig: signature,
           sigTime: now,
-        }));
+        })
+      );
   }
 
   unshareSecret(user, friendNames, hashedTitle) {
@@ -140,7 +144,8 @@ class API {
           json,
           sig: signature,
           sigTime: now,
-        }));
+        })
+      );
   }
 
   shareSecret(user, sharedSecretObjects) {
@@ -159,7 +164,8 @@ class API {
           json,
           sig: signature,
           sigTime: now,
-        }));
+        })
+      );
   }
 
   retrieveUser(username, hash, hashed) {
@@ -207,7 +213,8 @@ class API {
         return user.sign(`${url}|${now}`);
       })
       .then(signature =>
-        doGET(`${this.db}${url}?sig=${signature}&sigTime=${now}`));
+        doGET(`${this.db}${url}?sig=${signature}&sigTime=${now}`, 0)
+      );
   }
 
   getSecret(hashedTitle, user) {
@@ -219,7 +226,8 @@ class API {
         return user.sign(`${url}|${now}`);
       })
       .then(signature =>
-        doGET(`${this.db}${url}?sig=${signature}&sigTime=${now}`));
+        doGET(`${this.db}${url}?sig=${signature}&sigTime=${now}`)
+      );
   }
 
   getHistory(user, hashedTitle) {
@@ -231,7 +239,8 @@ class API {
         return user.sign(`${url}|${now}`);
       })
       .then(signature =>
-        doGET(`${this.db}${url}?sig=${signature}&sigTime=${now}`))
+        doGET(`${this.db}${url}?sig=${signature}&sigTime=${now}`)
+      )
       .then(secret => ({
         iv: secret.iv_history,
         secret: secret.history,
@@ -274,7 +283,8 @@ class API {
           json,
           sig: signature,
           sigTime: now,
-        }));
+        })
+      );
   }
 
   getRescueCodes(user) {
@@ -286,7 +296,8 @@ class API {
         return user.sign(`${url}|${now}`);
       })
       .then(signature =>
-        doGET(`${this.db}${url}?sig=${signature}&sigTime=${now}`));
+        doGET(`${this.db}${url}?sig=${signature}&sigTime=${now}`)
+      );
   }
 
   editUser(user, datas) {
@@ -303,7 +314,8 @@ class API {
           json,
           sig: signature,
           sigTime: now,
-        }));
+        })
+      );
   }
 
   changePassword(user, privateKey, pass) {
@@ -323,7 +335,8 @@ class API {
           json,
           sig: signature,
           sigTime: now,
-        }));
+        })
+      );
   }
 
   testTotp(seed, token) {
@@ -346,7 +359,8 @@ class API {
           json,
           sig: signature,
           sigTime: now,
-        }));
+        })
+      );
   }
 
   deactivateTotp(user) {
@@ -358,7 +372,8 @@ class API {
         return user.sign(`${url}|${now}`);
       })
       .then(signature =>
-        doPUT(`${this.db}${url}?sig=${signature}&sigTime=${now}`, {}));
+        doPUT(`${this.db}${url}?sig=${signature}&sigTime=${now}`, {})
+      );
   }
 
   activateShortLogin(shortpass, user) {
@@ -377,7 +392,8 @@ class API {
           json,
           sig: signature,
           sigTime: now,
-        }));
+        })
+      );
   }
 
   isOnline() {

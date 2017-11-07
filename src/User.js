@@ -107,7 +107,8 @@ class User {
 
   exportBigPrivateData(data) {
     const result = {};
-    return this.cryptoAdapter.encryptAESGCM256(data)
+    return this.cryptoAdapter
+      .encryptAESGCM256(data)
       .then(secretObject => {
         result.secret = secretObject.secret;
         result.iv = secretObject.iv;
@@ -254,7 +255,7 @@ class User {
       .then(rMetadata => {
         metadata = rMetadata;
         if (typeof encryptedHistory.iv === 'undefined') {
-          return Promise.resolve({})
+          return Promise.resolve({});
         }
         return this.decryptSecret(hashedTitle, encryptedHistory);
       })
@@ -368,20 +369,22 @@ class User {
     const progressStatus = new DecryptMetadataStatus(0, hashedTitles.length);
     progress(progressStatus);
     const metadatas = {};
-    return hashedTitles.reduce(
-      (promise, hashedTitle) =>
-        promise.then(() =>
-          this.decryptSecret(
-            hashedTitle,
-            allMetadatas[hashedTitle]
-          ).then(metadata => {
-            progressStatus.step();
-            progress(progressStatus);
-            metadatas[hashedTitle] = metadata;
-          })
-        ),
-      Promise.resolve()
-    ).then(() => metadatas);
+    return hashedTitles
+      .reduce(
+        (promise, hashedTitle) =>
+          promise.then(() =>
+            this.decryptSecret(
+              hashedTitle,
+              allMetadatas[hashedTitle]
+            ).then(metadata => {
+              progressStatus.step();
+              progress(progressStatus);
+              metadatas[hashedTitle] = metadata;
+            })
+          ),
+        Promise.resolve()
+      )
+      .then(() => metadatas);
   }
 
   activateShortLogin(shortpass, deviceName) {
@@ -429,10 +432,7 @@ class User {
           privateKey: localStorage.getItem(`${Secretin.prefix}privateKey`),
           iv: localStorage.getItem(`${Secretin.prefix}privateKeyIv`),
         };
-        return this.importPrivateKey(
-          protectKey,
-          privateKeyObject
-        );
+        return this.importPrivateKey(protectKey, privateKeyObject);
       });
   }
 }
