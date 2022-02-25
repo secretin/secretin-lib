@@ -29,7 +29,7 @@ function resetAndGetDB() {
       xhr.send();
     });
   }
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     this.secretin = getDB();
     // console.log(JSON.stringify(this.secretin));
     resolve();

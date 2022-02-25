@@ -1,5 +1,3 @@
-import PasswordGenerator from './passwordGenerator';
-
 export function hexStringToUint8Array(hexString) {
   if (hexString.length % 2 !== 0) {
     throw 'Invalid hexString';
@@ -46,7 +44,7 @@ export function asciiToUint8Array(str) {
 export function asciiToHexString(str) {
   return str
     .split('')
-    .map(c => `0${c.charCodeAt(0).toString(16)}`.slice(-2))
+    .map((c) => `0${c.charCodeAt(0).toString(16)}`.slice(-2))
     .join('');
 }
 
@@ -158,6 +156,8 @@ export function defaultProgress(status) {
   }
 }
 
+export const SecretinPrefix = 'Secret-in:';
+
 const Utils = {
   generateRandomNumber,
   generateSeed,
@@ -167,10 +167,10 @@ const Utils = {
   bytesToASCIIString,
   xorSeed,
   escapeRegExp,
-  PasswordGenerator,
   defaultProgress,
   asciiToHexString,
   hexStringToAscii,
+  SecretinPrefix,
 };
 
 export default Utils;

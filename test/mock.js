@@ -21,7 +21,7 @@ crypto.subtle.generateKey = function generateKey(
     const pKeyUsages = ['unwrapKey', 'decrypt'];
     return crypto.subtle
       .importKey(format, key.publicKey, nAlgorithm, nExtractable, pubKeyUsages)
-      .then(publicKey => {
+      .then((publicKey) => {
         keyObject.publicKey = publicKey;
         return crypto.subtle.importKey(
           format,
@@ -31,14 +31,14 @@ crypto.subtle.generateKey = function generateKey(
           pKeyUsages
         );
       })
-      .then(privateKey => {
+      .then((privateKey) => {
         keyObject.privateKey = privateKey;
         return keyObject;
       });
   }
   return crypto.subtle
     .oldGenerateKey(algorithm, extractable, keyUsages)
-    .then(test => test);
+    .then((test) => test);
 };
 
 // eslint-disable-next-line

@@ -1,3 +1,4 @@
+/* eslint-disable max-classes-per-file */
 export class Status {
   constructor(state = 0, total = 1) {
     this.message = 'Unknown status';
@@ -16,6 +17,7 @@ export class PasswordDerivationStatus extends Status {
 export class GetDerivationStatus extends Status {
   constructor() {
     super();
+
     this.message = 'Retrieve derivation parameters';
   }
 }

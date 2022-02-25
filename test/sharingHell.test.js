@@ -93,37 +93,37 @@ describe('Sharing hell', () => {
       .then(() => this.secretin.newUser(user4, password4))
       .then(() => this.secretin.newUser(user3, password3))
       .then(() => this.secretin.addSecret(secretTitle, secretContent))
-      .then(hashedTitle => {
+      .then((hashedTitle) => {
         secretId = hashedTitle;
         return this.secretin.addFolder(folderTitle);
       })
-      .then(hashedTitle => {
+      .then((hashedTitle) => {
         folderId = hashedTitle;
         return this.secretin.addFolder(folderInFolderTitle);
       })
-      .then(hashedTitle => {
+      .then((hashedTitle) => {
         folderInFolderId = hashedTitle;
         return this.secretin.addFolder(otherFolderTitle);
       })
-      .then(hashedTitle => {
+      .then((hashedTitle) => {
         otherFolderId = hashedTitle;
         return this.secretin.addSecret(secretInFolderTitle, secretContent);
       })
-      .then(hashedTitle => {
+      .then((hashedTitle) => {
         secretInFolderId = hashedTitle;
         return this.secretin.addSecret(
           otherSecretInOtherFolderTitle,
           otherSecretInOtherFolderContent
         );
       })
-      .then(hashedTitle => {
+      .then((hashedTitle) => {
         otherSecretInOtherFolderId = hashedTitle;
         return this.secretin.addSecret(
           otherSecretInOtherFolderTitle2,
           otherSecretInOtherFolderContent2
         );
       })
-      .then(hashedTitle => {
+      .then((hashedTitle) => {
         otherSecretInOtherFolderId2 = hashedTitle;
         return this.secretin.addSecretToFolder(secretInFolderId, folderId);
       })
@@ -374,19 +374,19 @@ describe('Sharing hell', () => {
         return this.secretin.loginUser(user1, password1);
       })
       .then(() => this.secretin.getSecret(secretId))
-      .then(secret => secret.should.deep.equal(secretContent))
+      .then((secret) => secret.should.deep.equal(secretContent))
       .then(() => {
         this.secretin.currentUser.disconnect();
         return this.secretin.loginUser(user4, password4);
       })
       .then(() => this.secretin.getSecret(secretId))
-      .then(secret => secret.should.deep.equal(secretContent))
+      .then((secret) => secret.should.deep.equal(secretContent))
       .then(() => {
         this.secretin.currentUser.disconnect();
         return this.secretin.loginUser(user2, password2);
       })
       .then(() => this.secretin.getSecret(secretId))
-      .then(secret => secret.should.deep.equal(secretContent));
+      .then((secret) => secret.should.deep.equal(secretContent));
   });
 
   it('Unshare secret with one user in folder', () => {
@@ -426,7 +426,7 @@ describe('Sharing hell', () => {
         return this.secretin.loginUser(user2, password2);
       })
       .then(() => this.secretin.getSecret(secretInFolderId))
-      .then(secret => secret.should.deep.equal(secretContent))
+      .then((secret) => secret.should.deep.equal(secretContent))
       .then(() => {
         this.secretin.currentUser.disconnect();
         return this.secretin.loginUser(user1, password1);
@@ -455,7 +455,7 @@ describe('Sharing hell', () => {
     return this.secretin
       .loginUser(user1, password1)
       .then(() => this.secretin.addSecret(user1SecretTitle, user1SecretContent))
-      .then(rUser1SecretId => {
+      .then((rUser1SecretId) => {
         user1SecretId = rUser1SecretId;
         return this.secretin.addSecretToFolder(user1SecretId, folderId);
       })

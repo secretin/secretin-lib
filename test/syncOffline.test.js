@@ -56,7 +56,7 @@ if (__karma__.config.args[0] === 'server') {
       return resetAndGetDB()
         .then(() => this.secretin.newUser(username, password))
         .then(() => this.secretin.addSecret(secretTitle, secretContent))
-        .then(hashedTitle => {
+        .then((hashedTitle) => {
           secretId = hashedTitle;
         })
         .then(() => this.secretin.newUser(username2, password2));
@@ -82,8 +82,8 @@ if (__karma__.config.args[0] === 'server') {
     }
 
     it('Can work offline', () =>
-      syncThenOffline().should.eventually.have.all
-        .keys(
+      syncThenOffline()
+        .should.eventually.have.all.keys(
           'totp',
           'username',
           'publicKey',
@@ -96,7 +96,7 @@ if (__karma__.config.args[0] === 'server') {
           'options',
           'cryptoAdapter'
         )
-        .then(currentUser => currentUser.privateKey)
+        .then((currentUser) => currentUser.privateKey)
         .should.eventually.be.instanceOf(CryptoKey)
         .then(() => typeof this.secretin.api.db)
         .should.eventually.be.equal('object'));
@@ -124,16 +124,16 @@ if (__karma__.config.args[0] === 'server') {
         .then(() => goBackOnline())
         .then(() => {
           let id = -1;
-          Object.keys(
-            this.secretin.currentUser.metadatas
-          ).forEach((mHashedTitle, i) => {
-            if (
-              this.secretin.currentUser.metadatas[mHashedTitle].title ===
-              newSecretTitle
-            ) {
-              id = i;
+          Object.keys(this.secretin.currentUser.metadatas).forEach(
+            (mHashedTitle, i) => {
+              if (
+                this.secretin.currentUser.metadatas[mHashedTitle].title ===
+                newSecretTitle
+              ) {
+                id = i;
+              }
             }
-          });
+          );
           hashedTitle = Object.keys(this.secretin.currentUser.metadatas)[id];
           delete this.secretin.currentUser.metadatas[hashedTitle].id;
           return this.secretin.currentUser.metadatas[hashedTitle];
@@ -244,7 +244,7 @@ if (__karma__.config.args[0] === 'server') {
         .then(() => Object.keys(this.secretin.currentUser.metadatas).length)
         .should.eventually.equal(2)
         .then(() => {
-          Object.keys(this.secretin.currentUser.metadatas).forEach(key => {
+          Object.keys(this.secretin.currentUser.metadatas).forEach((key) => {
             if (
               this.secretin.currentUser.metadatas[key].title.indexOf('Conflict')
             ) {

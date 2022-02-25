@@ -49,7 +49,7 @@ describe('Secret accesses', () => {
         this.secretin.newUser(userReadWriteShare, passwordReadWriteShare)
       )
       .then(() => this.secretin.addSecret(secretTitle, secretContent))
-      .then(hashedTitle => {
+      .then((hashedTitle) => {
         secretId = hashedTitle;
         secretKeyReadWriteShare = this.secretin.currentUser.keys[secretId].key;
         return this.secretin.shareSecret(secretId, userRead, 0);

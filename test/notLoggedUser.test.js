@@ -32,7 +32,7 @@ describe('Not logged user', () => {
         'options',
         'cryptoAdapter'
       )
-      .then(currentUser => currentUser.privateKey)
+      .then((currentUser) => currentUser.privateKey)
       .should.eventually.be.instanceOf(CryptoKey));
 
   it('Can login', () =>
@@ -53,7 +53,7 @@ describe('Not logged user', () => {
         'options',
         'cryptoAdapter'
       )
-      .then(currentUser => currentUser.privateKey)
+      .then((currentUser) => currentUser.privateKey)
       .should.eventually.be.instanceOf(CryptoKey));
 
   it("Can't login with invalid password", () =>

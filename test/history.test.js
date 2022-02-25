@@ -62,112 +62,101 @@ describe('Test history', () => {
   */
 
   // eslint-disable-next-line
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear();
     // eslint-disable-next-line
     availableKeyCounter = 0;
     // eslint-disable-next-line
-    return resetAndGetDB()
-      .then(() => this.secretin.newUser(username2, password2))
-      .then(() => this.secretin.newUser(username, password))
-      .then(() => this.secretin.addSecret(secretTitle, secretContent))
-      .then(hashedTitle => {
-        secretId = hashedTitle;
-        return this.secretin.addFolder(folderTitle);
-      })
-      .then(hashedTitle => {
-        folderId = hashedTitle;
-        return this.secretin.addFolder(folderInFolderTitle);
-      })
-      .then(hashedTitle => {
-        folderInFolderId = hashedTitle;
-        return this.secretin.addFolder(otherFolderTitle);
-      })
-      .then(hashedTitle => {
-        otherFolderId = hashedTitle;
-        return this.secretin.addSecret(secretInFolderTitle, secretContent);
-      })
-      .then(hashedTitle => {
-        secretInFolderId = hashedTitle;
-        return this.secretin.addSecret(
-          otherSecretInOtherFolderTitle,
-          otherSecretInOtherFolderContent
-        );
-      })
-      .then(hashedTitle => {
-        otherSecretInOtherFolderId = hashedTitle;
-        return this.secretin.addSecretToFolder(secretInFolderId, folderId);
-      })
-      .then(() => this.secretin.addSecretToFolder(folderInFolderId, folderId))
-      .then(() =>
-        this.secretin.addSecretToFolder(
-          otherSecretInOtherFolderId,
-          otherFolderId
-        )
-      )
-      .then(() => this.secretin.shareSecret(secretInFolderId, username2, 0))
-      .then(() => {
-        this.secretin.currentUser.disconnect();
-        return this.secretin.loginUser(username, password);
-      });
+    await resetAndGetDB()
+    await this.secretin.newUser(username2, password2);
+    await this.secretin.newUser(username, password);
+    secretId = await this.secretin.addSecret(secretTitle, secretContent);
+    folderId = await this.secretin.addFolder(folderTitle);
+    folderInFolderId = await this.secretin.addFolder(folderInFolderTitle);
+    otherFolderId = await this.secretin.addFolder(otherFolderTitle);
+    secretInFolderId = await this.secretin.addSecret(
+      secretInFolderTitle,
+      secretContent
+    );
+    otherSecretInOtherFolderId = await this.secretin.addSecret(
+      otherSecretInOtherFolderTitle,
+      otherSecretInOtherFolderContent
+    );
+
+    await this.secretin.addSecretToFolder(secretInFolderId, folderId);
+    await this.secretin.addSecretToFolder(folderInFolderId, folderId);
+    await this.secretin.addSecretToFolder(
+      otherSecretInOtherFolderId,
+      otherFolderId
+    );
+    await this.secretin.shareSecret(secretInFolderId, username2, 0);
+    await this.secretin.currentUser.disconnect();
+    await this.secretin.loginUser(username, password);
   });
 
-  it('Can retrieve history', () =>
-    this.secretin
-      .getHistory(secretId)
-      .should.eventually.deep.equal([
-        {
-          secret: secretContent,
-          lastModifiedAt: now,
-          lastModifiedBy: username,
-        },
-      ])
-      .then(() => this.secretin.editSecret(secretId, newSecretContent))
-      .then(() => this.secretin.getHistory(secretId))
-      .should.eventually.deep.equal([
-        {
-          secret: newSecretContent,
-          lastModifiedAt: now,
-          lastModifiedBy: username,
-        },
-        {
-          secret: secretContent,
-          lastModifiedAt: now,
-          lastModifiedBy: username,
-        },
-      ])
-      .then(() => this.secretin.editSecret(secretId, newSecretContent))
-      .then(() => this.secretin.getHistory(secretId))
-      .should.eventually.deep.equal([
-        {
-          secret: newSecretContent,
-          lastModifiedAt: now,
-          lastModifiedBy: username,
-        },
-        {
-          secret: secretContent,
-          lastModifiedAt: now,
-          lastModifiedBy: username,
-        },
-      ]));
+  it('Can retrieve history', async () => {
+    const firstHistory = await this.secretin.getHistory(secretId);
+    firstHistory.should.deep.equal([
+      {
+        secret: secretContent,
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+      },
+    ]);
+    await this.secretin.editSecret(secretId, newSecretContent);
 
-  it('Can unshare and retrieve history', () =>
-    this.secretin
-      .getHistory(secretInFolderId)
-      .should.eventually.deep.equal([
-        {
-          secret: secretContent,
-          lastModifiedAt: now,
-          lastModifiedBy: username,
-        },
-      ])
-      .then(() => this.secretin.unshareSecret(secretInFolderId, username2))
-      .then(() => this.secretin.getHistory(secretId))
-      .should.eventually.deep.equal([
-        {
-          secret: secretContent,
-          lastModifiedAt: now,
-          lastModifiedBy: username,
-        },
-      ]));
+    const secondHistory = await this.secretin.getHistory(secretId);
+    secondHistory.should.deep.equal([
+      {
+        secret: newSecretContent,
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+      },
+      {
+        secret: secretContent,
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+      },
+    ]);
+
+    await this.secretin.editSecret(secretId, newSecretContent);
+
+    const thirdHistory = await this.secretin.getHistory(secretId);
+    thirdHistory.should.deep.equal([
+      {
+        secret: newSecretContent,
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+      },
+      {
+        secret: secretContent,
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+      },
+    ]);
+  });
+
+  it('Can unshare and retrieve history', async () => {
+    const firstHistory = await this.secretin.getHistory(secretInFolderId);
+
+    firstHistory.should.deep.equal([
+      {
+        secret: secretContent,
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+      },
+    ]);
+
+    await this.secretin.unshareSecret(secretInFolderId, username2);
+
+    const secondHistory = await this.secretin.getHistory(secretId);
+
+    secondHistory.should.deep.equal([
+      {
+        secret: secretContent,
+        lastModifiedAt: now,
+        lastModifiedBy: username,
+      },
+    ]);
+  });
 });

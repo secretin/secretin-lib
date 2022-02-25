@@ -1,14 +1,11 @@
-/* eslint-disable import/no-extraneous-dependencies */
-import json from 'rollup-plugin-json';
-import babel from 'rollup-plugin-babel';
-import eslint from 'rollup-plugin-eslint';
+import json from '@rollup/plugin-json';
+import eslint from '@rollup/plugin-eslint';
 
 export default {
-  entry: 'src/index.js',
-  moduleName: 'Secretin',
-  plugins: [eslint(), json(), babel()],
-  targets: [
-    { dest: 'dist/secretin.js', format: 'iife' },
-    { dest: 'dist/secretin.umd.js', format: 'umd' },
+  input: 'src/index.js',
+  plugins: [eslint(), json()],
+  output: [
+    { file: 'dist/secretin.js', format: 'iife', name: 'Secretin' },
+    { file: 'dist/secretin.umd.js', name: 'Secretin', format: 'umd' },
   ],
 };

@@ -214,7 +214,7 @@ export function derivePassword(password, parameters) {
 
   result.key = bytesToASCIIString(derivedKey);
 
-  return getSHA256(result.key).then(hash => {
+  return getSHA256(result.key).then((hash) => {
     result.hash = hash;
     return result;
   });
