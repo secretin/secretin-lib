@@ -9,16 +9,50 @@
   var crypto__default = /*#__PURE__*/_interopDefaultLegacy(crypto);
   var forge__default = /*#__PURE__*/_interopDefaultLegacy(forge);
 
+  /* eslint-disable max-classes-per-file */
+  class Error {
+    constructor(errorObject) {
+      this.message = 'Unknown error';
+      if (typeof errorObject !== 'undefined') {
+        this.errorObject = errorObject;
+      } else {
+        this.errorObject = null;
+      }
+    }
+  }
+
+  class AESGCMDecryptionError extends Error {
+    constructor() {
+      super();
+      this.message = 'AES-GCM decryption error';
+    }
+  }
+  class InvalidHexStringError extends Error {
+    constructor() {
+      super();
+      this.message = 'Invalid hexString';
+    }
+  }
+
+  class InvalidPasswordError extends Error {
+    constructor() {
+      super();
+      this.message = 'Invalid password';
+    }
+  }
+
+  /* eslint-disable no-bitwise */
+
   function hexStringToUint8Array(hexString) {
     if (hexString.length % 2 !== 0) {
-      throw 'Invalid hexString';
+      throw new InvalidHexStringError();
     }
     const arrayBuffer = new Uint8Array(hexString.length / 2);
 
     for (let i = 0; i < hexString.length; i += 2) {
       const byteValue = parseInt(hexString.substr(i, 2), 16);
-      if (isNaN(byteValue)) {
-        throw 'Invalid hexString';
+      if (Number.isNaN(byteValue)) {
+        throw new InvalidHexStringError();
       }
       arrayBuffer[i / 2] = byteValue;
     }
@@ -34,7 +68,7 @@
     const bytes = new Uint8Array(givenBytes);
     const hexBytes = [];
 
-    for (let i = 0; i < bytes.length; ++i) {
+    for (let i = 0; i < bytes.length; i += 1) {
       let byteString = bytes[i].toString(16);
       if (byteString.length < 2) {
         byteString = `0${byteString}`;
@@ -46,7 +80,7 @@
 
   function asciiToUint8Array(str) {
     const chars = [];
-    for (let i = 0; i < str.length; ++i) {
+    for (let i = 0; i < str.length; i += 1) {
       chars.push(str.charCodeAt(i));
     }
     return new Uint8Array(chars);
@@ -142,7 +176,7 @@
     if (pass) {
       return Promise.resolve(JSON.parse(decipher.output.getBytes()));
     }
-    return Promise.reject('AES-GCM decryption error');
+    return Promise.reject(new AESGCMDecryptionError());
   }
 
   function encryptRSAOAEP(secret, publicKey) {
@@ -215,7 +249,7 @@
     if (hex.length % 2) {
       hex = `0${hex}`;
     }
-    const buf = new Buffer(hex, 'hex');
+    const buf = Buffer.from(hex, 'hex');
     const b64 = buf.toString('base64');
     const b64Url = b64.replace(/[+]/g, '-').replace(/\//g, '_').replace(/=/g, '');
     return b64Url;
@@ -240,8 +274,8 @@
   }
 
   function importPublicKey(jwkPublicKey) {
-    const n = new Buffer(jwkPublicKey.n, 'base64');
-    const e = new Buffer(jwkPublicKey.e, 'base64');
+    const n = Buffer.from(jwkPublicKey.n, 'base64');
+    const e = Buffer.from(jwkPublicKey.e, 'base64');
 
     const publicKey = forge__default["default"].pki.setRsaPublicKey(
       new forge__default["default"].jsbn.BigInteger(n.toString('hex'), 16),
@@ -320,7 +354,7 @@
         qi,
       };
     } else {
-      const b64Key = new Buffer(key, 'binary').toString('base64');
+      const b64Key = Buffer.from(key, 'binary').toString('base64');
       const b64UrlKey = b64Key
         .replace(/[+]/g, '-')
         .replace(/\//g, '_')
@@ -358,14 +392,14 @@
 
       const jwkPrivateKey = JSON.parse(jwkPrivateKeyString);
 
-      const n = new Buffer(jwkPrivateKey.n, 'base64');
-      const e = new Buffer(jwkPrivateKey.e, 'base64');
-      const d = new Buffer(jwkPrivateKey.d, 'base64');
-      const p = new Buffer(jwkPrivateKey.p, 'base64');
-      const q = new Buffer(jwkPrivateKey.q, 'base64');
-      const dP = new Buffer(jwkPrivateKey.dp, 'base64');
-      const dQ = new Buffer(jwkPrivateKey.dq, 'base64');
-      const qInv = new Buffer(jwkPrivateKey.qi, 'base64');
+      const n = Buffer.from(jwkPrivateKey.n, 'base64');
+      const e = Buffer.from(jwkPrivateKey.e, 'base64');
+      const d = Buffer.from(jwkPrivateKey.d, 'base64');
+      const p = Buffer.from(jwkPrivateKey.p, 'base64');
+      const q = Buffer.from(jwkPrivateKey.q, 'base64');
+      const dP = Buffer.from(jwkPrivateKey.dp, 'base64');
+      const dQ = Buffer.from(jwkPrivateKey.dq, 'base64');
+      const qInv = Buffer.from(jwkPrivateKey.qi, 'base64');
 
       const privateKey = forge__default["default"].pki.setRsaPrivateKey(
         new forge__default["default"].jsbn.BigInteger(n.toString('hex'), 16),
@@ -379,7 +413,7 @@
       );
       return Promise.resolve(privateKey);
     } catch (e) {
-      return Promise.reject('Invalid Password');
+      return Promise.reject(new InvalidPasswordError());
     }
   }
 
@@ -397,11 +431,11 @@
 
       const jwkKey = JSON.parse(jwkKeyString);
 
-      const importedKey = new Buffer(jwkKey.k, 'base64');
+      const importedKey = Buffer.from(jwkKey.k, 'base64');
 
       return Promise.resolve(importedKey.toString('binary'));
     } catch (e) {
-      return Promise.reject('Invalid Password');
+      return Promise.reject(new InvalidPasswordError());
     }
   }
 

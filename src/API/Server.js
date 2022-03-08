@@ -258,6 +258,7 @@ class API {
         doGET(`${this.db}/protectKey/${hashedUsername}/${deviceId}/${hash}`)
       )
       .then((result) => {
+        // eslint-disable-next-line security/detect-possible-timing-attacks
         if (hash === 'undefined') {
           return result;
         }

@@ -1,5 +1,5 @@
 import { DecryptMetadataStatus } from './Statuses';
-
+import { DontHaveSecretError } from './Errors';
 import { defaultProgress, SecretinPrefix } from './lib/utils';
 
 class User {
@@ -189,7 +189,7 @@ class User {
   editSecret(hashedTitle, secret, history) {
     const metadatas = this.metadatas[hashedTitle];
     if (typeof metadatas === 'undefined') {
-      return Promise.reject("You don't have this secret");
+      return Promise.reject(new DontHaveSecretError());
     }
     const now = new Date();
     metadatas.lastModifiedAt = now.toISOString();
@@ -345,7 +345,7 @@ class User {
 
   decryptSecret(hashedTitle, secret) {
     if (typeof this.keys[hashedTitle] === 'undefined') {
-      return Promise.reject("You don't have this secret");
+      return Promise.reject(new DontHaveSecretError());
     }
     const wrappedKey = this.keys[hashedTitle].key;
     return this.unwrapKey(wrappedKey).then((key) =>

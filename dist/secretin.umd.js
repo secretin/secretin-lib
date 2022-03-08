@@ -6,6 +6,7 @@
 
   var version = "2.1.1";
 
+  /* eslint-disable max-classes-per-file */
   class Error {
     constructor(errorObject) {
       this.message = 'Unknown error';
@@ -14,6 +15,26 @@
       } else {
         this.errorObject = null;
       }
+    }
+  }
+
+  class XorSeedError extends Error {
+    constructor() {
+      super();
+      this.message = 'Utils.xorSeed expect 32 bytes Uint8Arrays';
+    }
+  }
+  class InvalidHexStringError extends Error {
+    constructor() {
+      super();
+      this.message = 'Invalid hexString';
+    }
+  }
+
+  class SomethingGoesWrong extends Error {
+    constructor() {
+      super();
+      this.message = 'Something goes wrong.';
     }
   }
 
@@ -228,6 +249,8 @@
         this.error = new OfflineError();
       } else if (error === 'Not available in standalone mode') {
         this.error = new NotAvailableError();
+      } else if (error === 'Something goes wrong.') {
+        this.error = new SomethingGoesWrong();
       } else {
         this.error = new Error(error);
       }
@@ -259,7 +282,10 @@
     NotSharedWithUserError,
     FriendNotFoundError,
     OfflineError,
+    InvalidHexStringError,
+    XorSeedError,
     NotAvailableError,
+    SomethingGoesWrong,
   };
 
   /* eslint-disable max-classes-per-file */
@@ -490,16 +516,18 @@
     escapeRegExp,
   };
 
+  /* eslint-disable no-bitwise */
+
   function hexStringToUint8Array(hexString) {
     if (hexString.length % 2 !== 0) {
-      throw 'Invalid hexString';
+      throw new InvalidHexStringError();
     }
     const arrayBuffer = new Uint8Array(hexString.length / 2);
 
     for (let i = 0; i < hexString.length; i += 2) {
       const byteValue = parseInt(hexString.substr(i, 2), 16);
-      if (isNaN(byteValue)) {
-        throw 'Invalid hexString';
+      if (Number.isNaN(byteValue)) {
+        throw new InvalidHexStringError();
       }
       arrayBuffer[i / 2] = byteValue;
     }
@@ -515,7 +543,7 @@
     const bytes = new Uint8Array(givenBytes);
     const hexBytes = [];
 
-    for (let i = 0; i < bytes.length; ++i) {
+    for (let i = 0; i < bytes.length; i += 1) {
       let byteString = bytes[i].toString(16);
       if (byteString.length < 2) {
         byteString = `0${byteString}`;
@@ -527,7 +555,7 @@
 
   function asciiToUint8Array(str) {
     const chars = [];
-    for (let i = 0; i < str.length; ++i) {
+    for (let i = 0; i < str.length; i += 1) {
       chars.push(str.charCodeAt(i));
     }
     return new Uint8Array(chars);
@@ -570,7 +598,7 @@
     let output = '';
     const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
-    for (i = 0; i < buf.length; i++) {
+    for (i = 0; i < buf.length; i += 1) {
       byte = buf[i];
 
       symbol = carry | (byte >> shift);
@@ -617,12 +645,12 @@
     ) {
       const buf = new Uint8Array(32);
       let i;
-      for (i = 0; i < 32; i++) {
+      for (i = 0; i < 32; i += 1) {
         buf[i] = byteArray1[i] ^ byteArray2[i];
       }
       return bytesToHexString(buf);
     }
-    throw 'Utils.xorSeed expect 32 bytes Uint8Arrays';
+    throw new XorSeedError();
   }
 
   function defaultProgress(status) {
@@ -680,7 +708,7 @@
             if (typeof this.db.users[hashedUsername] === 'undefined') {
               resolve(this.getSHA256(pass.hash));
             } else {
-              reject('Username already exists');
+              reject(new UsernameAlreadyExistsError());
             }
           });
         })
@@ -721,9 +749,9 @@
             };
             resolve();
           }
-          reject('Secret already exists');
+          reject(new SecretAlreadyExistsError());
         } else {
-          reject('User not found');
+          reject(new UserNotFoundError());
         }
       });
     }
@@ -734,7 +762,7 @@
         hashedUsername = rHashedUsername;
         if (typeof this.db.users[hashedUsername] !== 'undefined') {
           if (typeof this.db.secrets[hashedTitle] === 'undefined') {
-            return Promise.reject('Secret not found');
+            return Promise.reject(new SecretNotFoundError());
           }
           delete this.db.users[hashedUsername].keys[hashedTitle];
           const index =
@@ -747,7 +775,7 @@
           }
           return Promise.resolve();
         }
-        return Promise.reject('User not found');
+        return Promise.reject(new UserNotFoundError());
       });
     }
 
@@ -762,7 +790,7 @@
                 'undefined' ||
               this.db.users[hashedUsername].keys[hashedTitle].rights <= 0
             ) {
-              return Promise.reject("You can't edit this secret");
+              return Promise.reject(new CantEditSecretError());
             }
             this.db.secrets[hashedTitle].iv = secretObject.iv;
             this.db.secrets[hashedTitle].secret = secretObject.secret;
@@ -773,9 +801,9 @@
             this.db.secrets[hashedTitle].history = secretObject.history;
             return Promise.resolve();
           }
-          return Promise.reject('Secret not found');
+          return Promise.reject(new SecretNotFoundError());
         }
-        return Promise.reject('User not found');
+        return Promise.reject(new UserNotFoundError());
       });
     }
 
@@ -790,7 +818,7 @@
                 'undefined' ||
               this.db.users[hashedUsername].keys[hashedTitle].rights <= 1
             ) {
-              return Promise.reject("You can't generate new key for this secret");
+              return Promise.reject(new CantGenerateNewKeyError());
             }
             this.db.secrets[hashedTitle].iv = secret.iv;
             this.db.secrets[hashedTitle].secret = secret.secret;
@@ -811,9 +839,9 @@
             });
             return Promise.resolve();
           }
-          return Promise.reject('Secret not found');
+          return Promise.reject(new SecretNotFoundError());
         }
-        return Promise.reject('User not found');
+        return Promise.reject(new UserNotFoundError());
       });
     }
 
@@ -856,10 +884,10 @@
                         this.db.secrets[hashedTitle].users.splice(id, 1);
                         nb += 1;
                       } else {
-                        throw 'Secret not shared with this user';
+                        throw new NotSharedWithUserError();
                       }
                     } else {
-                      throw 'Secret not shared with this user';
+                      throw new NotSharedWithUserError();
                     }
                   } else {
                     yourself = 1;
@@ -871,13 +899,13 @@
                 if (nb === hashedFriendUsernames.length - yourself) {
                   return response;
                 }
-                return Promise.reject('Something goes wrong.');
+                return Promise.reject(new SomethingGoesWrong());
               }
-              return Promise.reject("You can't unshare this secret");
+              return Promise.reject(new CantUnshareSecretError());
             }
-            return Promise.reject('Secret not found');
+            return Promise.reject(new SecretNotFoundError());
           }
-          return Promise.reject('User not found');
+          return Promise.reject(new UserNotFoundError());
         });
     }
 
@@ -912,24 +940,24 @@
                     }
                     nb += 1;
                   } else {
-                    throw 'Friend not found';
+                    throw new FriendNotFoundError();
                   }
                 } else {
-                  throw "You can't share this secret";
+                  throw new CantShareSecretError();
                 }
               } else {
-                throw 'Secret not found';
+                throw new SecretNotFoundError();
               }
             } else {
-              throw "You can't share with yourself";
+              throw new CantShareWithYourselfError();
             }
           });
           if (nb !== sharedSecretObjects.length) {
-            return Promise.reject('Something goes wrong.');
+            return Promise.reject(new SomethingGoesWrong());
           }
           return Promise.resolve();
         }
-        return Promise.reject('User not found');
+        return Promise.reject(new UserNotFoundError());
       });
     }
 
@@ -949,7 +977,7 @@
       return isHashed
         .then(() => {
           if (typeof this.db.users[hashedUsername] === 'undefined') {
-            return Promise.reject('User not found');
+            return Promise.reject(new UserNotFoundError());
           }
           user = JSON.parse(JSON.stringify(this.db.users[hashedUsername]));
           return this.getSHA256(hash);
@@ -998,7 +1026,7 @@
         hashedUsername = rHashedUsername;
         return new Promise((resolve, reject) => {
           if (typeof this.db.users[hashedUsername] === 'undefined') {
-            reject('User not found');
+            reject(new UserNotFoundError());
           } else {
             const userObject = JSON.parse(
               JSON.stringify(this.db.users[hashedUsername])
@@ -1022,7 +1050,7 @@
     getSecret(hash) {
       return new Promise((resolve, reject) => {
         if (typeof this.db.secrets[hash] === 'undefined') {
-          reject("You don't have this secret");
+          reject(new DontHaveSecretError());
         } else {
           resolve(this.db.secrets[hash]);
         }
@@ -1047,7 +1075,7 @@
     getHistory(user, hash) {
       return new Promise((resolve, reject) => {
         if (typeof this.db.secrets[hash] === 'undefined') {
-          reject("You don't have this secret");
+          reject(new DontHaveSecretError());
         } else {
           const secret = this.db.secrets[hash];
           const history = {
@@ -1059,8 +1087,9 @@
       });
     }
 
+    // eslint-disable-next-line class-methods-use-this
     getProtectKeyParameters() {
-      return Promise.reject('Not available in standalone mode');
+      return Promise.reject(new NotAvailableError());
     }
 
     getDb() {
@@ -1091,7 +1120,7 @@
               resolve();
             }
           } else {
-            reject('User not found');
+            reject(new UserNotFoundError());
           }
         });
       });
@@ -1106,8 +1135,11 @@
       });
     }
 
+    // eslint-disable-next-line class-methods-use-this
     isOnline() {
-      return new Promise((resolve) => resolve(false));
+      return new Promise((resolve) => {
+        resolve(false);
+      });
     }
   }
 
@@ -1298,7 +1330,7 @@
     editSecret(hashedTitle, secret, history) {
       const metadatas = this.metadatas[hashedTitle];
       if (typeof metadatas === 'undefined') {
-        return Promise.reject("You don't have this secret");
+        return Promise.reject(new DontHaveSecretError());
       }
       const now = new Date();
       metadatas.lastModifiedAt = now.toISOString();
@@ -1454,7 +1486,7 @@
 
     decryptSecret(hashedTitle, secret) {
       if (typeof this.keys[hashedTitle] === 'undefined') {
-        return Promise.reject("You don't have this secret");
+        return Promise.reject(new DontHaveSecretError());
       }
       const wrappedKey = this.keys[hashedTitle].key;
       return this.unwrapKey(wrappedKey).then((key) =>
@@ -1553,7 +1585,7 @@
   });
 
   class Secretin {
-    constructor(cryptoAdapter, API = API$1, db) {
+    constructor(cryptoAdapter, API = API$1, db = null) {
       this.cryptoAdapter = cryptoAdapter;
       this.api = new API(db, this.cryptoAdapter.getSHA256);
       this.editableDB = true;
@@ -2290,7 +2322,7 @@
       rights,
       fullSharedSecretObjects,
       addUsername = false,
-      hashedFolder
+      hashedFolder = undefined
     ) {
       let isFolder = Promise.resolve();
       const sharedSecretObjectPromises = [];
@@ -2415,7 +2447,7 @@
         .getPublicKey(friend.username)
         .then(
           (publicKey) => friend.importPublicKey(publicKey),
-          () => Promise.reject('Friend not found')
+          () => Promise.reject(new FriendNotFoundError())
         )
         .then(() => this.getSharedSecretObjects(hashedTitle, friend, rights, []))
         .then((rSharedSecretObjects) => {
@@ -2941,6 +2973,7 @@
       return Promise.reject(new LocalStorageUnavailableError());
     }
 
+    // eslint-disable-next-line class-methods-use-this
     deactivateShortLogin() {
       if (localStorageAvailable()) {
         localStorage.removeItem(`${SecretinPrefix}username`);
@@ -3265,6 +3298,7 @@
         // Electron
         xhr.timeout = timeout;
       }
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       xhr.open(type, encodeURI(path));
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.onload = () => {
@@ -3276,10 +3310,10 @@
         }
       };
       xhr.ontimeout = () => {
-        reject('Offline');
+        reject(new OfflineError());
       };
       xhr.onerror = () => {
-        reject('Offline');
+        reject(new OfflineError());
       };
       xhr.send(JSON.stringify(datas));
     });
@@ -3302,10 +3336,10 @@
         }
       };
       xhr.ontimeout = () => {
-        reject('Offline');
+        reject(new OfflineError());
       };
       xhr.onerror = () => {
-        reject('Offline');
+        reject(new OfflineError());
       };
       xhr.send();
     });
@@ -3581,6 +3615,7 @@
           doGET(`${this.db}/protectKey/${hashedUsername}/${deviceId}/${hash}`)
         )
         .then((result) => {
+          // eslint-disable-next-line security/detect-possible-timing-attacks
           if (hash === 'undefined') {
             return result;
           }

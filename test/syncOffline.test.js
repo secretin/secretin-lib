@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection */
 if (__karma__.config.args[0] === 'server') {
   window.process = 'karma';
   describe('Sync offline/online', () => {
@@ -11,7 +10,7 @@ if (__karma__.config.args[0] === 'server') {
     let secretId = '';
 
     const now = '2016-01-01T00:00:00.000Z';
-    // eslint-disable-next-line
+    // eslint-disable-next-line no-extend-native
     Date.prototype.toISOString = () => now;
 
     const secretContent = {

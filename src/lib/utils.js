@@ -1,15 +1,17 @@
+/* eslint-disable no-bitwise */
 import PasswordGenerator from './passwordGenerator';
+import { InvalidHexStringError, XorSeedError } from '../Errors';
 
 export function hexStringToUint8Array(hexString) {
   if (hexString.length % 2 !== 0) {
-    throw 'Invalid hexString';
+    throw new InvalidHexStringError();
   }
   const arrayBuffer = new Uint8Array(hexString.length / 2);
 
   for (let i = 0; i < hexString.length; i += 2) {
     const byteValue = parseInt(hexString.substr(i, 2), 16);
-    if (isNaN(byteValue)) {
-      throw 'Invalid hexString';
+    if (Number.isNaN(byteValue)) {
+      throw new InvalidHexStringError();
     }
     arrayBuffer[i / 2] = byteValue;
   }
@@ -25,7 +27,7 @@ export function bytesToHexString(givenBytes) {
   const bytes = new Uint8Array(givenBytes);
   const hexBytes = [];
 
-  for (let i = 0; i < bytes.length; ++i) {
+  for (let i = 0; i < bytes.length; i += 1) {
     let byteString = bytes[i].toString(16);
     if (byteString.length < 2) {
       byteString = `0${byteString}`;
@@ -37,7 +39,7 @@ export function bytesToHexString(givenBytes) {
 
 export function asciiToUint8Array(str) {
   const chars = [];
-  for (let i = 0; i < str.length; ++i) {
+  for (let i = 0; i < str.length; i += 1) {
     chars.push(str.charCodeAt(i));
   }
   return new Uint8Array(chars);
@@ -80,7 +82,7 @@ export function generateSeed() {
   let output = '';
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
-  for (i = 0; i < buf.length; i++) {
+  for (i = 0; i < buf.length; i += 1) {
     byte = buf[i];
 
     symbol = carry | (byte >> shift);
@@ -127,12 +129,12 @@ export function xorSeed(byteArray1, byteArray2) {
   ) {
     const buf = new Uint8Array(32);
     let i;
-    for (i = 0; i < 32; i++) {
+    for (i = 0; i < 32; i += 1) {
       buf[i] = byteArray1[i] ^ byteArray2[i];
     }
     return bytesToHexString(buf);
   }
-  throw 'Utils.xorSeed expect 32 bytes Uint8Arrays';
+  throw new XorSeedError();
 }
 
 export function defaultProgress(status) {

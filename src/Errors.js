@@ -1,3 +1,4 @@
+/* eslint-disable max-classes-per-file */
 export class Error {
   constructor(errorObject) {
     this.message = 'Unknown error';
@@ -6,6 +7,33 @@ export class Error {
     } else {
       this.errorObject = null;
     }
+  }
+}
+
+export class AESGCMDecryptionError extends Error {
+  constructor() {
+    super();
+    this.message = 'AES-GCM decryption error';
+  }
+}
+
+export class XorSeedError extends Error {
+  constructor() {
+    super();
+    this.message = 'Utils.xorSeed expect 32 bytes Uint8Arrays';
+  }
+}
+export class InvalidHexStringError extends Error {
+  constructor() {
+    super();
+    this.message = 'Invalid hexString';
+  }
+}
+
+export class SomethingGoesWrong extends Error {
+  constructor() {
+    super();
+    this.message = 'Something goes wrong.';
   }
 }
 
@@ -220,6 +248,8 @@ export class WrappingError {
       this.error = new OfflineError();
     } else if (error === 'Not available in standalone mode') {
       this.error = new NotAvailableError();
+    } else if (error === 'Something goes wrong.') {
+      this.error = new SomethingGoesWrong();
     } else {
       this.error = new Error(error);
     }
@@ -251,7 +281,10 @@ const Errors = {
   NotSharedWithUserError,
   FriendNotFoundError,
   OfflineError,
+  InvalidHexStringError,
+  XorSeedError,
   NotAvailableError,
+  SomethingGoesWrong,
 };
 
 export default Errors;

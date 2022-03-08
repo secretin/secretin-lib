@@ -10,6 +10,7 @@ module.exports = {
     sourceType: 'module',
   },
   rules: {
+    'security/detect-object-injection': 'off',
     'no-return-await': 'off',
     'no-restricted-syntax': 'off',
     'prefer-destructuring': 'off',

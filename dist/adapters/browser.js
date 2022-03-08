@@ -1,16 +1,43 @@
 var SecretinBrowserAdapter = (function (exports) {
   'use strict';
 
+  /* eslint-disable max-classes-per-file */
+  class Error {
+    constructor(errorObject) {
+      this.message = 'Unknown error';
+      if (typeof errorObject !== 'undefined') {
+        this.errorObject = errorObject;
+      } else {
+        this.errorObject = null;
+      }
+    }
+  }
+  class InvalidHexStringError extends Error {
+    constructor() {
+      super();
+      this.message = 'Invalid hexString';
+    }
+  }
+
+  class InvalidPasswordError extends Error {
+    constructor() {
+      super();
+      this.message = 'Invalid password';
+    }
+  }
+
+  /* eslint-disable no-bitwise */
+
   function hexStringToUint8Array(hexString) {
     if (hexString.length % 2 !== 0) {
-      throw 'Invalid hexString';
+      throw new InvalidHexStringError();
     }
     const arrayBuffer = new Uint8Array(hexString.length / 2);
 
     for (let i = 0; i < hexString.length; i += 2) {
       const byteValue = parseInt(hexString.substr(i, 2), 16);
-      if (isNaN(byteValue)) {
-        throw 'Invalid hexString';
+      if (Number.isNaN(byteValue)) {
+        throw new InvalidHexStringError();
       }
       arrayBuffer[i / 2] = byteValue;
     }
@@ -26,7 +53,7 @@ var SecretinBrowserAdapter = (function (exports) {
     const bytes = new Uint8Array(givenBytes);
     const hexBytes = [];
 
-    for (let i = 0; i < bytes.length; ++i) {
+    for (let i = 0; i < bytes.length; i += 1) {
       let byteString = bytes[i].toString(16);
       if (byteString.length < 2) {
         byteString = `0${byteString}`;
@@ -38,7 +65,7 @@ var SecretinBrowserAdapter = (function (exports) {
 
   function asciiToUint8Array(str) {
     const chars = [];
-    for (let i = 0; i < str.length; ++i) {
+    for (let i = 0; i < str.length; i += 1) {
       chars.push(str.charCodeAt(i));
     }
     return new Uint8Array(chars);
@@ -377,7 +404,7 @@ var SecretinBrowserAdapter = (function (exports) {
         extractable,
         keyUsages
       )
-      .catch(() => Promise.reject('Invalid Password'));
+      .catch(() => Promise.reject(new InvalidPasswordError()));
   }
 
   function importKey(key, keyObject) {
@@ -401,7 +428,7 @@ var SecretinBrowserAdapter = (function (exports) {
         extractable,
         keyUsages
       )
-      .catch(() => Promise.reject('Invalid Password'));
+      .catch(() => Promise.reject(new InvalidPasswordError()));
   }
 
   exports.convertOAEPToPSS = convertOAEPToPSS;

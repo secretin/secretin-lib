@@ -1,3 +1,5 @@
+import { OfflineError } from '../Errors';
+
 function reqData(path, datas, type, timeout = 10000) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -5,6 +7,7 @@ function reqData(path, datas, type, timeout = 10000) {
       // Electron
       xhr.timeout = timeout;
     }
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     xhr.open(type, encodeURI(path));
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.onload = () => {
@@ -16,10 +19,10 @@ function reqData(path, datas, type, timeout = 10000) {
       }
     };
     xhr.ontimeout = () => {
-      reject('Offline');
+      reject(new OfflineError());
     };
     xhr.onerror = () => {
-      reject('Offline');
+      reject(new OfflineError());
     };
     xhr.send(JSON.stringify(datas));
   });
@@ -42,10 +45,10 @@ export function doGET(path, timeout = 6000) {
       }
     };
     xhr.ontimeout = () => {
-      reject('Offline');
+      reject(new OfflineError());
     };
     xhr.onerror = () => {
-      reject('Offline');
+      reject(new OfflineError());
     };
     xhr.send();
   });

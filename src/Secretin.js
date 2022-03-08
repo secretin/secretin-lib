@@ -5,6 +5,7 @@ import {
   DontHaveSecretError,
   OfflineError,
   LocalStorageUnavailableError,
+  FriendNotFoundError,
   NotAvailableError,
 } from './Errors';
 
@@ -33,7 +34,7 @@ import APIStandalone from './API/Standalone';
 import User from './User';
 
 class Secretin {
-  constructor(cryptoAdapter, API = APIStandalone, db) {
+  constructor(cryptoAdapter, API = APIStandalone, db = null) {
     this.cryptoAdapter = cryptoAdapter;
     this.api = new API(db, this.cryptoAdapter.getSHA256);
     this.editableDB = true;
@@ -770,7 +771,7 @@ class Secretin {
     rights,
     fullSharedSecretObjects,
     addUsername = false,
-    hashedFolder
+    hashedFolder = undefined
   ) {
     let isFolder = Promise.resolve();
     const sharedSecretObjectPromises = [];
@@ -895,7 +896,7 @@ class Secretin {
       .getPublicKey(friend.username)
       .then(
         (publicKey) => friend.importPublicKey(publicKey),
-        () => Promise.reject('Friend not found')
+        () => Promise.reject(new FriendNotFoundError())
       )
       .then(() => this.getSharedSecretObjects(hashedTitle, friend, rights, []))
       .then((rSharedSecretObjects) => {
@@ -1421,6 +1422,7 @@ class Secretin {
     return Promise.reject(new LocalStorageUnavailableError());
   }
 
+  // eslint-disable-next-line class-methods-use-this
   deactivateShortLogin() {
     if (localStorageAvailable()) {
       localStorage.removeItem(`${SecretinPrefix}username`);

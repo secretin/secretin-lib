@@ -10,6 +10,8 @@ import {
   bytesToHexString,
 } from '../../lib/utils';
 
+import { AESGCMDecryptionError, InvalidPasswordError } from '../../Errors';
+
 export function getSHA256(str) {
   const hash = crypto.createHash('sha256');
   const data = asciiToUint8Array(str);
@@ -75,7 +77,7 @@ export function decryptAESGCM256(secretObject, key) {
   if (pass) {
     return Promise.resolve(JSON.parse(decipher.output.getBytes()));
   }
-  return Promise.reject('AES-GCM decryption error');
+  return Promise.reject(new AESGCMDecryptionError());
 }
 
 export function encryptRSAOAEP(secret, publicKey) {
@@ -148,7 +150,7 @@ function bigIntToBase64Url(fbin) {
   if (hex.length % 2) {
     hex = `0${hex}`;
   }
-  const buf = new Buffer(hex, 'hex');
+  const buf = Buffer.from(hex, 'hex');
   const b64 = buf.toString('base64');
   const b64Url = b64.replace(/[+]/g, '-').replace(/\//g, '_').replace(/=/g, '');
   return b64Url;
@@ -173,8 +175,8 @@ export function convertOAEPToPSS(key) {
 }
 
 export function importPublicKey(jwkPublicKey) {
-  const n = new Buffer(jwkPublicKey.n, 'base64');
-  const e = new Buffer(jwkPublicKey.e, 'base64');
+  const n = Buffer.from(jwkPublicKey.n, 'base64');
+  const e = Buffer.from(jwkPublicKey.e, 'base64');
 
   const publicKey = forge.pki.setRsaPublicKey(
     new forge.jsbn.BigInteger(n.toString('hex'), 16),
@@ -253,7 +255,7 @@ export function exportKey(wrappingKey, key) {
       qi,
     };
   } else {
-    const b64Key = new Buffer(key, 'binary').toString('base64');
+    const b64Key = Buffer.from(key, 'binary').toString('base64');
     const b64UrlKey = b64Key
       .replace(/[+]/g, '-')
       .replace(/\//g, '_')
@@ -291,14 +293,14 @@ export function importPrivateKey(key, privateKeyObject) {
 
     const jwkPrivateKey = JSON.parse(jwkPrivateKeyString);
 
-    const n = new Buffer(jwkPrivateKey.n, 'base64');
-    const e = new Buffer(jwkPrivateKey.e, 'base64');
-    const d = new Buffer(jwkPrivateKey.d, 'base64');
-    const p = new Buffer(jwkPrivateKey.p, 'base64');
-    const q = new Buffer(jwkPrivateKey.q, 'base64');
-    const dP = new Buffer(jwkPrivateKey.dp, 'base64');
-    const dQ = new Buffer(jwkPrivateKey.dq, 'base64');
-    const qInv = new Buffer(jwkPrivateKey.qi, 'base64');
+    const n = Buffer.from(jwkPrivateKey.n, 'base64');
+    const e = Buffer.from(jwkPrivateKey.e, 'base64');
+    const d = Buffer.from(jwkPrivateKey.d, 'base64');
+    const p = Buffer.from(jwkPrivateKey.p, 'base64');
+    const q = Buffer.from(jwkPrivateKey.q, 'base64');
+    const dP = Buffer.from(jwkPrivateKey.dp, 'base64');
+    const dQ = Buffer.from(jwkPrivateKey.dq, 'base64');
+    const qInv = Buffer.from(jwkPrivateKey.qi, 'base64');
 
     const privateKey = forge.pki.setRsaPrivateKey(
       new forge.jsbn.BigInteger(n.toString('hex'), 16),
@@ -312,7 +314,7 @@ export function importPrivateKey(key, privateKeyObject) {
     );
     return Promise.resolve(privateKey);
   } catch (e) {
-    return Promise.reject('Invalid Password');
+    return Promise.reject(new InvalidPasswordError());
   }
 }
 
@@ -330,10 +332,10 @@ export function importKey(key, keyObject) {
 
     const jwkKey = JSON.parse(jwkKeyString);
 
-    const importedKey = new Buffer(jwkKey.k, 'base64');
+    const importedKey = Buffer.from(jwkKey.k, 'base64');
 
     return Promise.resolve(importedKey.toString('binary'));
   } catch (e) {
-    return Promise.reject('Invalid Password');
+    return Promise.reject(new InvalidPasswordError());
   }
 }
