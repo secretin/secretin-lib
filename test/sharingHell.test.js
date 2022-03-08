@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 describe('Sharing hell', () => {
   const now = '2016-01-01T00:00:00.000Z';
   // eslint-disable-next-line
@@ -82,72 +83,58 @@ describe('Sharing hell', () => {
           otherSecret2
   */
 
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear();
     // eslint-disable-next-line
     availableKeyCounter = 0;
     // eslint-disable-next-line
-    return resetAndGetDB()
-      .then(() => this.secretin.newUser(user1, password1))
-      .then(() => this.secretin.newUser(user2, password2))
-      .then(() => this.secretin.newUser(user4, password4))
-      .then(() => this.secretin.newUser(user3, password3))
-      .then(() => this.secretin.addSecret(secretTitle, secretContent))
-      .then((hashedTitle) => {
-        secretId = hashedTitle;
-        return this.secretin.addFolder(folderTitle);
-      })
-      .then((hashedTitle) => {
-        folderId = hashedTitle;
-        return this.secretin.addFolder(folderInFolderTitle);
-      })
-      .then((hashedTitle) => {
-        folderInFolderId = hashedTitle;
-        return this.secretin.addFolder(otherFolderTitle);
-      })
-      .then((hashedTitle) => {
-        otherFolderId = hashedTitle;
-        return this.secretin.addSecret(secretInFolderTitle, secretContent);
-      })
-      .then((hashedTitle) => {
-        secretInFolderId = hashedTitle;
-        return this.secretin.addSecret(
-          otherSecretInOtherFolderTitle,
-          otherSecretInOtherFolderContent
-        );
-      })
-      .then((hashedTitle) => {
-        otherSecretInOtherFolderId = hashedTitle;
-        return this.secretin.addSecret(
-          otherSecretInOtherFolderTitle2,
-          otherSecretInOtherFolderContent2
-        );
-      })
-      .then((hashedTitle) => {
-        otherSecretInOtherFolderId2 = hashedTitle;
-        return this.secretin.addSecretToFolder(secretInFolderId, folderId);
-      })
-      .then(() => this.secretin.addSecretToFolder(folderInFolderId, folderId))
-      .then(() =>
-        this.secretin.addSecretToFolder(
-          otherSecretInOtherFolderId,
-          otherFolderId
-        )
-      )
-      .then(() =>
-        this.secretin.addSecretToFolder(
-          otherSecretInOtherFolderId2,
-          otherFolderId
-        )
-      )
-      .then(() => this.secretin.shareSecret(secretId, user4, 0))
-      .then(() => this.secretin.shareSecret(otherFolderId, user4, 0))
-      .then(() => this.secretin.shareSecret(folderId, user1, 0))
-      .then(() => this.secretin.shareSecret(folderId, user2, 1))
-      .then(() => this.secretin.currentUser.disconnect());
+    await resetAndGetDB()
+    await this.secretin.newUser(user1, password1);
+    await this.secretin.newUser(user2, password2);
+    await this.secretin.newUser(user4, password4);
+    await this.secretin.newUser(user3, password3);
+    secretId = await this.secretin.addSecret(secretTitle, secretContent);
+
+    folderId = await this.secretin.addFolder(folderTitle);
+
+    folderInFolderId = await this.secretin.addFolder(folderInFolderTitle);
+
+    otherFolderId = await this.secretin.addFolder(otherFolderTitle);
+
+    secretInFolderId = await this.secretin.addSecret(
+      secretInFolderTitle,
+      secretContent
+    );
+
+    otherSecretInOtherFolderId = await this.secretin.addSecret(
+      otherSecretInOtherFolderTitle,
+      otherSecretInOtherFolderContent
+    );
+
+    otherSecretInOtherFolderId2 = await this.secretin.addSecret(
+      otherSecretInOtherFolderTitle2,
+      otherSecretInOtherFolderContent2
+    );
+
+    await this.secretin.addSecretToFolder(secretInFolderId, folderId);
+    await this.secretin.addSecretToFolder(folderInFolderId, folderId);
+
+    await this.secretin.addSecretToFolder(
+      otherSecretInOtherFolderId,
+      otherFolderId
+    );
+    await this.secretin.addSecretToFolder(
+      otherSecretInOtherFolderId2,
+      otherFolderId
+    );
+    await this.secretin.shareSecret(secretId, user4, 0);
+    await this.secretin.shareSecret(otherFolderId, user4, 0);
+    await this.secretin.shareSecret(folderId, user1, 0);
+    await this.secretin.shareSecret(folderId, user2, 1);
+    this.secretin.currentUser.disconnect();
   });
 
-  it('Metadatas are valid', () => {
+  it('Metadatas are valid', async () => {
     const expectedMetadatas = {
       [secretId]: {
         id: secretId,
@@ -318,14 +305,11 @@ describe('Sharing hell', () => {
         id: folderInFolderId,
       },
     };
-    return this.secretin
-      .loginUser(user3, password3)
-      .then(() =>
-        this.secretin.currentUser.metadatas.should.deep.equal(expectedMetadatas)
-      );
+    await this.secretin.loginUser(user3, password3);
+    this.secretin.currentUser.metadatas.should.deep.equal(expectedMetadatas);
   });
 
-  it('Add secret to a folder with multiple users', () => {
+  it('Add secret to a folder with multiple users', async () => {
     const expectedMetadatas = {
       id: secretId,
       lastModifiedAt: now,
@@ -361,35 +345,33 @@ describe('Sharing hell', () => {
         },
       },
     };
-    return this.secretin
-      .loginUser(user3, password3)
-      .then(() => this.secretin.addSecretToFolder(secretId, folderId))
-      .then(() =>
-        this.secretin.currentUser.metadatas[secretId].should.deep.equal(
-          expectedMetadatas
-        )
-      )
-      .then(() => {
-        this.secretin.currentUser.disconnect();
-        return this.secretin.loginUser(user1, password1);
-      })
-      .then(() => this.secretin.getSecret(secretId))
-      .then((secret) => secret.should.deep.equal(secretContent))
-      .then(() => {
-        this.secretin.currentUser.disconnect();
-        return this.secretin.loginUser(user4, password4);
-      })
-      .then(() => this.secretin.getSecret(secretId))
-      .then((secret) => secret.should.deep.equal(secretContent))
-      .then(() => {
-        this.secretin.currentUser.disconnect();
-        return this.secretin.loginUser(user2, password2);
-      })
-      .then(() => this.secretin.getSecret(secretId))
-      .then((secret) => secret.should.deep.equal(secretContent));
+    await this.secretin.loginUser(user3, password3);
+    await this.secretin.addSecretToFolder(secretId, folderId);
+
+    this.secretin.currentUser.metadatas[secretId].should.deep.equal(
+      expectedMetadatas
+    );
+
+    this.secretin.currentUser.disconnect();
+    await this.secretin.loginUser(user1, password1);
+
+    const secret = await this.secretin.getSecret(secretId);
+    secret.should.deep.equal(secretContent);
+
+    this.secretin.currentUser.disconnect();
+    await this.secretin.loginUser(user4, password4);
+
+    const secret2 = await this.secretin.getSecret(secretId);
+    secret2.should.deep.equal(secretContent);
+
+    this.secretin.currentUser.disconnect();
+    await this.secretin.loginUser(user2, password2);
+
+    const secret3 = await this.secretin.getSecret(secretId);
+    secret3.should.deep.equal(secretContent);
   });
 
-  it('Unshare secret with one user in folder', () => {
+  it('Unshare secret with one user in folder', async () => {
     const expectedMetadatas = {
       id: secretInFolderId,
       lastModifiedAt: now,
@@ -413,29 +395,30 @@ describe('Sharing hell', () => {
         },
       },
     };
-    return this.secretin
-      .loginUser(user3, password3)
-      .then(() => this.secretin.unshareSecret(secretInFolderId, user1))
-      .then(() =>
-        this.secretin.currentUser.metadatas[secretInFolderId].should.deep.equal(
-          expectedMetadatas
-        )
-      )
-      .then(() => {
-        this.secretin.currentUser.disconnect();
-        return this.secretin.loginUser(user2, password2);
-      })
-      .then(() => this.secretin.getSecret(secretInFolderId))
-      .then((secret) => secret.should.deep.equal(secretContent))
-      .then(() => {
-        this.secretin.currentUser.disconnect();
-        return this.secretin.loginUser(user1, password1);
-      })
-      .then(() => this.secretin.getSecret(secretInFolderId))
-      .should.be.rejectedWith(Secretin.Errors.DontHaveSecretError);
+    await this.secretin.loginUser(user3, password3);
+    await this.secretin.unshareSecret(secretInFolderId, user1);
+
+    this.secretin.currentUser.metadatas[secretInFolderId].should.deep.equal(
+      expectedMetadatas
+    );
+
+    this.secretin.currentUser.disconnect();
+    await this.secretin.loginUser(user2, password2);
+    const secret = await this.secretin.getSecret(secretInFolderId);
+    secret.should.deep.equal(secretContent);
+
+    this.secretin.currentUser.disconnect();
+    await this.secretin.loginUser(user1, password1);
+    let error;
+    try {
+      await this.secretin.getSecret(secretInFolderId);
+    } catch (e) {
+      error = e;
+    }
+    error.should.be.instanceOf(Secretin.Errors.DontHaveSecretError);
   });
 
-  it("User can't share secret in read only folder", () => {
+  it("User can't share secret in read only folder", async () => {
     const expectedMetadatas = {
       lastModifiedAt: now,
       lastModifiedBy: user1,
@@ -451,20 +434,24 @@ describe('Sharing hell', () => {
         },
       },
     };
-    let user1SecretId;
-    return this.secretin
-      .loginUser(user1, password1)
-      .then(() => this.secretin.addSecret(user1SecretTitle, user1SecretContent))
-      .then((rUser1SecretId) => {
-        user1SecretId = rUser1SecretId;
-        return this.secretin.addSecretToFolder(user1SecretId, folderId);
-      })
-      .should.be.rejectedWith(Secretin.Errors.CantEditSecretError)
-      .then(() => {
-        delete this.secretin.currentUser.metadatas[user1SecretId].id;
-        return this.secretin.currentUser.metadatas[
-          user1SecretId
-        ].should.deep.equal(expectedMetadatas);
-      });
+
+    await this.secretin.loginUser(user1, password1);
+    const user1SecretId = await this.secretin.addSecret(
+      user1SecretTitle,
+      user1SecretContent
+    );
+    let error;
+    try {
+      await this.secretin.addSecretToFolder(user1SecretId, folderId);
+    } catch (e) {
+      error = e;
+    }
+
+    error.should.be.instanceOf(Secretin.Errors.CantEditSecretError);
+
+    delete this.secretin.currentUser.metadatas[user1SecretId].id;
+    this.secretin.currentUser.metadatas[user1SecretId].should.deep.equal(
+      expectedMetadatas
+    );
   });
 });

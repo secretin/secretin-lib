@@ -1,11 +1,19 @@
-import { escapeRegExp, generateRandomNumber } from './utils';
-
 const symbols = '!@#$%^&*()+_=}{[]|:;"?.><,`~';
 const vowels = 'aeiouy';
 const consonants = 'bcdfghjklmnpqrstvwxz';
 const numbers = '0123456789';
 
 const similarChars = '[ilLI|`oO0';
+
+export function generateRandomNumber(max) {
+  const randomValues = new Uint8Array(1);
+  crypto.getRandomValues(randomValues);
+  return randomValues[0] % max;
+}
+
+export function escapeRegExp(s) {
+  return s.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+}
 
 export const hasNumber = (str) => str.match(/\d+/g) != null;
 export const hasMixedCase = (str) =>
@@ -104,6 +112,8 @@ const PasswordGenerator = {
   buildCharset,
   getRandomPassword,
   generatePassword,
+  generateRandomNumber,
+  escapeRegExp,
 };
 
 export default PasswordGenerator;

@@ -1,3 +1,5 @@
+import PasswordGenerator from './passwordGenerator';
+
 export function hexStringToUint8Array(hexString) {
   if (hexString.length % 2 !== 0) {
     throw 'Invalid hexString';
@@ -64,12 +66,6 @@ export function bytesToASCIIString(bytes) {
     (str, charIndex) => str + String.fromCharCode(charIndex),
     ''
   );
-}
-
-export function generateRandomNumber(max) {
-  const randomValues = new Uint8Array(1);
-  crypto.getRandomValues(randomValues);
-  return randomValues[0] % max;
 }
 
 export function generateSeed() {
@@ -139,10 +135,6 @@ export function xorSeed(byteArray1, byteArray2) {
   throw 'Utils.xorSeed expect 32 bytes Uint8Arrays';
 }
 
-export function escapeRegExp(s) {
-  return s.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-}
-
 export function defaultProgress(status) {
   const seconds = Math.trunc(Date.now());
   if (status.total < 2) {
@@ -159,17 +151,16 @@ export function defaultProgress(status) {
 export const SecretinPrefix = 'Secret-in:';
 
 const Utils = {
-  generateRandomNumber,
   generateSeed,
   hexStringToUint8Array,
   bytesToHexString,
   asciiToUint8Array,
   bytesToASCIIString,
   xorSeed,
-  escapeRegExp,
   defaultProgress,
   asciiToHexString,
   hexStringToAscii,
+  PasswordGenerator,
   SecretinPrefix,
 };
 

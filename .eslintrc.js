@@ -10,6 +10,9 @@ module.exports = {
     sourceType: 'module',
   },
   rules: {
+    'no-return-await': 'off',
+    'no-restricted-syntax': 'off',
+    'prefer-destructuring': 'off',
     'prettier/prettier': 'error',
   },
   globals: {

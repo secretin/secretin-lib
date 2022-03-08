@@ -5,8 +5,8 @@ describe('Utils', () => {
   });
 
   describe('Randomness', () => {
-    it('Utils.generateRandomNumber is working', () => {
-      Secretin.Utils.generateRandomNumber(10).should.equal(7);
+    it('Utils.PasswordGenerator.generateRandomNumber is working', () => {
+      Secretin.Utils.PasswordGenerator.generateRandomNumber(10).should.equal(7);
     });
 
     it('Utils.generateSeed is working', () => {
