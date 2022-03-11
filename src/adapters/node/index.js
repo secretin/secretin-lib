@@ -10,7 +10,12 @@ import {
   bytesToHexString,
 } from '../../lib/utils';
 
-import { AESGCMDecryptionError, InvalidPasswordError } from '../../Errors';
+class AESGCMDecryptionError extends Error {
+  constructor() {
+    super();
+    this.message = 'AES-GCM decryption error';
+  }
+}
 
 export function getSHA256(str) {
   const hash = crypto.createHash('sha256');
@@ -281,61 +286,53 @@ export function exportKey(wrappingKey, key) {
 }
 
 export function importPrivateKey(key, privateKeyObject) {
-  try {
-    const wrappedPrivateKey = hexStringToAscii(privateKeyObject.privateKey);
-    const iv = hexStringToAscii(privateKeyObject.iv);
+  const wrappedPrivateKey = hexStringToAscii(privateKeyObject.privateKey);
+  const iv = hexStringToAscii(privateKeyObject.iv);
 
-    const decipher = forge.cipher.createDecipher('AES-CBC', key);
-    decipher.start({ iv });
-    decipher.update(forge.util.createBuffer(wrappedPrivateKey));
-    decipher.finish();
-    const jwkPrivateKeyString = decipher.output.getBytes();
+  const decipher = forge.cipher.createDecipher('AES-CBC', key);
+  decipher.start({ iv });
+  decipher.update(forge.util.createBuffer(wrappedPrivateKey));
+  decipher.finish();
+  const jwkPrivateKeyString = decipher.output.getBytes();
 
-    const jwkPrivateKey = JSON.parse(jwkPrivateKeyString);
+  const jwkPrivateKey = JSON.parse(jwkPrivateKeyString);
 
-    const n = Buffer.from(jwkPrivateKey.n, 'base64');
-    const e = Buffer.from(jwkPrivateKey.e, 'base64');
-    const d = Buffer.from(jwkPrivateKey.d, 'base64');
-    const p = Buffer.from(jwkPrivateKey.p, 'base64');
-    const q = Buffer.from(jwkPrivateKey.q, 'base64');
-    const dP = Buffer.from(jwkPrivateKey.dp, 'base64');
-    const dQ = Buffer.from(jwkPrivateKey.dq, 'base64');
-    const qInv = Buffer.from(jwkPrivateKey.qi, 'base64');
+  const n = Buffer.from(jwkPrivateKey.n, 'base64');
+  const e = Buffer.from(jwkPrivateKey.e, 'base64');
+  const d = Buffer.from(jwkPrivateKey.d, 'base64');
+  const p = Buffer.from(jwkPrivateKey.p, 'base64');
+  const q = Buffer.from(jwkPrivateKey.q, 'base64');
+  const dP = Buffer.from(jwkPrivateKey.dp, 'base64');
+  const dQ = Buffer.from(jwkPrivateKey.dq, 'base64');
+  const qInv = Buffer.from(jwkPrivateKey.qi, 'base64');
 
-    const privateKey = forge.pki.setRsaPrivateKey(
-      new forge.jsbn.BigInteger(n.toString('hex'), 16),
-      new forge.jsbn.BigInteger(e.toString('hex'), 16),
-      new forge.jsbn.BigInteger(d.toString('hex'), 16),
-      new forge.jsbn.BigInteger(p.toString('hex'), 16),
-      new forge.jsbn.BigInteger(q.toString('hex'), 16),
-      new forge.jsbn.BigInteger(dP.toString('hex'), 16),
-      new forge.jsbn.BigInteger(dQ.toString('hex'), 16),
-      new forge.jsbn.BigInteger(qInv.toString('hex'), 16)
-    );
-    return Promise.resolve(privateKey);
-  } catch (e) {
-    return Promise.reject(new InvalidPasswordError());
-  }
+  const privateKey = forge.pki.setRsaPrivateKey(
+    new forge.jsbn.BigInteger(n.toString('hex'), 16),
+    new forge.jsbn.BigInteger(e.toString('hex'), 16),
+    new forge.jsbn.BigInteger(d.toString('hex'), 16),
+    new forge.jsbn.BigInteger(p.toString('hex'), 16),
+    new forge.jsbn.BigInteger(q.toString('hex'), 16),
+    new forge.jsbn.BigInteger(dP.toString('hex'), 16),
+    new forge.jsbn.BigInteger(dQ.toString('hex'), 16),
+    new forge.jsbn.BigInteger(qInv.toString('hex'), 16)
+  );
+  return Promise.resolve(privateKey);
 }
 
 export function importKey(key, keyObject) {
-  try {
-    const wrappedKey = hexStringToUint8Array(keyObject.key);
-    const iv = hexStringToAscii(keyObject.iv);
+  const wrappedKey = hexStringToUint8Array(keyObject.key);
+  const iv = hexStringToAscii(keyObject.iv);
 
-    const decipher = forge.cipher.createDecipher('AES-CBC', key);
-    decipher.start({ iv });
-    decipher.update(forge.util.createBuffer(wrappedKey));
-    decipher.finish();
+  const decipher = forge.cipher.createDecipher('AES-CBC', key);
+  decipher.start({ iv });
+  decipher.update(forge.util.createBuffer(wrappedKey));
+  decipher.finish();
 
-    const jwkKeyString = decipher.output.getBytes();
+  const jwkKeyString = decipher.output.getBytes();
 
-    const jwkKey = JSON.parse(jwkKeyString);
+  const jwkKey = JSON.parse(jwkKeyString);
 
-    const importedKey = Buffer.from(jwkKey.k, 'base64');
+  const importedKey = Buffer.from(jwkKey.k, 'base64');
 
-    return Promise.resolve(importedKey.toString('binary'));
-  } catch (e) {
-    return Promise.reject(new InvalidPasswordError());
-  }
+  return Promise.resolve(importedKey.toString('binary'));
 }

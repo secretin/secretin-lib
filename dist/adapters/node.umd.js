@@ -10,7 +10,7 @@
   var forge__default = /*#__PURE__*/_interopDefaultLegacy(forge);
 
   /* eslint-disable max-classes-per-file */
-  class Error {
+  class Error$1 {
     constructor(errorObject) {
       this.message = 'Unknown error';
       if (typeof errorObject !== 'undefined') {
@@ -20,24 +20,10 @@
       }
     }
   }
-
-  class AESGCMDecryptionError extends Error {
-    constructor() {
-      super();
-      this.message = 'AES-GCM decryption error';
-    }
-  }
-  class InvalidHexStringError extends Error {
+  class InvalidHexStringError extends Error$1 {
     constructor() {
       super();
       this.message = 'Invalid hexString';
-    }
-  }
-
-  class InvalidPasswordError extends Error {
-    constructor() {
-      super();
-      this.message = 'Invalid password';
     }
   }
 
@@ -109,6 +95,13 @@
       (str, charIndex) => str + String.fromCharCode(charIndex),
       ''
     );
+  }
+
+  class AESGCMDecryptionError extends Error {
+    constructor() {
+      super();
+      this.message = 'AES-GCM decryption error';
+    }
   }
 
   function getSHA256(str) {
@@ -380,63 +373,55 @@
   }
 
   function importPrivateKey(key, privateKeyObject) {
-    try {
-      const wrappedPrivateKey = hexStringToAscii(privateKeyObject.privateKey);
-      const iv = hexStringToAscii(privateKeyObject.iv);
+    const wrappedPrivateKey = hexStringToAscii(privateKeyObject.privateKey);
+    const iv = hexStringToAscii(privateKeyObject.iv);
 
-      const decipher = forge__default["default"].cipher.createDecipher('AES-CBC', key);
-      decipher.start({ iv });
-      decipher.update(forge__default["default"].util.createBuffer(wrappedPrivateKey));
-      decipher.finish();
-      const jwkPrivateKeyString = decipher.output.getBytes();
+    const decipher = forge__default["default"].cipher.createDecipher('AES-CBC', key);
+    decipher.start({ iv });
+    decipher.update(forge__default["default"].util.createBuffer(wrappedPrivateKey));
+    decipher.finish();
+    const jwkPrivateKeyString = decipher.output.getBytes();
 
-      const jwkPrivateKey = JSON.parse(jwkPrivateKeyString);
+    const jwkPrivateKey = JSON.parse(jwkPrivateKeyString);
 
-      const n = Buffer.from(jwkPrivateKey.n, 'base64');
-      const e = Buffer.from(jwkPrivateKey.e, 'base64');
-      const d = Buffer.from(jwkPrivateKey.d, 'base64');
-      const p = Buffer.from(jwkPrivateKey.p, 'base64');
-      const q = Buffer.from(jwkPrivateKey.q, 'base64');
-      const dP = Buffer.from(jwkPrivateKey.dp, 'base64');
-      const dQ = Buffer.from(jwkPrivateKey.dq, 'base64');
-      const qInv = Buffer.from(jwkPrivateKey.qi, 'base64');
+    const n = Buffer.from(jwkPrivateKey.n, 'base64');
+    const e = Buffer.from(jwkPrivateKey.e, 'base64');
+    const d = Buffer.from(jwkPrivateKey.d, 'base64');
+    const p = Buffer.from(jwkPrivateKey.p, 'base64');
+    const q = Buffer.from(jwkPrivateKey.q, 'base64');
+    const dP = Buffer.from(jwkPrivateKey.dp, 'base64');
+    const dQ = Buffer.from(jwkPrivateKey.dq, 'base64');
+    const qInv = Buffer.from(jwkPrivateKey.qi, 'base64');
 
-      const privateKey = forge__default["default"].pki.setRsaPrivateKey(
-        new forge__default["default"].jsbn.BigInteger(n.toString('hex'), 16),
-        new forge__default["default"].jsbn.BigInteger(e.toString('hex'), 16),
-        new forge__default["default"].jsbn.BigInteger(d.toString('hex'), 16),
-        new forge__default["default"].jsbn.BigInteger(p.toString('hex'), 16),
-        new forge__default["default"].jsbn.BigInteger(q.toString('hex'), 16),
-        new forge__default["default"].jsbn.BigInteger(dP.toString('hex'), 16),
-        new forge__default["default"].jsbn.BigInteger(dQ.toString('hex'), 16),
-        new forge__default["default"].jsbn.BigInteger(qInv.toString('hex'), 16)
-      );
-      return Promise.resolve(privateKey);
-    } catch (e) {
-      return Promise.reject(new InvalidPasswordError());
-    }
+    const privateKey = forge__default["default"].pki.setRsaPrivateKey(
+      new forge__default["default"].jsbn.BigInteger(n.toString('hex'), 16),
+      new forge__default["default"].jsbn.BigInteger(e.toString('hex'), 16),
+      new forge__default["default"].jsbn.BigInteger(d.toString('hex'), 16),
+      new forge__default["default"].jsbn.BigInteger(p.toString('hex'), 16),
+      new forge__default["default"].jsbn.BigInteger(q.toString('hex'), 16),
+      new forge__default["default"].jsbn.BigInteger(dP.toString('hex'), 16),
+      new forge__default["default"].jsbn.BigInteger(dQ.toString('hex'), 16),
+      new forge__default["default"].jsbn.BigInteger(qInv.toString('hex'), 16)
+    );
+    return Promise.resolve(privateKey);
   }
 
   function importKey(key, keyObject) {
-    try {
-      const wrappedKey = hexStringToUint8Array(keyObject.key);
-      const iv = hexStringToAscii(keyObject.iv);
+    const wrappedKey = hexStringToUint8Array(keyObject.key);
+    const iv = hexStringToAscii(keyObject.iv);
 
-      const decipher = forge__default["default"].cipher.createDecipher('AES-CBC', key);
-      decipher.start({ iv });
-      decipher.update(forge__default["default"].util.createBuffer(wrappedKey));
-      decipher.finish();
+    const decipher = forge__default["default"].cipher.createDecipher('AES-CBC', key);
+    decipher.start({ iv });
+    decipher.update(forge__default["default"].util.createBuffer(wrappedKey));
+    decipher.finish();
 
-      const jwkKeyString = decipher.output.getBytes();
+    const jwkKeyString = decipher.output.getBytes();
 
-      const jwkKey = JSON.parse(jwkKeyString);
+    const jwkKey = JSON.parse(jwkKeyString);
 
-      const importedKey = Buffer.from(jwkKey.k, 'base64');
+    const importedKey = Buffer.from(jwkKey.k, 'base64');
 
-      return Promise.resolve(importedKey.toString('binary'));
-    } catch (e) {
-      return Promise.reject(new InvalidPasswordError());
-    }
+    return Promise.resolve(importedKey.toString('binary'));
   }
 
   exports.convertOAEPToPSS = convertOAEPToPSS;

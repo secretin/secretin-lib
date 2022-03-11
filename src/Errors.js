@@ -10,13 +10,6 @@ export class Error {
   }
 }
 
-export class AESGCMDecryptionError extends Error {
-  constructor() {
-    super();
-    this.message = 'AES-GCM decryption error';
-  }
-}
-
 export class XorSeedError extends Error {
   constructor() {
     super();

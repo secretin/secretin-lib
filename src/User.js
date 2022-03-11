@@ -1,5 +1,5 @@
 import { DecryptMetadataStatus } from './Statuses';
-import { DontHaveSecretError } from './Errors';
+import { DontHaveSecretError, InvalidPasswordError } from './Errors';
 import { defaultProgress, SecretinPrefix } from './lib/utils';
 
 class User {
@@ -100,7 +100,8 @@ class User {
       })
       .then((privateKeySign) => {
         this.privateKeySign = privateKeySign;
-      });
+      })
+      .catch(() => Promise.reject(new InvalidPasswordError()));
   }
 
   exportBigPrivateData(data) {
@@ -430,7 +431,8 @@ class User {
           iv: localStorage.getItem(`${SecretinPrefix}privateKeyIv`),
         };
         return this.importPrivateKey(protectKey, privateKeyObject);
-      });
+      })
+      .catch(() => Promise.reject(new InvalidPasswordError()));
   }
 }
 

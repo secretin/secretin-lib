@@ -63,6 +63,7 @@ describe('Not logged user', () => {
     } catch (e) {
       error = e;
     }
+    console.log(error);
     error.should.be.instanceOf(Secretin.Errors.InvalidPasswordError);
     // eslint-disable-next-line no-undef,no-unused-expressions
     chai.expect(this.secretin.currentUser.privateKey).to.equal(null);
@@ -77,6 +78,7 @@ describe('Not logged user', () => {
     } catch (e) {
       error = e;
     }
+    console.log(error);
     error.should.be.instanceOf(Secretin.Errors.UserNotFoundError);
     // eslint-disable-next-line no-undef,no-unused-expressions
     chai.expect(this.secretin.currentUser.privateKey).to.equal(undefined);

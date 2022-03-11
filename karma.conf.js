@@ -7,7 +7,9 @@ module.exports = function exports(config) {
     'dist/adapters/browser.js',
     'test/fixtures/keys.js',
     'test/fixtures/exportedDB.js',
-    'test/*.js',
+    'test/helpers.js',
+    'test/mock.js',
+    'test/*.test.js',
   ];
 
   const karmaConfig = {

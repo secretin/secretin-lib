@@ -59,7 +59,7 @@ describe('Utils', () => {
       try {
         Secretin.Utils.xorSeed(array1, array2);
       } catch (err) {
-        err.should.equal('Utils.xorSeed expect 32 bytes Uint8Arrays');
+        err.should.be.instanceOf(Secretin.Errors.XorSeedError);
       }
     });
 
@@ -69,7 +69,7 @@ describe('Utils', () => {
       try {
         Secretin.Utils.xorSeed(array1, array2);
       } catch (err) {
-        err.should.equal('Utils.xorSeed expect 32 bytes Uint8Arrays');
+        err.should.be.instanceOf(Secretin.Errors.XorSeedError);
       }
     });
 

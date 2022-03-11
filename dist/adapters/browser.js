@@ -19,13 +19,6 @@ var SecretinBrowserAdapter = (function (exports) {
     }
   }
 
-  class InvalidPasswordError extends Error {
-    constructor() {
-      super();
-      this.message = 'Invalid password';
-    }
-  }
-
   /* eslint-disable no-bitwise */
 
   function hexStringToUint8Array(hexString) {
@@ -394,17 +387,15 @@ var SecretinBrowserAdapter = (function (exports) {
     const extractable = true;
     const keyUsages = ['unwrapKey', 'decrypt'];
 
-    return crypto.subtle
-      .unwrapKey(
-        format,
-        wrappedPrivateKey,
-        key,
-        unwrapAlgorithm,
-        unwrappedKeyAlgorithm,
-        extractable,
-        keyUsages
-      )
-      .catch(() => Promise.reject(new InvalidPasswordError()));
+    return crypto.subtle.unwrapKey(
+      format,
+      wrappedPrivateKey,
+      key,
+      unwrapAlgorithm,
+      unwrappedKeyAlgorithm,
+      extractable,
+      keyUsages
+    );
   }
 
   function importKey(key, keyObject) {
@@ -418,17 +409,15 @@ var SecretinBrowserAdapter = (function (exports) {
     const extractable = true;
     const keyUsages = ['wrapKey', 'unwrapKey'];
 
-    return crypto.subtle
-      .unwrapKey(
-        format,
-        wrappedKey,
-        key,
-        unwrapAlgorithm,
-        unwrappedKeyAlgorithm,
-        extractable,
-        keyUsages
-      )
-      .catch(() => Promise.reject(new InvalidPasswordError()));
+    return crypto.subtle.unwrapKey(
+      format,
+      wrappedKey,
+      key,
+      unwrapAlgorithm,
+      unwrappedKeyAlgorithm,
+      extractable,
+      keyUsages
+    );
   }
 
   exports.convertOAEPToPSS = convertOAEPToPSS;

@@ -4,7 +4,6 @@ import {
   bytesToHexString,
   bytesToASCIIString,
 } from '../../lib/utils';
-import { InvalidPasswordError } from '../../Errors';
 
 export function getSHA256(str) {
   const algorithm = 'SHA-256';
@@ -320,17 +319,15 @@ export function importPrivateKey(key, privateKeyObject) {
   const extractable = true;
   const keyUsages = ['unwrapKey', 'decrypt'];
 
-  return crypto.subtle
-    .unwrapKey(
-      format,
-      wrappedPrivateKey,
-      key,
-      unwrapAlgorithm,
-      unwrappedKeyAlgorithm,
-      extractable,
-      keyUsages
-    )
-    .catch(() => Promise.reject(new InvalidPasswordError()));
+  return crypto.subtle.unwrapKey(
+    format,
+    wrappedPrivateKey,
+    key,
+    unwrapAlgorithm,
+    unwrappedKeyAlgorithm,
+    extractable,
+    keyUsages
+  );
 }
 
 export function importKey(key, keyObject) {
@@ -344,15 +341,13 @@ export function importKey(key, keyObject) {
   const extractable = true;
   const keyUsages = ['wrapKey', 'unwrapKey'];
 
-  return crypto.subtle
-    .unwrapKey(
-      format,
-      wrappedKey,
-      key,
-      unwrapAlgorithm,
-      unwrappedKeyAlgorithm,
-      extractable,
-      keyUsages
-    )
-    .catch(() => Promise.reject(new InvalidPasswordError()));
+  return crypto.subtle.unwrapKey(
+    format,
+    wrappedKey,
+    key,
+    unwrapAlgorithm,
+    unwrappedKeyAlgorithm,
+    extractable,
+    keyUsages
+  );
 }

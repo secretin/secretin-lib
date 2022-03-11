@@ -34,7 +34,7 @@ import APIStandalone from './API/Standalone';
 import User from './User';
 
 class Secretin {
-  constructor(cryptoAdapter, API = APIStandalone, db = null) {
+  constructor(cryptoAdapter, API = APIStandalone, db = undefined) {
     this.cryptoAdapter = cryptoAdapter;
     this.api = new API(db, this.cryptoAdapter.getSHA256);
     this.editableDB = true;
@@ -91,7 +91,7 @@ class Secretin {
           return Promise.resolve();
         })
         .catch((err) => {
-          if (err === 'Offline') {
+          if (err instanceof OfflineError) {
             this.testOnline();
           } else {
             throw err;
@@ -269,7 +269,7 @@ class Secretin {
       })
       .then(() => this.currentUser)
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
         }
         const wrapper = new WrappingError(err);
@@ -351,7 +351,7 @@ class Secretin {
       })
       .then(() => this.currentUser)
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB(username);
           return this.loginUser(username, password, otp, progress);
         }
@@ -410,7 +410,7 @@ class Secretin {
         return Promise.resolve();
       })
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
           return this.refreshUser(rForceUpdate, progress);
         }
@@ -481,7 +481,7 @@ class Secretin {
       })
       .then(() => hashedTitle)
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
           return this.addSecret(clearTitle, content, inFolderId, type);
         }
@@ -507,7 +507,7 @@ class Secretin {
         return Promise.resolve();
       })
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
         }
         const wrapper = new WrappingError(err);
@@ -556,7 +556,7 @@ class Secretin {
         return Promise.resolve();
       })
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
           return this.editSecret(hashedTitle, content);
         }
@@ -598,7 +598,7 @@ class Secretin {
         return Promise.resolve();
       })
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
         }
         const wrapper = new WrappingError(err);
@@ -756,7 +756,7 @@ class Secretin {
       })
       .then(() => hashedSecretTitle)
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
           return this.addSecretToFolder(hashedSecretTitle, hashedFolder);
         }
@@ -821,7 +821,7 @@ class Secretin {
           return fullSharedSecretObjects;
         })
         .catch((err) => {
-          if (err === 'Offline') {
+          if (err instanceof OfflineError) {
             this.offlineDB();
             throw err;
           } else {
@@ -877,7 +877,7 @@ class Secretin {
         return Promise.resolve();
       })
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
         }
         const wrapper = new WrappingError(err);
@@ -935,7 +935,7 @@ class Secretin {
       })
       .then(() => this.currentUser.metadatas[hashedTitle])
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
         }
         const wrapper = new WrappingError(err);
@@ -980,7 +980,7 @@ class Secretin {
       })
       .then(() => this.currentUser.metadatas[hashedTitle])
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
         }
         const wrapper = new WrappingError(err);
@@ -1012,7 +1012,7 @@ class Secretin {
         return Promise.resolve();
       })
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
         }
         const wrapper = new WrappingError(err);
@@ -1037,7 +1037,7 @@ class Secretin {
         key: friendWrappedKey,
       }))
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
           throw err;
         }
@@ -1124,7 +1124,7 @@ class Secretin {
         return Promise.resolve();
       })
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
         }
         const wrapper = new WrappingError(err);
@@ -1194,7 +1194,7 @@ class Secretin {
         return Promise.resolve();
       })
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
           return this.removeSecretFromFolder(hashedTitle, hashedFolder);
         }
@@ -1211,7 +1211,7 @@ class Secretin {
       )
       .then((secret) => secret)
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
           return this.getSecret(hashedTitle);
         }
@@ -1237,7 +1237,7 @@ class Secretin {
         return history[index % history.length];
       })
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
           return this.getHistory(hashedTitle, index);
         }
@@ -1299,7 +1299,7 @@ class Secretin {
         return Promise.resolve();
       })
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
         }
         const wrapper = new WrappingError(err);
@@ -1332,7 +1332,7 @@ class Secretin {
         return Promise.resolve();
       })
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
         }
         const wrapper = new WrappingError(err);
@@ -1354,7 +1354,7 @@ class Secretin {
         return Promise.resolve();
       })
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
         }
         const wrapper = new WrappingError(err);
@@ -1380,7 +1380,7 @@ class Secretin {
         return Promise.resolve();
       })
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
         }
         const wrapper = new WrappingError(err);
@@ -1412,7 +1412,7 @@ class Secretin {
           );
         })
         .catch((err) => {
-          if (err === 'Offline') {
+          if (err instanceof OfflineError) {
             this.offlineDB();
           }
           const wrapper = new WrappingError(err);
@@ -1480,7 +1480,7 @@ class Secretin {
       })
       .then(() => this.currentUser)
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
           return this.shortLogin(shortpass);
         }
@@ -1515,7 +1515,7 @@ class Secretin {
 
   getRescueCodes() {
     return this.api.getRescueCodes(this.currentUser).catch((err) => {
-      if (err === 'Offline') {
+      if (err instanceof OfflineError) {
         this.offlineDB();
         return this.getRescueCodes();
       }
@@ -1557,7 +1557,7 @@ class Secretin {
         return newDbCacheStr;
       })
       .catch((err) => {
-        if (err === 'Offline') {
+        if (err instanceof OfflineError) {
           this.offlineDB();
           return this.getDb();
         }
