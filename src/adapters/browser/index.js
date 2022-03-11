@@ -351,3 +351,26 @@ export function importKey(key, keyObject) {
     keyUsages
   );
 }
+
+const SecretinBrowserAdapter = {
+  importKey,
+  importPrivateKey,
+  exportKey,
+  derivePassword,
+  importPublicKey,
+  convertOAEPToPSS,
+  exportClearKey,
+  unwrapRSAOAEP,
+  verify,
+  sign,
+  wrapRSAOAEP,
+  decryptRSAOAEP,
+  encryptRSAOAEP,
+  decryptAESGCM256,
+  encryptAESGCM256,
+  generateWrappingKey,
+  genRSAOAEP,
+  getSHA256,
+};
+
+export default SecretinBrowserAdapter;

@@ -1,46 +1,75 @@
 function testInput(adapterName, SecretinAdapter, fixtureName, fixtures) {
   describe(`${adapterName} adapter with ${fixtureName} fixtures`, () => {
-    it('can decrypt secret with RSA', () =>
-      SecretinAdapter.derivePassword(fixtures.password, fixtures.parameters)
-        .then((dKey) =>
-          SecretinAdapter.importKey(dKey.key, fixtures.protectKey)
-        )
-        .then((protectKey) =>
-          SecretinAdapter.importPrivateKey(protectKey, fixtures.privateKey)
-        )
-        .then((privateKey) =>
-          SecretinAdapter.decryptRSAOAEP(fixtures.RSASecret, privateKey)
-        )
-        .should.eventually.equal(fixtures.secret)
-    );
+    it('can decrypt secret with RSA', async () => {
+      const { key } = await SecretinAdapter.derivePassword(
+        fixtures.password,
+        fixtures.parameters
+      );
 
-    it('can decrypt secret with AESGCM', () =>
-      SecretinAdapter.derivePassword(fixtures.password, fixtures.parameters)
-        .then((dKey) =>
-          SecretinAdapter.importKey(dKey.key, fixtures.protectKey)
-        )
-        .then((protectKey) =>
-          SecretinAdapter.importPrivateKey(protectKey, fixtures.privateKey)
-        )
-        .then((privateKey) =>
-          SecretinAdapter.unwrapRSAOAEP(fixtures.wrappedKey, privateKey)
-        )
-        .then((wrappedKey) =>
-          SecretinAdapter.decryptAESGCM256(fixtures.AESGCMsecretObject, wrappedKey)
-        )
-        .should.eventually.equal(fixtures.secret)
-    );
+      const protectKey = await SecretinAdapter.importKey(
+        key,
+        fixtures.protectKey
+      );
 
-    it('can verify signature', () =>
-      SecretinAdapter.importPublicKey(fixtures.publicKey)
-        .then((publicKey) =>
-          SecretinAdapter.convertOAEPToPSS(publicKey, 'verify')
-        )
-        .then((publicKeyVerify) =>
-          SecretinAdapter.verify(fixtures.secret, fixtures.signature, publicKeyVerify)
-        )
-        .should.eventually.is.true
-    );
+      const privateKey = await SecretinAdapter.importPrivateKey(
+        protectKey,
+        fixtures.privateKey
+      );
+
+      const decrypted = await SecretinAdapter.decryptRSAOAEP(
+        fixtures.RSASecret,
+        privateKey
+      );
+
+      decrypted.should.equal(fixtures.secret);
+    });
+
+    it('can decrypt secret with AESGCM', async () => {
+      const { key } = await SecretinAdapter.derivePassword(
+        fixtures.password,
+        fixtures.parameters
+      );
+
+      const protectKey = await SecretinAdapter.importKey(
+        key,
+        fixtures.protectKey
+      );
+
+      const privateKey = await SecretinAdapter.importPrivateKey(
+        protectKey,
+        fixtures.privateKey
+      );
+
+      const wrappedKey = await SecretinAdapter.unwrapRSAOAEP(
+        fixtures.wrappedKey,
+        privateKey
+      );
+
+      const decrypted = await SecretinAdapter.decryptAESGCM256(
+        fixtures.AESGCMsecretObject,
+        wrappedKey
+      );
+
+      decrypted.should.equal(fixtures.secret);
+    });
+
+    it('can verify signature', async () => {
+      const publicKey = await SecretinAdapter.importPublicKey(
+        fixtures.publicKey
+      );
+
+      const publicKeyVerify = await SecretinAdapter.convertOAEPToPSS(
+        publicKey,
+        'verify'
+      );
+
+      const verified = await SecretinAdapter.verify(
+        fixtures.secret,
+        fixtures.signature,
+        publicKeyVerify
+      );
+      verified.should.equal(true);
+    });
   });
 }
 

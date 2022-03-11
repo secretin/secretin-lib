@@ -423,9 +423,31 @@
     );
   }
 
+  const SecretinBrowserAdapter = {
+    importKey,
+    importPrivateKey,
+    exportKey,
+    derivePassword,
+    importPublicKey,
+    convertOAEPToPSS,
+    exportClearKey,
+    unwrapRSAOAEP,
+    verify,
+    sign,
+    wrapRSAOAEP,
+    decryptRSAOAEP,
+    encryptRSAOAEP,
+    decryptAESGCM256,
+    encryptAESGCM256,
+    generateWrappingKey,
+    genRSAOAEP,
+    getSHA256,
+  };
+
   exports.convertOAEPToPSS = convertOAEPToPSS;
   exports.decryptAESGCM256 = decryptAESGCM256;
   exports.decryptRSAOAEP = decryptRSAOAEP;
+  exports["default"] = SecretinBrowserAdapter;
   exports.derivePassword = derivePassword;
   exports.encryptAESGCM256 = encryptAESGCM256;
   exports.encryptRSAOAEP = encryptRSAOAEP;

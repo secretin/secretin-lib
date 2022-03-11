@@ -51,9 +51,7 @@ function genOutput(adapterName, SecretinAdapter) {
       wrappedKey = rWrappedKey;
       return SecretinAdapter.convertOAEPToPSS(keyPair.privateKey, 'sign');
     })
-    .then((privateKeySign) =>
-      SecretinAdapter.sign(secret, privateKeySign)
-    )
+    .then((privateKeySign) => SecretinAdapter.sign(secret, privateKeySign))
     .then((rSignature) => {
       signature = rSignature;
       return SecretinAdapter.exportKey(derivedKey, protectKey);
