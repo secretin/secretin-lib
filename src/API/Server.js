@@ -18,7 +18,7 @@ class API {
   }
 
   addUser(username, privateKey, publicKey, pass, options) {
-    return this.getSHA256(username).then(hashedUsername =>
+    return this.getSHA256(username).then((hashedUsername) =>
       doPOST(`${this.db}/user/${hashedUsername}`, {
         pass,
         privateKey,
@@ -41,7 +41,7 @@ class API {
       title: secretObject.hashedTitle,
     });
     const now = Date.now();
-    return user.sign(`${json}|${now}`).then(signature =>
+    return user.sign(`${json}|${now}`).then((signature) =>
       doPOST(`${this.db}/secret/${secretObject.hashedUsername}`, {
         json,
         sig: signature,
@@ -54,11 +54,11 @@ class API {
     let url;
     const now = Date.now();
     return this.getSHA256(user.username)
-      .then(hashedUsername => {
+      .then((hashedUsername) => {
         url = `/secret/${hashedUsername}/${hashedTitle}`;
         return user.sign(`DELETE ${url}|${now}`);
       })
-      .then(signature =>
+      .then((signature) =>
         doDELETE(`${this.db}${url}`, {
           sig: signature,
           sigTime: now,
@@ -79,11 +79,11 @@ class API {
     });
     const now = Date.now();
     return this.getSHA256(user.username)
-      .then(rHashedUsername => {
+      .then((rHashedUsername) => {
         hashedUsername = rHashedUsername;
         return user.sign(`${json}|${now}`);
       })
-      .then(signature =>
+      .then((signature) =>
         doPUT(`${this.db}/secret/${hashedUsername}`, {
           json,
           sig: signature,
@@ -101,11 +101,11 @@ class API {
     });
     const now = Date.now();
     return this.getSHA256(user.username)
-      .then(rHashedUsername => {
+      .then((rHashedUsername) => {
         hashedUsername = rHashedUsername;
         return user.sign(`${json}|${now}`);
       })
-      .then(signature =>
+      .then((signature) =>
         doPOST(`${this.db}/newKey/${hashedUsername}`, {
           json,
           sig: signature,
@@ -123,23 +123,23 @@ class API {
     let json;
     const now = Date.now();
     return this.getSHA256(user.username)
-      .then(rHashedUsername => {
+      .then((rHashedUsername) => {
         hashedUsername = rHashedUsername;
         const hashedFriendUseramePromises = [];
-        friendNames.forEach(username => {
+        friendNames.forEach((username) => {
           hashedFriendUseramePromises.push(this.getSHA256(username));
         });
         return Promise.all(hashedFriendUseramePromises);
       })
-      .then(rHashedFriendUserames => {
-        rHashedFriendUserames.forEach(hashedFriendUserame => {
+      .then((rHashedFriendUserames) => {
+        rHashedFriendUserames.forEach((hashedFriendUserame) => {
           hashedFriendUsernames.push(hashedFriendUserame);
         });
         datas.friendNames = hashedFriendUsernames;
         json = JSON.stringify(datas);
         return user.sign(`${json}|${now}`);
       })
-      .then(signature =>
+      .then((signature) =>
         doPOST(`${this.db}/unshare/${hashedUsername}`, {
           json,
           sig: signature,
@@ -155,11 +155,11 @@ class API {
     });
     const now = Date.now();
     return this.getSHA256(user.username)
-      .then(rHashedUsername => {
+      .then((rHashedUsername) => {
         hashedUsername = rHashedUsername;
         return user.sign(`${json}|${now}`);
       })
-      .then(signature =>
+      .then((signature) =>
         doPOST(`${this.db}/share/${hashedUsername}`, {
           json,
           sig: signature,
@@ -174,7 +174,7 @@ class API {
     if (!hashed) {
       isHashed = isHashed
         .then(() => this.getSHA256(username))
-        .then(rHashedUsername => {
+        .then((rHashedUsername) => {
           hashedUsername = rHashedUsername;
         });
     }
@@ -184,7 +184,7 @@ class API {
   }
 
   getDerivationParameters(username, isHashed) {
-    return this.retrieveUser(username, 'undefined', isHashed).then(user => ({
+    return this.retrieveUser(username, 'undefined', isHashed).then((user) => ({
       totp: user.pass.totp,
       shortpass: user.pass.shortpass,
       salt: user.pass.salt,
@@ -194,12 +194,12 @@ class API {
 
   getPublicKey(username, isHashed) {
     return this.retrieveUser(username, 'undefined', isHashed).then(
-      user => user.publicKey
+      (user) => user.publicKey
     );
   }
 
   getUser(username, hash, otp) {
-    return this.getSHA256(username).then(hashedUsername =>
+    return this.getSHA256(username).then((hashedUsername) =>
       doGET(`${this.db}/user/${hashedUsername}/${hash}?otp=${otp}`)
     );
   }
@@ -208,11 +208,11 @@ class API {
     let url;
     const now = Date.now();
     return this.getSHA256(user.username)
-      .then(hashedUsername => {
+      .then((hashedUsername) => {
         url = `/user/${hashedUsername}`;
         return user.sign(`${url}|${now}`);
       })
-      .then(signature =>
+      .then((signature) =>
         doGET(`${this.db}${url}?sig=${signature}&sigTime=${now}`, 0)
       );
   }
@@ -221,11 +221,11 @@ class API {
     let url;
     const now = Date.now();
     return this.getSHA256(user.username)
-      .then(hashedUsername => {
+      .then((hashedUsername) => {
         url = `/secret/${hashedUsername}/${hashedTitle}`;
         return user.sign(`${url}|${now}`);
       })
-      .then(signature =>
+      .then((signature) =>
         doGET(`${this.db}${url}?sig=${signature}&sigTime=${now}`)
       );
   }
@@ -234,14 +234,14 @@ class API {
     let url;
     const now = Date.now();
     return this.getSHA256(user.username)
-      .then(hashedUsername => {
+      .then((hashedUsername) => {
         url = `/history/${hashedUsername}/${hashedTitle}`;
         return user.sign(`${url}|${now}`);
       })
-      .then(signature =>
+      .then((signature) =>
         doGET(`${this.db}${url}?sig=${signature}&sigTime=${now}`)
       )
-      .then(secret => ({
+      .then((secret) => ({
         iv: secret.iv_history,
         secret: secret.history,
       }));
@@ -250,14 +250,15 @@ class API {
   getProtectKey(username, deviceName, hash) {
     let hashedUsername;
     return this.getSHA256(username)
-      .then(rHashedUsername => {
+      .then((rHashedUsername) => {
         hashedUsername = rHashedUsername;
         return this.getSHA256(deviceName);
       })
-      .then(deviceId =>
+      .then((deviceId) =>
         doGET(`${this.db}/protectKey/${hashedUsername}/${deviceId}/${hash}`)
       )
-      .then(result => {
+      .then((result) => {
+        // eslint-disable-next-line security/detect-possible-timing-attacks
         if (hash === 'undefined') {
           return result;
         }
@@ -274,11 +275,11 @@ class API {
     const json = JSON.stringify(revs);
     const now = Date.now();
     return this.getSHA256(user.username)
-      .then(hashedUsername => {
+      .then((hashedUsername) => {
         url = `/database/${hashedUsername}`;
         return user.sign(`${json}|${now}`);
       })
-      .then(signature =>
+      .then((signature) =>
         doPOST(`${this.db}${url}`, {
           json,
           sig: signature,
@@ -291,11 +292,11 @@ class API {
     let url;
     const now = Date.now();
     return this.getSHA256(user.username)
-      .then(hashedUsername => {
+      .then((hashedUsername) => {
         url = `/rescueCodes/${hashedUsername}`;
         return user.sign(`${url}|${now}`);
       })
-      .then(signature =>
+      .then((signature) =>
         doGET(`${this.db}${url}?sig=${signature}&sigTime=${now}`)
       );
   }
@@ -305,11 +306,11 @@ class API {
     const json = JSON.stringify(datas);
     const now = Date.now();
     return this.getSHA256(user.username)
-      .then(rHashedUsername => {
+      .then((rHashedUsername) => {
         hashedUsername = rHashedUsername;
         return user.sign(`${json}|${now}`);
       })
-      .then(signature =>
+      .then((signature) =>
         doPUT(`${this.db}/user/${hashedUsername}`, {
           json,
           sig: signature,
@@ -326,11 +327,11 @@ class API {
     });
     const now = Date.now();
     return this.getSHA256(user.username)
-      .then(rHashedUsername => {
+      .then((rHashedUsername) => {
         hashedUsername = rHashedUsername;
         return user.sign(`${json}|${now}`);
       })
-      .then(signature =>
+      .then((signature) =>
         doPUT(`${this.db}/user/${hashedUsername}`, {
           json,
           sig: signature,
@@ -350,11 +351,11 @@ class API {
     });
     const now = Date.now();
     return this.getSHA256(user.username)
-      .then(rHashedUsername => {
+      .then((rHashedUsername) => {
         hashedUsername = rHashedUsername;
         return user.sign(`${json}|${now}`);
       })
-      .then(signature =>
+      .then((signature) =>
         doPUT(`${this.db}/activateTotp/${hashedUsername}`, {
           json,
           sig: signature,
@@ -367,11 +368,11 @@ class API {
     let url;
     const now = Date.now();
     return this.getSHA256(user.username)
-      .then(hashedUsername => {
+      .then((hashedUsername) => {
         url = `/deactivateTotp/${hashedUsername}`;
         return user.sign(`${url}|${now}`);
       })
-      .then(signature =>
+      .then((signature) =>
         doPUT(`${this.db}${url}?sig=${signature}&sigTime=${now}`, {})
       );
   }
@@ -383,11 +384,11 @@ class API {
     });
     const now = Date.now();
     return this.getSHA256(user.username)
-      .then(rHashedUsername => {
+      .then((rHashedUsername) => {
         hashedUsername = rHashedUsername;
         return user.sign(`${json}|${now}`);
       })
-      .then(signature =>
+      .then((signature) =>
         doPUT(`${this.db}/activateShortLogin/${hashedUsername}`, {
           json,
           sig: signature,

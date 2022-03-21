@@ -5,7 +5,7 @@
   "main": "dist/secretin.umd.js",
   "scripts": {
     "start": "yarn run watch",
-    "build": "yarn run lint && rollup -c config/rollup.config.js && yarn run build-adapters",
+    "build": "rollup -c config/rollup.config.js && yarn run build-adapters",
     "build-adapters": "yarn run build-browser-adapter && yarn run build-node-adapter",
     "build-browser-adapter": "rollup -c config/rollup.browserAdapter.config.js",
     "build-node-adapter": "rollup -c config/rollup.nodeAdapter.config.js",
@@ -17,8 +17,7 @@
     "adapter-node-test": "node_modules/mocha/bin/mocha adapters_test/node/input.test.js",
     "adapter-node-output": "node adapters_test/node/output.js",
     "adapter-browser-test": "./node_modules/karma/bin/karma start adapters_test/browser/karma.conf.js",
-    "adapter-browser-output": "google-chrome adapters_test/browser/output.html",
-    "prettier": "prettier --print-width 80 --trailing-comma es5 --single-quote --write \"src/**/*.js\" \"test/*.js\""
+    "adapter-browser-output": "google-chrome adapters_test/browser/output.html"
   },
   "repository": {
     "type": "git",
@@ -31,34 +30,26 @@
   },
   "homepage": "https://github.com/secretin/secretin-lib",
   "devDependencies": {
-    "babel-cli": "^6.14.0",
-    "babel-eslint": "^6.1.2",
-    "babel-preset-es2015-rollup": "^1.2.0",
-    "chai": "^3.5.0",
-    "chai-as-promised": "^5.3.0",
-    "eslint": "^3.4.0",
-    "eslint-config-airbnb-base": "^5.0.3",
-    "eslint-config-prettier": "^2.0.0",
-    "eslint-plugin-chai": "0.0.1",
-    "eslint-plugin-import": "^1.14.0",
-    "eslint-plugin-mocha": "^4.5.1",
-    "karma": "^1.2.0",
+    "@rollup/plugin-eslint": "^8.0.1",
+    "@rollup/plugin-json": "^4.1.0",
+    "chai": "^4.3.6",
+    "eslint": "^7.32.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-prettier": "^8.4.0",
+    "eslint-plugin-import": "^2.25.4",
+    "eslint-plugin-mocha": "^10.0.3",
+    "eslint-plugin-prettier": "^4.0.0",
+    "eslint-plugin-security": "^1.4.0",
+    "karma": "^6.3.16",
     "karma-chai": "^0.1.0",
-    "karma-chai-as-promised": "^0.1.2",
-    "karma-chai-plugins": "^0.7.0",
-    "karma-chrome-launcher": "^2.0.0",
-    "karma-mocha": "^1.1.1",
-    "karma-mocha-reporter": "^2.1.0",
-    "karma-spec-reporter": "0.0.26",
-    "mocha": "^3.0.2",
-    "rollup": "^0.34.13",
-    "rollup-plugin-babel": "^2.6.1",
-    "rollup-plugin-eslint": "^3.0.0",
-    "rollup-plugin-json": "^2.0.1",
-    "rollup-watch": "^2.5.0"
+    "karma-chrome-launcher": "^3.1.0",
+    "karma-mocha": "^2.0.1",
+    "karma-mocha-reporter": "^2.2.5",
+    "mocha": "^9.2.1",
+    "prettier": "^2.5.1",
+    "rollup": "^2.68.0"
   },
   "peerDependencies": {
-    "node-forge": "^0.7.0"
-  },
-  "dependencies": {}
+    "node-forge": "^1.2.1"
+  }
 }

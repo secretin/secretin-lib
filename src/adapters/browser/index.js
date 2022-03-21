@@ -10,7 +10,7 @@ export function getSHA256(str) {
   const data = asciiToUint8Array(str);
   return crypto.subtle
     .digest(algorithm, data)
-    .then(hashedStr => bytesToHexString(hashedStr));
+    .then((hashedStr) => bytesToHexString(hashedStr));
 }
 
 export function genRSAOAEP() {
@@ -49,7 +49,7 @@ export function encryptAESGCM256(secret, key) {
     const keyUsages = ['encrypt'];
     return crypto.subtle
       .generateKey(algorithm, extractable, keyUsages)
-      .then(newKey => {
+      .then((newKey) => {
         const iv = new Uint8Array(12);
         crypto.getRandomValues(iv);
         algorithm = {
@@ -62,7 +62,7 @@ export function encryptAESGCM256(secret, key) {
         result.iv = bytesToHexString(iv);
         return crypto.subtle.encrypt(algorithm, newKey, data);
       })
-      .then(encryptedSecret => {
+      .then((encryptedSecret) => {
         result.secret = bytesToHexString(encryptedSecret);
         return result;
       });
@@ -78,7 +78,7 @@ export function encryptAESGCM256(secret, key) {
   };
   const data = asciiToUint8Array(JSON.stringify(secret));
   result.iv = bytesToHexString(iv);
-  return crypto.subtle.encrypt(algorithm, key, data).then(encryptedSecret => {
+  return crypto.subtle.encrypt(algorithm, key, data).then((encryptedSecret) => {
     result.secret = bytesToHexString(encryptedSecret);
     return result;
   });
@@ -93,7 +93,7 @@ export function decryptAESGCM256(secretObject, key) {
   const data = hexStringToUint8Array(secretObject.secret);
   return crypto.subtle
     .decrypt(algorithm, key, data)
-    .then(decryptedSecret => JSON.parse(bytesToASCIIString(decryptedSecret)));
+    .then((decryptedSecret) => JSON.parse(bytesToASCIIString(decryptedSecret)));
 }
 
 export function encryptRSAOAEP(secret, publicKey) {
@@ -104,7 +104,7 @@ export function encryptRSAOAEP(secret, publicKey) {
   const data = asciiToUint8Array(JSON.stringify(secret));
   return crypto.subtle
     .encrypt(algorithm, publicKey, data)
-    .then(encryptedSecret => bytesToHexString(encryptedSecret));
+    .then((encryptedSecret) => bytesToHexString(encryptedSecret));
 }
 
 export function decryptRSAOAEP(secret, privateKey) {
@@ -115,7 +115,7 @@ export function decryptRSAOAEP(secret, privateKey) {
   const data = hexStringToUint8Array(secret);
   return crypto.subtle
     .decrypt(algorithm, privateKey, data)
-    .then(decryptedSecret => JSON.parse(bytesToASCIIString(decryptedSecret)));
+    .then((decryptedSecret) => JSON.parse(bytesToASCIIString(decryptedSecret)));
 }
 
 export function wrapRSAOAEP(key, wrappingPublicKey) {
@@ -126,7 +126,7 @@ export function wrapRSAOAEP(key, wrappingPublicKey) {
   };
   return crypto.subtle
     .wrapKey(format, key, wrappingPublicKey, wrapAlgorithm)
-    .then(wrappedKey => bytesToHexString(wrappedKey));
+    .then((wrappedKey) => bytesToHexString(wrappedKey));
 }
 
 export function sign(datas, key) {
@@ -136,7 +136,7 @@ export function sign(datas, key) {
   };
   return crypto.subtle
     .sign(signAlgorithm, key, asciiToUint8Array(datas))
-    .then(signature => bytesToHexString(signature));
+    .then((signature) => bytesToHexString(signature));
 }
 
 export function verify(datas, signature, key) {
@@ -183,7 +183,7 @@ export function exportClearKey(key) {
 }
 
 export function convertOAEPToPSS(key, keyUsage) {
-  return exportClearKey(key).then(OAEPKey => {
+  return exportClearKey(key).then((OAEPKey) => {
     const format = 'jwk';
     const algorithm = {
       name: 'RSA-PSS',
@@ -232,7 +232,7 @@ export function derivePassword(password, parameters) {
 
   return crypto.subtle
     .importKey('raw', passwordBuf, { name: 'PBKDF2' }, extractable, usages)
-    .then(key => {
+    .then((key) => {
       let saltBuf;
       let iterations;
       if (typeof parameters === 'undefined') {
@@ -276,12 +276,12 @@ export function derivePassword(password, parameters) {
         usages
       );
     })
-    .then(dKey => {
+    .then((dKey) => {
       result.key = dKey;
       return crypto.subtle.exportKey('raw', dKey);
     })
-    .then(rawKey => crypto.subtle.digest('SHA-256', rawKey))
-    .then(hashedKey => {
+    .then((rawKey) => crypto.subtle.digest('SHA-256', rawKey))
+    .then((hashedKey) => {
       result.hash = bytesToHexString(hashedKey);
       return result;
     });
@@ -299,7 +299,7 @@ export function exportKey(wrappingKey, key) {
   result.iv = bytesToHexString(iv);
   return crypto.subtle
     .wrapKey(format, key, wrappingKey, wrapAlgorithm)
-    .then(wrappedKey => {
+    .then((wrappedKey) => {
       result.key = bytesToHexString(wrappedKey);
       return result;
     });
@@ -319,17 +319,15 @@ export function importPrivateKey(key, privateKeyObject) {
   const extractable = true;
   const keyUsages = ['unwrapKey', 'decrypt'];
 
-  return crypto.subtle
-    .unwrapKey(
-      format,
-      wrappedPrivateKey,
-      key,
-      unwrapAlgorithm,
-      unwrappedKeyAlgorithm,
-      extractable,
-      keyUsages
-    )
-    .catch(() => Promise.reject('Invalid Password'));
+  return crypto.subtle.unwrapKey(
+    format,
+    wrappedPrivateKey,
+    key,
+    unwrapAlgorithm,
+    unwrappedKeyAlgorithm,
+    extractable,
+    keyUsages
+  );
 }
 
 export function importKey(key, keyObject) {
@@ -343,15 +341,36 @@ export function importKey(key, keyObject) {
   const extractable = true;
   const keyUsages = ['wrapKey', 'unwrapKey'];
 
-  return crypto.subtle
-    .unwrapKey(
-      format,
-      wrappedKey,
-      key,
-      unwrapAlgorithm,
-      unwrappedKeyAlgorithm,
-      extractable,
-      keyUsages
-    )
-    .catch(() => Promise.reject('Invalid Password'));
+  return crypto.subtle.unwrapKey(
+    format,
+    wrappedKey,
+    key,
+    unwrapAlgorithm,
+    unwrappedKeyAlgorithm,
+    extractable,
+    keyUsages
+  );
 }
+
+const SecretinBrowserAdapter = {
+  importKey,
+  importPrivateKey,
+  exportKey,
+  derivePassword,
+  importPublicKey,
+  convertOAEPToPSS,
+  exportClearKey,
+  unwrapRSAOAEP,
+  verify,
+  sign,
+  wrapRSAOAEP,
+  decryptRSAOAEP,
+  encryptRSAOAEP,
+  decryptAESGCM256,
+  encryptAESGCM256,
+  generateWrappingKey,
+  genRSAOAEP,
+  getSHA256,
+};
+
+export default SecretinBrowserAdapter;

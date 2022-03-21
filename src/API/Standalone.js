@@ -1,4 +1,20 @@
 import { bytesToHexString } from '../lib/utils';
+import {
+  UsernameAlreadyExistsError,
+  SecretAlreadyExistsError,
+  UserNotFoundError,
+  CantEditSecretError,
+  SecretNotFoundError,
+  CantGenerateNewKeyError,
+  NotSharedWithUserError,
+  CantUnshareSecretError,
+  CantShareSecretError,
+  FriendNotFoundError,
+  CantShareWithYourselfError,
+  DontHaveSecretError,
+  NotAvailableError,
+  SomethingGoesWrong,
+} from '../Errors';
 
 class API {
   constructor(db, getSHA256) {
@@ -20,17 +36,17 @@ class API {
   addUser(username, privateKey, publicKey, pass, options) {
     let hashedUsername;
     return this.getSHA256(username)
-      .then(rHashedUsername => {
+      .then((rHashedUsername) => {
         hashedUsername = rHashedUsername;
         return new Promise((resolve, reject) => {
           if (typeof this.db.users[hashedUsername] === 'undefined') {
             resolve(this.getSHA256(pass.hash));
           } else {
-            reject('Username already exists');
+            reject(new UsernameAlreadyExistsError());
           }
         });
       })
-      .then(hashedHash => {
+      .then((hashedHash) => {
         this.db.users[hashedUsername] = {
           pass: {
             salt: pass.salt,
@@ -67,25 +83,24 @@ class API {
           };
           resolve();
         }
-        reject('Secret already exists');
+        reject(new SecretAlreadyExistsError());
       } else {
-        reject('User not found');
+        reject(new UserNotFoundError());
       }
     });
   }
 
   deleteSecret(user, hashedTitle) {
     let hashedUsername;
-    return this.getSHA256(user.username).then(rHashedUsername => {
+    return this.getSHA256(user.username).then((rHashedUsername) => {
       hashedUsername = rHashedUsername;
       if (typeof this.db.users[hashedUsername] !== 'undefined') {
         if (typeof this.db.secrets[hashedTitle] === 'undefined') {
-          return Promise.reject('Secret not found');
+          return Promise.reject(new SecretNotFoundError());
         }
         delete this.db.users[hashedUsername].keys[hashedTitle];
-        const index = this.db.secrets[hashedTitle].users.indexOf(
-          hashedUsername
-        );
+        const index =
+          this.db.secrets[hashedTitle].users.indexOf(hashedUsername);
         if (index > -1) {
           this.db.secrets[hashedTitle].users.splice(index, 1);
         }
@@ -94,13 +109,13 @@ class API {
         }
         return Promise.resolve();
       }
-      return Promise.reject('User not found');
+      return Promise.reject(new UserNotFoundError());
     });
   }
 
   editSecret(user, secretObject, hashedTitle) {
     let hashedUsername;
-    return this.getSHA256(user.username).then(rHashedUsername => {
+    return this.getSHA256(user.username).then((rHashedUsername) => {
       hashedUsername = rHashedUsername;
       if (typeof this.db.users[hashedUsername] !== 'undefined') {
         if (typeof this.db.secrets[hashedTitle] !== 'undefined') {
@@ -109,7 +124,7 @@ class API {
               'undefined' ||
             this.db.users[hashedUsername].keys[hashedTitle].rights <= 0
           ) {
-            return Promise.reject("You can't edit this secret");
+            return Promise.reject(new CantEditSecretError());
           }
           this.db.secrets[hashedTitle].iv = secretObject.iv;
           this.db.secrets[hashedTitle].secret = secretObject.secret;
@@ -120,15 +135,15 @@ class API {
           this.db.secrets[hashedTitle].history = secretObject.history;
           return Promise.resolve();
         }
-        return Promise.reject('Secret not found');
+        return Promise.reject(new SecretNotFoundError());
       }
-      return Promise.reject('User not found');
+      return Promise.reject(new UserNotFoundError());
     });
   }
 
   newKey(user, hashedTitle, secret, wrappedKeys) {
     let hashedUsername;
-    return this.getSHA256(user.username).then(rHashedUsername => {
+    return this.getSHA256(user.username).then((rHashedUsername) => {
       hashedUsername = rHashedUsername;
       if (typeof this.db.users[hashedUsername] !== 'undefined') {
         if (typeof this.db.secrets[hashedTitle] !== 'undefined') {
@@ -137,7 +152,7 @@ class API {
               'undefined' ||
             this.db.users[hashedUsername].keys[hashedTitle].rights <= 1
           ) {
-            return Promise.reject("You can't generate new key for this secret");
+            return Promise.reject(new CantGenerateNewKeyError());
           }
           this.db.secrets[hashedTitle].iv = secret.iv;
           this.db.secrets[hashedTitle].secret = secret.secret;
@@ -145,7 +160,7 @@ class API {
           this.db.secrets[hashedTitle].metadatas = secret.metadatas;
           this.db.secrets[hashedTitle].iv_history = secret.iv_history;
           this.db.secrets[hashedTitle].history = secret.history;
-          wrappedKeys.forEach(wrappedKey => {
+          wrappedKeys.forEach((wrappedKey) => {
             if (typeof this.db.users[wrappedKey.user] !== 'undefined') {
               if (
                 typeof this.db.users[wrappedKey.user].keys[hashedTitle] !==
@@ -158,9 +173,9 @@ class API {
           });
           return Promise.resolve();
         }
-        return Promise.reject('Secret not found');
+        return Promise.reject(new SecretNotFoundError());
       }
-      return Promise.reject('User not found');
+      return Promise.reject(new UserNotFoundError());
     });
   }
 
@@ -168,16 +183,16 @@ class API {
     let hashedUsername;
     const hashedFriendUsernames = [];
     return this.getSHA256(user.username)
-      .then(rHashedUsername => {
+      .then((rHashedUsername) => {
         hashedUsername = rHashedUsername;
         const hashedFriendUseramePromises = [];
-        friendNames.forEach(username => {
+        friendNames.forEach((username) => {
           hashedFriendUseramePromises.push(this.getSHA256(username));
         });
         return Promise.all(hashedFriendUseramePromises);
       })
-      .then(rHashedFriendUserames => {
-        rHashedFriendUserames.forEach(hashedFriendUserame => {
+      .then((rHashedFriendUserames) => {
+        rHashedFriendUserames.forEach((hashedFriendUserame) => {
           hashedFriendUsernames.push(hashedFriendUserame);
         });
         if (typeof this.db.users[hashedUsername] !== 'undefined') {
@@ -190,22 +205,23 @@ class API {
               let yourself = 0;
               let nb = 0;
               let response = 'Secret unshared';
-              hashedFriendUsernames.forEach(hashedFriendUsername => {
+              hashedFriendUsernames.forEach((hashedFriendUsername) => {
                 if (hashedUsername !== hashedFriendUsername) {
                   const dbUser = this.db.users[hashedFriendUsername];
                   if (typeof dbUser !== 'undefined') {
                     if (typeof dbUser.keys[hashedTitle] !== 'undefined') {
                       delete dbUser.keys[hashedTitle];
-                      const id = this.db.secrets[hashedTitle].users.indexOf(
-                        hashedFriendUsername
-                      );
+                      const id =
+                        this.db.secrets[hashedTitle].users.indexOf(
+                          hashedFriendUsername
+                        );
                       this.db.secrets[hashedTitle].users.splice(id, 1);
                       nb += 1;
                     } else {
-                      throw 'Secret not shared with this user';
+                      throw new NotSharedWithUserError();
                     }
                   } else {
-                    throw 'Secret not shared with this user';
+                    throw new NotSharedWithUserError();
                   }
                 } else {
                   yourself = 1;
@@ -217,24 +233,24 @@ class API {
               if (nb === hashedFriendUsernames.length - yourself) {
                 return response;
               }
-              return Promise.reject('Something goes wrong.');
+              return Promise.reject(new SomethingGoesWrong());
             }
-            return Promise.reject("You can't unshare this secret");
+            return Promise.reject(new CantUnshareSecretError());
           }
-          return Promise.reject('Secret not found');
+          return Promise.reject(new SecretNotFoundError());
         }
-        return Promise.reject('User not found');
+        return Promise.reject(new UserNotFoundError());
       });
   }
 
   shareSecret(user, sharedSecretObjects) {
     let hashedUsername;
-    return this.getSHA256(user.username).then(rHashedUsername => {
+    return this.getSHA256(user.username).then((rHashedUsername) => {
       hashedUsername = rHashedUsername;
       const dbUser = this.db.users[hashedUsername];
       if (typeof dbUser !== 'undefined') {
         let nb = 0;
-        sharedSecretObjects.forEach(sharedSecretObject => {
+        sharedSecretObjects.forEach((sharedSecretObject) => {
           if (sharedSecretObject.friendName !== hashedUsername) {
             if (
               typeof this.db.secrets[sharedSecretObject.hashedTitle] !==
@@ -251,31 +267,31 @@ class API {
                     key: sharedSecretObject.wrappedKey,
                     rights: sharedSecretObject.rights,
                   };
-                  const users = this.db.secrets[sharedSecretObject.hashedTitle]
-                    .users;
+                  const { users } =
+                    this.db.secrets[sharedSecretObject.hashedTitle];
                   if (users.indexOf(sharedSecretObject.friendName) < 0) {
                     users.push(sharedSecretObject.friendName);
                   }
                   nb += 1;
                 } else {
-                  throw 'Friend not found';
+                  throw new FriendNotFoundError();
                 }
               } else {
-                throw "You can't share this secret";
+                throw new CantShareSecretError();
               }
             } else {
-              throw 'Secret not found';
+              throw new SecretNotFoundError();
             }
           } else {
-            throw "You can't share with yourself";
+            throw new CantShareWithYourselfError();
           }
         });
         if (nb !== sharedSecretObjects.length) {
-          return Promise.reject('Something goes wrong.');
+          return Promise.reject(new SomethingGoesWrong());
         }
         return Promise.resolve();
       }
-      return Promise.reject('User not found');
+      return Promise.reject(new UserNotFoundError());
     });
   }
 
@@ -287,7 +303,7 @@ class API {
     if (!hashed) {
       isHashed = isHashed
         .then(() => this.getSHA256(username))
-        .then(rHashedUsername => {
+        .then((rHashedUsername) => {
           hashedUsername = rHashedUsername;
         });
     }
@@ -295,12 +311,12 @@ class API {
     return isHashed
       .then(() => {
         if (typeof this.db.users[hashedUsername] === 'undefined') {
-          return Promise.reject('User not found');
+          return Promise.reject(new UserNotFoundError());
         }
         user = JSON.parse(JSON.stringify(this.db.users[hashedUsername]));
         return this.getSHA256(hash);
       })
-      .then(hashedHash => {
+      .then((hashedHash) => {
         delete user.keys;
         if (hashedHash === user.pass.hash) {
           return user;
@@ -321,7 +337,7 @@ class API {
   }
 
   getDerivationParameters(username, isHashed) {
-    return this.retrieveUser(username, 'undefined', isHashed).then(user => ({
+    return this.retrieveUser(username, 'undefined', isHashed).then((user) => ({
       totp: user.pass.totp,
       salt: user.pass.salt,
       iterations: user.pass.iterations,
@@ -330,7 +346,7 @@ class API {
 
   getPublicKey(username, isHashed) {
     return this.retrieveUser(username, 'undefined', isHashed).then(
-      user => user.publicKey
+      (user) => user.publicKey
     );
   }
 
@@ -340,18 +356,18 @@ class API {
 
   getUserWithSignature(user) {
     let hashedUsername;
-    return this.getSHA256(user.username).then(rHashedUsername => {
+    return this.getSHA256(user.username).then((rHashedUsername) => {
       hashedUsername = rHashedUsername;
       return new Promise((resolve, reject) => {
         if (typeof this.db.users[hashedUsername] === 'undefined') {
-          reject('User not found');
+          reject(new UserNotFoundError());
         } else {
           const userObject = JSON.parse(
             JSON.stringify(this.db.users[hashedUsername])
           );
           const metadatas = {};
           const hashedTitles = Object.keys(userObject.keys);
-          hashedTitles.forEach(hashedTitle => {
+          hashedTitles.forEach((hashedTitle) => {
             const secret = this.db.secrets[hashedTitle];
             metadatas[hashedTitle] = {
               iv: secret.iv_meta,
@@ -368,7 +384,7 @@ class API {
   getSecret(hash) {
     return new Promise((resolve, reject) => {
       if (typeof this.db.secrets[hash] === 'undefined') {
-        reject("You don't have this secret");
+        reject(new DontHaveSecretError());
       } else {
         resolve(this.db.secrets[hash]);
       }
@@ -377,9 +393,9 @@ class API {
 
   getAllMetadatas(user) {
     const result = {};
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       const hashedTitles = Object.keys(user.keys);
-      hashedTitles.forEach(hashedTitle => {
+      hashedTitles.forEach((hashedTitle) => {
         const secret = this.db.secrets[hashedTitle];
         result[hashedTitle] = {
           iv: secret.iv_meta,
@@ -393,7 +409,7 @@ class API {
   getHistory(user, hash) {
     return new Promise((resolve, reject) => {
       if (typeof this.db.secrets[hash] === 'undefined') {
-        reject("You don't have this secret");
+        reject(new DontHaveSecretError());
       } else {
         const secret = this.db.secrets[hash];
         const history = {
@@ -405,19 +421,20 @@ class API {
     });
   }
 
+  // eslint-disable-next-line class-methods-use-this
   getProtectKeyParameters() {
-    return Promise.reject('Not available in standalone mode');
+    return Promise.reject(new NotAvailableError());
   }
 
   getDb() {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       resolve(this.db);
     });
   }
 
   editUser(user, datas) {
     let hashedUsername;
-    return this.getSHA256(user.username).then(rHashedUsername => {
+    return this.getSHA256(user.username).then((rHashedUsername) => {
       hashedUsername = rHashedUsername;
       return new Promise((resolve, reject) => {
         if (typeof this.db.users[hashedUsername] !== 'undefined') {
@@ -437,14 +454,14 @@ class API {
             resolve();
           }
         } else {
-          reject('User not found');
+          reject(new UserNotFoundError());
         }
       });
     });
   }
 
   changePassword(hashedUsername, privateKey, pass) {
-    return this.getSHA256(pass.hash).then(hashedHash => {
+    return this.getSHA256(pass.hash).then((hashedHash) => {
       const newPass = pass;
       newPass.hash = hashedHash;
       this.db.users[hashedUsername].privateKey = privateKey;
@@ -452,8 +469,11 @@ class API {
     });
   }
 
+  // eslint-disable-next-line class-methods-use-this
   isOnline() {
-    return new Promise(resolve => resolve(false));
+    return new Promise((resolve) => {
+      resolve(false);
+    });
   }
 }
 

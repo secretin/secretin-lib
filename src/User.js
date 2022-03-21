@@ -1,8 +1,6 @@
 import { DecryptMetadataStatus } from './Statuses';
-
-import { defaultProgress } from './lib/utils';
-
-import Secretin from './Secretin';
+import { DontHaveSecretError, InvalidPasswordError } from './Errors';
+import { defaultProgress, SecretinPrefix } from './lib/utils';
 
 class User {
   constructor(username, cryptoAdapter) {
@@ -43,16 +41,16 @@ class User {
   generateMasterKey() {
     return this.cryptoAdapter
       .genRSAOAEP()
-      .then(keyPair => {
+      .then((keyPair) => {
         this.publicKey = keyPair.publicKey;
         this.privateKey = keyPair.privateKey;
         return this.cryptoAdapter.convertOAEPToPSS(this.privateKey, 'sign');
       })
-      .then(privateKeySign => {
+      .then((privateKeySign) => {
         this.privateKeySign = privateKeySign;
         return this.cryptoAdapter.convertOAEPToPSS(this.publicKey, 'verify');
       })
-      .then(publicKeySign => {
+      .then((publicKeySign) => {
         this.publicKeySign = publicKeySign;
       });
   }
@@ -64,11 +62,11 @@ class User {
   importPublicKey(jwkPublicKey) {
     return this.cryptoAdapter
       .importPublicKey(jwkPublicKey)
-      .then(publicKey => {
+      .then((publicKey) => {
         this.publicKey = publicKey;
         return this.cryptoAdapter.convertOAEPToPSS(this.publicKey, 'verify');
       })
-      .then(publicKeySign => {
+      .then((publicKeySign) => {
         this.publicKeySign = publicKeySign;
       });
   }
@@ -77,14 +75,14 @@ class User {
     const pass = {};
     return this.cryptoAdapter
       .derivePassword(password)
-      .then(dKey => {
+      .then((dKey) => {
         pass.salt = dKey.salt;
         this.hash = dKey.hash;
         pass.hash = this.hash;
         pass.iterations = dKey.iterations;
         return this.cryptoAdapter.exportKey(dKey.key, this.privateKey);
       })
-      .then(keyObject => ({
+      .then((keyObject) => ({
         privateKey: {
           privateKey: keyObject.key,
           iv: keyObject.iv,
@@ -96,32 +94,33 @@ class User {
   importPrivateKey(dKey, privateKeyObject) {
     return this.cryptoAdapter
       .importPrivateKey(dKey, privateKeyObject)
-      .then(privateKey => {
+      .then((privateKey) => {
         this.privateKey = privateKey;
         return this.cryptoAdapter.convertOAEPToPSS(this.privateKey, 'sign');
       })
-      .then(privateKeySign => {
+      .then((privateKeySign) => {
         this.privateKeySign = privateKeySign;
-      });
+      })
+      .catch(() => Promise.reject(new InvalidPasswordError()));
   }
 
   exportBigPrivateData(data) {
     const result = {};
     return this.cryptoAdapter
       .encryptAESGCM256(data)
-      .then(secretObject => {
+      .then((secretObject) => {
         result.secret = secretObject.secret;
         result.iv = secretObject.iv;
         return this.wrapKey(secretObject.key, this.publicKey);
       })
-      .then(wrappedKey => {
+      .then((wrappedKey) => {
         result.wrappedKey = wrappedKey;
         return result;
       });
   }
 
   importBigPrivateData(data) {
-    return this.unwrapKey(data.wrappedKey).then(key =>
+    return this.unwrapKey(data.wrappedKey).then((key) =>
       this.cryptoAdapter.decryptAESGCM256(data, key)
     );
   }
@@ -130,18 +129,18 @@ class User {
     const result = {};
     return this.cryptoAdapter
       .encryptRSAOAEP(data, this.publicKey)
-      .then(encryptedOptions => {
+      .then((encryptedOptions) => {
         result.data = encryptedOptions;
         return this.sign(result.data);
       })
-      .then(signature => {
+      .then((signature) => {
         result.signature = signature;
         return result;
       });
   }
 
   importPrivateData(data, signature) {
-    return this.verify(data, signature).then(verified => {
+    return this.verify(data, signature).then((verified) => {
       if (verified) {
         return this.cryptoAdapter.decryptRSAOAEP(data, this.privateKey);
       }
@@ -150,7 +149,7 @@ class User {
   }
 
   exportOptions() {
-    return this.exportPrivateData(this.options).then(result => ({
+    return this.exportPrivateData(this.options).then((result) => ({
       options: result.data,
       signature: result.signature,
     }));
@@ -165,7 +164,7 @@ class User {
     return this.importPrivateData(
       optionsObject.options,
       optionsObject.signature
-    ).then(options => {
+    ).then((options) => {
       if (options) {
         this.options = options;
       } else {
@@ -177,12 +176,12 @@ class User {
   shareSecret(friend, wrappedKey, hashedTitle) {
     const result = { hashedTitle };
     return this.unwrapKey(wrappedKey)
-      .then(key => this.wrapKey(key, friend.publicKey))
-      .then(friendWrappedKey => {
+      .then((key) => this.wrapKey(key, friend.publicKey))
+      .then((friendWrappedKey) => {
         result.wrappedKey = friendWrappedKey;
         return this.cryptoAdapter.getSHA256(friend.username);
       })
-      .then(hashedUsername => {
+      .then((hashedUsername) => {
         result.friendName = hashedUsername;
         return result;
       });
@@ -191,7 +190,7 @@ class User {
   editSecret(hashedTitle, secret, history) {
     const metadatas = this.metadatas[hashedTitle];
     if (typeof metadatas === 'undefined') {
-      return Promise.reject("You don't have this secret");
+      return Promise.reject(new DontHaveSecretError());
     }
     const now = new Date();
     metadatas.lastModifiedAt = now.toISOString();
@@ -199,8 +198,8 @@ class User {
     const wrappedKey = this.keys[hashedTitle].key;
     const result = {};
     return this.unwrapKey(wrappedKey)
-      .then(key => this.encryptSecret(metadatas, secret, history, key))
-      .then(secretObject => {
+      .then((key) => this.encryptSecret(metadatas, secret, history, key))
+      .then((secretObject) => {
         result.secret = secretObject.secret;
         result.iv = secretObject.iv;
         result.metadatas = secretObject.metadatas;
@@ -218,12 +217,12 @@ class User {
     const newMetadas = metadatas;
     return this.cryptoAdapter
       .getSHA256(saltedTitle)
-      .then(hashedTitle => {
+      .then((hashedTitle) => {
         result.hashedTitle = hashedTitle;
         newMetadas.id = result.hashedTitle;
         return this.encryptSecret(newMetadas, secret);
       })
-      .then(secretObject => {
+      .then((secretObject) => {
         result.secret = secretObject.secret;
         result.iv = secretObject.iv;
         result.metadatas = secretObject.metadatas;
@@ -233,7 +232,7 @@ class User {
         result.hashedUsername = secretObject.hashedUsername;
         return this.wrapKey(secretObject.key, this.publicKey);
       })
-      .then(wrappedKey => {
+      .then((wrappedKey) => {
         result.wrappedKey = wrappedKey;
         return result;
       });
@@ -248,18 +247,18 @@ class User {
     let secret;
     let metadata;
     return this.decryptSecret(hashedTitle, encryptedSecret)
-      .then(rSecret => {
+      .then((rSecret) => {
         secret = rSecret;
         return this.decryptSecret(hashedTitle, encryptedMetadata);
       })
-      .then(rMetadata => {
+      .then((rMetadata) => {
         metadata = rMetadata;
         if (typeof encryptedHistory.iv === 'undefined') {
           return Promise.resolve({});
         }
         return this.decryptSecret(hashedTitle, encryptedHistory);
       })
-      .then(history => ({
+      .then((history) => ({
         secret,
         metadata,
         history,
@@ -269,7 +268,7 @@ class User {
   importSecret(hashedTitle, secret, metadata, history) {
     const result = {};
     return this.encryptSecret(metadata, secret, history)
-      .then(secretObject => {
+      .then((secretObject) => {
         result.secret = secretObject.secret;
         result.iv = secretObject.iv;
         result.metadatas = secretObject.metadatas;
@@ -280,7 +279,7 @@ class User {
         result.hashedTitle = hashedTitle;
         return this.wrapKey(secretObject.key, this.publicKey);
       })
-      .then(wrappedKey => {
+      .then((wrappedKey) => {
         result.wrappedKey = wrappedKey;
         return result;
       });
@@ -306,7 +305,7 @@ class User {
         // no history yet
         return Promise.resolve([]);
       })
-      .then(rHistory => {
+      .then((rHistory) => {
         newHistory = rHistory;
         if (
           newHistory.length === 0 ||
@@ -320,13 +319,13 @@ class User {
         }
         return this.cryptoAdapter.encryptAESGCM256(secret, key);
       })
-      .then(secretObject => {
+      .then((secretObject) => {
         result.secret = secretObject.secret;
         result.iv = secretObject.iv;
         result.key = secretObject.key;
         return this.cryptoAdapter.encryptAESGCM256(metadatas, secretObject.key);
       })
-      .then(secretObject => {
+      .then((secretObject) => {
         result.metadatas = secretObject.secret;
         result.iv_meta = secretObject.iv;
         return this.cryptoAdapter.encryptAESGCM256(
@@ -334,12 +333,12 @@ class User {
           secretObject.key
         );
       })
-      .then(secretObject => {
+      .then((secretObject) => {
         result.history = secretObject.secret;
         result.iv_history = secretObject.iv;
         return this.cryptoAdapter.getSHA256(this.username);
       })
-      .then(hashedUsername => {
+      .then((hashedUsername) => {
         result.hashedUsername = hashedUsername;
         return result;
       });
@@ -347,10 +346,10 @@ class User {
 
   decryptSecret(hashedTitle, secret) {
     if (typeof this.keys[hashedTitle] === 'undefined') {
-      return Promise.reject("You don't have this secret");
+      return Promise.reject(new DontHaveSecretError());
     }
     const wrappedKey = this.keys[hashedTitle].key;
-    return this.unwrapKey(wrappedKey).then(key =>
+    return this.unwrapKey(wrappedKey).then((key) =>
       this.cryptoAdapter.decryptAESGCM256(secret, key)
     );
   }
@@ -373,14 +372,13 @@ class User {
       .reduce(
         (promise, hashedTitle) =>
           promise.then(() =>
-            this.decryptSecret(
-              hashedTitle,
-              allMetadatas[hashedTitle]
-            ).then(metadata => {
-              progressStatus.step();
-              progress(progressStatus);
-              metadatas[hashedTitle] = metadata;
-            })
+            this.decryptSecret(hashedTitle, allMetadatas[hashedTitle]).then(
+              (metadata) => {
+                progressStatus.step();
+                progress(progressStatus);
+                metadatas[hashedTitle] = metadata;
+              }
+            )
           ),
         Promise.resolve()
       )
@@ -392,30 +390,30 @@ class User {
     const toSend = {};
     return this.cryptoAdapter
       .generateWrappingKey()
-      .then(key => {
+      .then((key) => {
         protectKey = key;
         return this.cryptoAdapter.exportKey(protectKey, this.privateKey);
       })
-      .then(object => {
-        localStorage.setItem(`${Secretin.prefix}privateKey`, object.key);
-        localStorage.setItem(`${Secretin.prefix}privateKeyIv`, object.iv);
+      .then((object) => {
+        localStorage.setItem(`${SecretinPrefix}privateKey`, object.key);
+        localStorage.setItem(`${SecretinPrefix}privateKeyIv`, object.iv);
         return this.cryptoAdapter.derivePassword(shortpass);
       })
-      .then(derived => {
+      .then((derived) => {
         toSend.salt = derived.salt;
         toSend.iterations = derived.iterations;
         toSend.hash = derived.hash;
         return this.cryptoAdapter.exportKey(derived.key, protectKey);
       })
-      .then(keyObject => {
+      .then((keyObject) => {
         toSend.protectKey = keyObject.key;
-        localStorage.setItem(`${Secretin.prefix}iv`, keyObject.iv);
-        localStorage.setItem(`${Secretin.prefix}username`, this.username);
+        localStorage.setItem(`${SecretinPrefix}iv`, keyObject.iv);
+        localStorage.setItem(`${SecretinPrefix}username`, this.username);
         return this.cryptoAdapter.getSHA256(deviceName);
       })
-      .then(deviceId => {
+      .then((deviceId) => {
         toSend.deviceId = deviceId;
-        localStorage.setItem(`${Secretin.prefix}deviceName`, deviceName);
+        localStorage.setItem(`${SecretinPrefix}deviceName`, deviceName);
         return toSend;
       });
   }
@@ -423,17 +421,18 @@ class User {
   shortLogin(shortpass, wrappedProtectKey) {
     const keyObject = {
       key: wrappedProtectKey,
-      iv: localStorage.getItem(`${Secretin.prefix}iv`),
+      iv: localStorage.getItem(`${SecretinPrefix}iv`),
     };
     return this.cryptoAdapter
       .importKey(shortpass, keyObject)
-      .then(protectKey => {
+      .then((protectKey) => {
         const privateKeyObject = {
-          privateKey: localStorage.getItem(`${Secretin.prefix}privateKey`),
-          iv: localStorage.getItem(`${Secretin.prefix}privateKeyIv`),
+          privateKey: localStorage.getItem(`${SecretinPrefix}privateKey`),
+          iv: localStorage.getItem(`${SecretinPrefix}privateKeyIv`),
         };
         return this.importPrivateKey(protectKey, privateKeyObject);
-      });
+      })
+      .catch(() => Promise.reject(new InvalidPasswordError()));
   }
 }
 

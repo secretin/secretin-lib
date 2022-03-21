@@ -10,6 +10,13 @@ import {
   bytesToHexString,
 } from '../../lib/utils';
 
+class AESGCMDecryptionError extends Error {
+  constructor() {
+    super();
+    this.message = 'AES-GCM decryption error';
+  }
+}
+
 export function getSHA256(str) {
   const hash = crypto.createHash('sha256');
   const data = asciiToUint8Array(str);
@@ -75,7 +82,7 @@ export function decryptAESGCM256(secretObject, key) {
   if (pass) {
     return Promise.resolve(JSON.parse(decipher.output.getBytes()));
   }
-  return Promise.reject('AES-GCM decryption error');
+  return Promise.reject(new AESGCMDecryptionError());
 }
 
 export function encryptRSAOAEP(secret, publicKey) {
@@ -148,7 +155,7 @@ function bigIntToBase64Url(fbin) {
   if (hex.length % 2) {
     hex = `0${hex}`;
   }
-  const buf = new Buffer(hex, 'hex');
+  const buf = Buffer.from(hex, 'hex');
   const b64 = buf.toString('base64');
   const b64Url = b64.replace(/[+]/g, '-').replace(/\//g, '_').replace(/=/g, '');
   return b64Url;
@@ -173,8 +180,8 @@ export function convertOAEPToPSS(key) {
 }
 
 export function importPublicKey(jwkPublicKey) {
-  const n = new Buffer(jwkPublicKey.n, 'base64');
-  const e = new Buffer(jwkPublicKey.e, 'base64');
+  const n = Buffer.from(jwkPublicKey.n, 'base64');
+  const e = Buffer.from(jwkPublicKey.e, 'base64');
 
   const publicKey = forge.pki.setRsaPublicKey(
     new forge.jsbn.BigInteger(n.toString('hex'), 16),
@@ -214,7 +221,7 @@ export function derivePassword(password, parameters) {
 
   result.key = bytesToASCIIString(derivedKey);
 
-  return getSHA256(result.key).then(hash => {
+  return getSHA256(result.key).then((hash) => {
     result.hash = hash;
     return result;
   });
@@ -253,7 +260,7 @@ export function exportKey(wrappingKey, key) {
       qi,
     };
   } else {
-    const b64Key = new Buffer(key, 'binary').toString('base64');
+    const b64Key = Buffer.from(key, 'binary').toString('base64');
     const b64UrlKey = b64Key
       .replace(/[+]/g, '-')
       .replace(/\//g, '_')
@@ -279,61 +286,76 @@ export function exportKey(wrappingKey, key) {
 }
 
 export function importPrivateKey(key, privateKeyObject) {
-  try {
-    const wrappedPrivateKey = hexStringToAscii(privateKeyObject.privateKey);
-    const iv = hexStringToAscii(privateKeyObject.iv);
+  const wrappedPrivateKey = hexStringToAscii(privateKeyObject.privateKey);
+  const iv = hexStringToAscii(privateKeyObject.iv);
 
-    const decipher = forge.cipher.createDecipher('AES-CBC', key);
-    decipher.start({ iv });
-    decipher.update(forge.util.createBuffer(wrappedPrivateKey));
-    decipher.finish();
-    const jwkPrivateKeyString = decipher.output.getBytes();
+  const decipher = forge.cipher.createDecipher('AES-CBC', key);
+  decipher.start({ iv });
+  decipher.update(forge.util.createBuffer(wrappedPrivateKey));
+  decipher.finish();
+  const jwkPrivateKeyString = decipher.output.getBytes();
 
-    const jwkPrivateKey = JSON.parse(jwkPrivateKeyString);
+  const jwkPrivateKey = JSON.parse(jwkPrivateKeyString);
 
-    const n = new Buffer(jwkPrivateKey.n, 'base64');
-    const e = new Buffer(jwkPrivateKey.e, 'base64');
-    const d = new Buffer(jwkPrivateKey.d, 'base64');
-    const p = new Buffer(jwkPrivateKey.p, 'base64');
-    const q = new Buffer(jwkPrivateKey.q, 'base64');
-    const dP = new Buffer(jwkPrivateKey.dp, 'base64');
-    const dQ = new Buffer(jwkPrivateKey.dq, 'base64');
-    const qInv = new Buffer(jwkPrivateKey.qi, 'base64');
+  const n = Buffer.from(jwkPrivateKey.n, 'base64');
+  const e = Buffer.from(jwkPrivateKey.e, 'base64');
+  const d = Buffer.from(jwkPrivateKey.d, 'base64');
+  const p = Buffer.from(jwkPrivateKey.p, 'base64');
+  const q = Buffer.from(jwkPrivateKey.q, 'base64');
+  const dP = Buffer.from(jwkPrivateKey.dp, 'base64');
+  const dQ = Buffer.from(jwkPrivateKey.dq, 'base64');
+  const qInv = Buffer.from(jwkPrivateKey.qi, 'base64');
 
-    const privateKey = forge.pki.setRsaPrivateKey(
-      new forge.jsbn.BigInteger(n.toString('hex'), 16),
-      new forge.jsbn.BigInteger(e.toString('hex'), 16),
-      new forge.jsbn.BigInteger(d.toString('hex'), 16),
-      new forge.jsbn.BigInteger(p.toString('hex'), 16),
-      new forge.jsbn.BigInteger(q.toString('hex'), 16),
-      new forge.jsbn.BigInteger(dP.toString('hex'), 16),
-      new forge.jsbn.BigInteger(dQ.toString('hex'), 16),
-      new forge.jsbn.BigInteger(qInv.toString('hex'), 16)
-    );
-    return Promise.resolve(privateKey);
-  } catch (e) {
-    return Promise.reject('Invalid Password');
-  }
+  const privateKey = forge.pki.setRsaPrivateKey(
+    new forge.jsbn.BigInteger(n.toString('hex'), 16),
+    new forge.jsbn.BigInteger(e.toString('hex'), 16),
+    new forge.jsbn.BigInteger(d.toString('hex'), 16),
+    new forge.jsbn.BigInteger(p.toString('hex'), 16),
+    new forge.jsbn.BigInteger(q.toString('hex'), 16),
+    new forge.jsbn.BigInteger(dP.toString('hex'), 16),
+    new forge.jsbn.BigInteger(dQ.toString('hex'), 16),
+    new forge.jsbn.BigInteger(qInv.toString('hex'), 16)
+  );
+  return Promise.resolve(privateKey);
 }
 
 export function importKey(key, keyObject) {
-  try {
-    const wrappedKey = hexStringToUint8Array(keyObject.key);
-    const iv = hexStringToAscii(keyObject.iv);
+  const wrappedKey = hexStringToUint8Array(keyObject.key);
+  const iv = hexStringToAscii(keyObject.iv);
 
-    const decipher = forge.cipher.createDecipher('AES-CBC', key);
-    decipher.start({ iv });
-    decipher.update(forge.util.createBuffer(wrappedKey));
-    decipher.finish();
+  const decipher = forge.cipher.createDecipher('AES-CBC', key);
+  decipher.start({ iv });
+  decipher.update(forge.util.createBuffer(wrappedKey));
+  decipher.finish();
 
-    const jwkKeyString = decipher.output.getBytes();
+  const jwkKeyString = decipher.output.getBytes();
 
-    const jwkKey = JSON.parse(jwkKeyString);
+  const jwkKey = JSON.parse(jwkKeyString);
 
-    const importedKey = new Buffer(jwkKey.k, 'base64');
+  const importedKey = Buffer.from(jwkKey.k, 'base64');
 
-    return Promise.resolve(importedKey.toString('binary'));
-  } catch (e) {
-    return Promise.reject('Invalid Password');
-  }
+  return Promise.resolve(importedKey.toString('binary'));
 }
+
+const SecretinNodeAdapter = {
+  importKey,
+  importPrivateKey,
+  exportKey,
+  derivePassword,
+  importPublicKey,
+  convertOAEPToPSS,
+  exportClearKey,
+  unwrapRSAOAEP,
+  verify,
+  sign,
+  wrapRSAOAEP,
+  decryptRSAOAEP,
+  encryptRSAOAEP,
+  decryptAESGCM256,
+  encryptAESGCM256,
+  generateWrappingKey,
+  genRSAOAEP,
+  getSHA256,
+};
+
+export default SecretinNodeAdapter;

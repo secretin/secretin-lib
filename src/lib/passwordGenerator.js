@@ -1,5 +1,3 @@
-import { escapeRegExp, generateRandomNumber } from './utils';
-
 const symbols = '!@#$%^&*()+_=}{[]|:;"?.><,`~';
 const vowels = 'aeiouy';
 const consonants = 'bcdfghjklmnpqrstvwxz';
@@ -7,10 +5,20 @@ const numbers = '0123456789';
 
 const similarChars = '[ilLI|`oO0';
 
-export const hasNumber = str => str.match(/\d+/g) != null;
-export const hasMixedCase = str =>
+export function generateRandomNumber(max) {
+  const randomValues = new Uint8Array(1);
+  crypto.getRandomValues(randomValues);
+  return randomValues[0] % max;
+}
+
+export function escapeRegExp(s) {
+  return s.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+}
+
+export const hasNumber = (str) => str.match(/\d+/g) != null;
+export const hasMixedCase = (str) =>
   str.toUpperCase() !== str && str.toLowerCase() !== str;
-export const hasSymbol = str => {
+export const hasSymbol = (str) => {
   const regexString = `[${escapeRegExp(symbols)}]`;
   const symbolRegex = new RegExp(regexString);
   return str.match(symbolRegex) != null;
@@ -21,7 +29,7 @@ export const checkStrictRules = (str, rules) =>
   rules.mixedCase === hasMixedCase(str) &&
   rules.symbols === hasSymbol(str);
 
-export const buildCharset = options => {
+export const buildCharset = (options) => {
   const charset = [];
 
   const letters = vowels + consonants;
@@ -39,13 +47,13 @@ export const buildCharset = options => {
   }
 
   if (options.contentRules.similarChars === false) {
-    charset.filter(character => similarChars.indexOf(character) >= 0);
+    charset.filter((character) => similarChars.indexOf(character) >= 0);
   }
 
   return charset;
 };
 
-export const getRandomPassword = options => {
+export const getRandomPassword = (options) => {
   let password = '';
 
   if (options.readable) {
@@ -69,7 +77,7 @@ export const getRandomPassword = options => {
   return password;
 };
 
-export const generatePassword = customOptions => {
+export const generatePassword = (customOptions) => {
   const defaults = {
     length: 20,
     readable: false,
@@ -82,8 +90,8 @@ export const generatePassword = customOptions => {
     },
   };
 
-  const options = Object.assign({}, defaults, customOptions);
-  const contentRules = options.contentRules;
+  const options = { ...defaults, ...customOptions };
+  const { contentRules } = options;
 
   const password = getRandomPassword(options);
 
@@ -104,6 +112,8 @@ const PasswordGenerator = {
   buildCharset,
   getRandomPassword,
   generatePassword,
+  generateRandomNumber,
+  escapeRegExp,
 };
 
 export default PasswordGenerator;
