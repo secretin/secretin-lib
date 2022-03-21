@@ -1393,7 +1393,7 @@
           return this.decryptSecret(hashedTitle, encryptedMetadata);
         })
         .then((rMetadata) => {
-          metadata = rMetadata;
+          metadata = { ...rMetadata, title: decodeURIComponent(rMetadata.title) };
           if (typeof encryptedHistory.iv === 'undefined') {
             return Promise.resolve({});
           }
@@ -1464,7 +1464,10 @@
           result.secret = secretObject.secret;
           result.iv = secretObject.iv;
           result.key = secretObject.key;
-          return this.cryptoAdapter.encryptAESGCM256(metadatas, secretObject.key);
+          return this.cryptoAdapter.encryptAESGCM256(
+            { ...metadatas, title: encodeURIComponent(metadatas.title) },
+            secretObject.key
+          );
         })
         .then((secretObject) => {
           result.metadatas = secretObject.secret;
@@ -1517,7 +1520,10 @@
                 (metadata) => {
                   progressStatus.step();
                   progress(progressStatus);
-                  metadatas[hashedTitle] = metadata;
+                  metadatas[hashedTitle] = {
+                    ...metadata,
+                    title: decodeURIComponent(metadata.title),
+                  };
                 }
               )
             ),
