@@ -1,7 +1,7 @@
 var Secretin = (function () {
   'use strict';
 
-  var version = "2.1.1";
+  var version = "2.2.1";
 
   /* eslint-disable max-classes-per-file */
   class Error {
