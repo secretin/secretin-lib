@@ -111,6 +111,7 @@
   function encryptAESGCM256(secret, key) {
     const result = {};
     let algorithm = {};
+    const data = asciiToUint8Array(JSON.stringify(secret));
     if (typeof key === 'undefined') {
       algorithm = {
         name: 'AES-GCM',
@@ -128,7 +129,7 @@
             iv,
             tagLength: 128,
           };
-          const data = asciiToUint8Array(JSON.stringify(secret));
+
           result.key = newKey;
           result.iv = bytesToHexString(iv);
           return crypto.subtle.encrypt(algorithm, newKey, data);
@@ -147,7 +148,6 @@
       iv,
       tagLength: 128,
     };
-    const data = asciiToUint8Array(JSON.stringify(secret));
     result.iv = bytesToHexString(iv);
     return crypto.subtle.encrypt(algorithm, key, data).then((encryptedSecret) => {
       result.secret = bytesToHexString(encryptedSecret);
@@ -162,9 +162,12 @@
       tagLength: 128,
     };
     const data = hexStringToUint8Array(secretObject.secret);
-    return crypto.subtle
-      .decrypt(algorithm, key, data)
-      .then((decryptedSecret) => JSON.parse(bytesToASCIIString(decryptedSecret)));
+    return crypto.subtle.decrypt(algorithm, key, data).then((decryptedSecret) => {
+      const jsonStr = bytesToASCIIString(decryptedSecret);
+      // eslint-disable-next-line no-control-regex
+      const breakingPattern = /[\x01-\x09\x0B-\x0C\x0E-\x1F]+/gi;
+      return JSON.parse(jsonStr.replace(breakingPattern, ''));
+    });
   }
 
   function encryptRSAOAEP(secret, publicKey) {

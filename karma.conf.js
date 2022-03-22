@@ -9,6 +9,7 @@ module.exports = function exports(config) {
     'test/fixtures/exportedDB.js',
     'test/helpers.js',
     'test/mock.js',
+    // 'test/naughtyStrings.js',
     'test/*.test.js',
   ];
 

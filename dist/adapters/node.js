@@ -164,7 +164,10 @@ var SecretinNodeAdapter = (function (exports, crypto, forge) {
     decipher.update(forge__default["default"].util.createBuffer(data));
     const pass = decipher.finish();
     if (pass) {
-      return Promise.resolve(JSON.parse(decipher.output.getBytes()));
+      const jsonStr = decipher.output.getBytes();
+      // eslint-disable-next-line no-control-regex
+      const breakingPattern = /[\x01-\x09\x0B-\x0C\x0E-\x1F]+/gi;
+      return Promise.resolve(JSON.parse(jsonStr.replace(breakingPattern, '')));
     }
     return Promise.reject(new AESGCMDecryptionError());
   }
