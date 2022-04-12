@@ -1,7 +1,7 @@
 var Secretin = (function () {
   'use strict';
 
-  var version = "2.3.1";
+  var version = "2.3.2";
 
   /* eslint-disable max-classes-per-file */
   class Error {
@@ -2985,11 +2985,10 @@ var Secretin = (function () {
     // eslint-disable-next-line class-methods-use-this
     getShortLoginActivationDate() {
       if (localStorageAvailable()) {
-        return Promise.resolve(
-          new Date(localStorage.getItem(`${SecretinPrefix}activatedAt`))
-        );
+        const dateStr = localStorage.getItem(`${SecretinPrefix}activatedAt`);
+        return dateStr ? new Date(dateStr) : null;
       }
-      return Promise.reject(new LocalStorageUnavailableError());
+      throw new LocalStorageUnavailableError();
     }
 
     // eslint-disable-next-line class-methods-use-this
