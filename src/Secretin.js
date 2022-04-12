@@ -1425,11 +1425,10 @@ class Secretin {
   // eslint-disable-next-line class-methods-use-this
   getShortLoginActivationDate() {
     if (localStorageAvailable()) {
-      return Promise.resolve(
-        new Date(localStorage.getItem(`${SecretinPrefix}activatedAt`))
-      );
+      const dateStr = localStorage.getItem(`${SecretinPrefix}activatedAt`);
+      return dateStr ? new Date(dateStr) : null;
     }
-    return Promise.reject(new LocalStorageUnavailableError());
+    throw new LocalStorageUnavailableError();
   }
 
   // eslint-disable-next-line class-methods-use-this
