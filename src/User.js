@@ -420,6 +420,10 @@ class User {
       .then((deviceId) => {
         toSend.deviceId = deviceId;
         localStorage.setItem(`${SecretinPrefix}deviceName`, deviceName);
+        localStorage.setItem(
+          `${SecretinPrefix}activatedAt`,
+          new Date().toISOString()
+        );
         return toSend;
       });
   }
