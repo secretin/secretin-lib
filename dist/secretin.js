@@ -1,7 +1,7 @@
 var Secretin = (function () {
   'use strict';
 
-  var version = "2.2.1";
+  var version = "2.3.1";
 
   /* eslint-disable max-classes-per-file */
   class Error {
@@ -1558,6 +1558,10 @@ var Secretin = (function () {
         .then((deviceId) => {
           toSend.deviceId = deviceId;
           localStorage.setItem(`${SecretinPrefix}deviceName`, deviceName);
+          localStorage.setItem(
+            `${SecretinPrefix}activatedAt`,
+            new Date().toISOString()
+          );
           return toSend;
         });
     }
@@ -2979,6 +2983,16 @@ var Secretin = (function () {
     }
 
     // eslint-disable-next-line class-methods-use-this
+    getShortLoginActivationDate() {
+      if (localStorageAvailable()) {
+        return Promise.resolve(
+          new Date(localStorage.getItem(`${SecretinPrefix}activatedAt`))
+        );
+      }
+      return Promise.reject(new LocalStorageUnavailableError());
+    }
+
+    // eslint-disable-next-line class-methods-use-this
     deactivateShortLogin() {
       if (localStorageAvailable()) {
         localStorage.removeItem(`${SecretinPrefix}username`);
@@ -2988,6 +3002,7 @@ var Secretin = (function () {
         localStorage.removeItem(`${SecretinPrefix}iv`);
         localStorage.removeItem(`${SecretinPrefix}shortpass`);
         localStorage.removeItem(`${SecretinPrefix}shortpassSignature`);
+        localStorage.removeItem(`${SecretinPrefix}activatedAt`);
         return Promise.resolve();
       }
       return Promise.reject(new LocalStorageUnavailableError());
