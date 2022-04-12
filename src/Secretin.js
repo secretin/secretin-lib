@@ -1423,6 +1423,16 @@ class Secretin {
   }
 
   // eslint-disable-next-line class-methods-use-this
+  getShortLoginActivationDate() {
+    if (localStorageAvailable()) {
+      return Promise.resolve(
+        new Date(localStorage.getItem(`${SecretinPrefix}activatedAt`))
+      );
+    }
+    return Promise.reject(new LocalStorageUnavailableError());
+  }
+
+  // eslint-disable-next-line class-methods-use-this
   deactivateShortLogin() {
     if (localStorageAvailable()) {
       localStorage.removeItem(`${SecretinPrefix}username`);
@@ -1432,6 +1442,7 @@ class Secretin {
       localStorage.removeItem(`${SecretinPrefix}iv`);
       localStorage.removeItem(`${SecretinPrefix}shortpass`);
       localStorage.removeItem(`${SecretinPrefix}shortpassSignature`);
+      localStorage.removeItem(`${SecretinPrefix}activatedAt`);
       return Promise.resolve();
     }
     return Promise.reject(new LocalStorageUnavailableError());
