@@ -1,4 +1,15 @@
 describe('Password generation', () => {
+  // We need actual random for these tests to avoid infinite recursion
+  // when we retry password generation until we match the rules
+  let mockedGetRandomValues;
+  before(() => {
+    mockedGetRandomValues = crypto.getRandomValues;
+    crypto.getRandomValues = crypto.__getRandomValues;
+  });
+  after(() => {
+    crypto.getRandomValues = mockedGetRandomValues;
+  });
+
   const pw = Secretin.Utils.PasswordGenerator;
 
   describe('hasNumber', () => {
@@ -208,28 +219,17 @@ describe('Password generation', () => {
 
     it('Should generate a password with the proper length', () => {
       const options = {
-        allowSimilarChars: true,
-        contentRules: {
-          numbers: true,
-          mixedCase: true,
-          symbols: true,
-        },
         length: 10,
       };
-      const password = pw.getRandomPassword(options);
+      const password = pw.generatePassword(options);
       password.length.should.equal(10);
     });
 
     it('Should generate a pronounceable password', () => {
       const options = {
         readable: true,
-        contentRules: {
-          numbers: true,
-          mixedCase: true,
-          symbols: false,
-        },
       };
-      const password = pw.getRandomPassword(options);
+      const password = pw.generatePassword(options);
       password.length.should.equal(20);
       // We consider it's pronounceable if there is an alternance of consonants and vowels
       const vowels = 'aeiouy';
@@ -238,7 +238,7 @@ describe('Password generation', () => {
       let lastCharType;
       [...password].forEach((char) => {
         const charType = getCharType(char);
-        expect(charType).not.toBe(lastCharType);
+        expect(charType).not.to.equal(lastCharType);
         lastCharType = charType;
       });
     });

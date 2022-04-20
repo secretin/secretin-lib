@@ -57,8 +57,7 @@ export const getRandomPassword = (options) => {
   let password = '';
 
   if (options.readable) {
-    let lastCharWasVocal = false; // TODO : rand
-
+    let lastCharWasVocal = Boolean(generateRandomNumber(1));
     for (let i = 0; i < options.length; i += 1) {
       const charset = lastCharWasVocal ? consonants : vowels;
       lastCharWasVocal = !lastCharWasVocal;
@@ -95,7 +94,7 @@ export const generatePassword = (customOptions) => {
 
   const password = getRandomPassword(options);
 
-  if (options.strictRules) {
+  if (options.strictRules && !options.readable) {
     return checkStrictRules(password, contentRules)
       ? password
       : generatePassword(customOptions);
