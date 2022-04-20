@@ -12,13 +12,14 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: '17.6.0'
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y libappindicator1 fonts-liberation xvfb
       - run: export CHROME_BIN=/usr/bin/google-chrome
       - run: export DISPLAY=:99.0
       - run: sh -e /etc/init.d/xvfb start
-      - run: sudo apt-get update
-      - run: sudo apt-get install -y libappindicator1 fonts-liberation
       - run: wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
       - run: sudo dpkg -i google-chrome*.deb
       - run: yarn
       - run: yarn add node-forge -P
+      - run: xvfb-run --auto-servernum yarn test
       
