@@ -30,24 +30,24 @@ export const checkStrictRules = (str, rules) =>
   rules.symbols === hasSymbol(str);
 
 export const buildCharset = (options) => {
-  let charset = [];
+  const charset = [];
 
   const letters = vowels + consonants;
 
-  charset.push(...[...letters]);
+  charset.push(...letters);
 
   if (options.contentRules.mixedCase) {
-    charset.push(...[...letters.toUpperCase()]);
+    charset.push(...letters.toUpperCase());
   }
   if (options.contentRules.numbers) {
-    charset.push(...[...numbers]);
+    charset.push(...numbers);
   }
   if (options.contentRules.symbols) {
-    charset.push(...[...symbols]);
+    charset.push(...symbols);
   }
 
   if (options.allowSimilarChars === false) {
-    charset = charset.filter((char) => !similarChars.includes(char));
+    return charset.filter((char) => !similarChars.includes(char));
   }
 
   return charset;
