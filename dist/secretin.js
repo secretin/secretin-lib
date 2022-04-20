@@ -400,7 +400,7 @@ var Secretin = (function () {
   const consonants = 'bcdfghjklmnpqrstvwxz';
   const numbers = '0123456789';
 
-  const similarChars = '[ilLI|`oO0';
+  const similarChars = '[]i;lLI|`\'"oO09g8B';
 
   function generateRandomNumber(max) {
     const randomValues = new Uint8Array(1);
@@ -431,20 +431,20 @@ var Secretin = (function () {
 
     const letters = vowels + consonants;
 
-    charset.push(...[...letters]);
+    charset.push(...letters);
 
     if (options.contentRules.mixedCase) {
-      charset.push(...[...letters.toUpperCase()]);
+      charset.push(...letters.toUpperCase());
     }
     if (options.contentRules.numbers) {
-      charset.push(...[...numbers]);
+      charset.push(...numbers);
     }
     if (options.contentRules.symbols) {
-      charset.push(...[...symbols]);
+      charset.push(...symbols);
     }
 
-    if (options.contentRules.similarChars === false) {
-      charset.filter((character) => similarChars.indexOf(character) >= 0);
+    if (options.allowSimilarChars === false) {
+      return charset.filter((char) => !similarChars.includes(char));
     }
 
     return charset;
@@ -454,8 +454,7 @@ var Secretin = (function () {
     let password = '';
 
     if (options.readable) {
-      let lastCharWasVocal = false; // TODO : rand
-
+      let lastCharWasVocal = Boolean(generateRandomNumber(1));
       for (let i = 0; i < options.length; i += 1) {
         const charset = lastCharWasVocal ? consonants : vowels;
         lastCharWasVocal = !lastCharWasVocal;
@@ -492,7 +491,7 @@ var Secretin = (function () {
 
     const password = getRandomPassword(options);
 
-    if (options.strictRules) {
+    if (options.strictRules && !options.readable) {
       return checkStrictRules(password, contentRules)
         ? password
         : generatePassword(customOptions);
