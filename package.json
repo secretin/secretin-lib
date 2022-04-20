@@ -1,6 +1,6 @@
 {
   "name": "secretin",
-  "version": "2.3.3",
+  "version": "2.3.4",
   "description": "Open source secret manager with groups managment based on webapi crypto https://developer.mozilla.org/en-US/docs/Web/API/Crypto",
   "main": "dist/secretin.umd.js",
   "scripts": {
@@ -17,7 +17,8 @@
     "adapter-node-test": "node_modules/mocha/bin/mocha adapters_test/node/input.test.js",
     "adapter-node-output": "node adapters_test/node/output.js",
     "adapter-browser-test": "./node_modules/karma/bin/karma start adapters_test/browser/karma.conf.js",
-    "adapter-browser-output": "google-chrome adapters_test/browser/output.html"
+    "adapter-browser-output": "google-chrome adapters_test/browser/output.html",
+    "deploy": "echo 'Bump version in package.json first then build then commit then yarn publish'"
   },
   "repository": {
     "type": "git",

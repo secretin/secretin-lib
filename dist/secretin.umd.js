@@ -4,7 +4,7 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Secretin = factory());
 })(this, (function () { 'use strict';
 
-  var version = "2.3.2";
+  var version = "2.3.4";
 
   /* eslint-disable max-classes-per-file */
   class Error {
