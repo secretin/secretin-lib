@@ -135,9 +135,7 @@ describe('Password generation', () => {
       };
       const expectedCharset = [...'abcdefghijklmnopqrstuvwxyz'];
       const actualCharset = pw.buildCharset(options);
-      for (const char of expectedCharset) {
-        (actualCharset.indexOf(char) >= 0).should.equal(true);
-      }
+      expect(actualCharset.sort()).to.deep.equal(expectedCharset.sort());
     });
 
     it('Should build mixedcase charset when mixedCase rule is set to true', () => {
@@ -153,9 +151,7 @@ describe('Password generation', () => {
         ...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
       ];
       const actualCharset = pw.buildCharset(options);
-      for (const char of expectedCharset) {
-        (actualCharset.indexOf(char) >= 0).should.equal(true);
-      }
+      expect(actualCharset.sort()).to.deep.equal(expectedCharset.sort());
     });
 
     // eslint-disable-next-line
@@ -173,9 +169,7 @@ describe('Password generation', () => {
         ...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()+_=}{[]|:;"?.><,`~',
       ];
       const actualCharset = pw.buildCharset(options);
-      for (const char of expectedCharset) {
-        (actualCharset.indexOf(char) >= 0).should.equal(true);
-      }
+      expect(actualCharset.sort()).to.deep.equal(expectedCharset.sort());
     });
 
     it('Should build mixedcase+symbols+numbers charset when all rules are set to true', () => {
@@ -192,9 +186,7 @@ describe('Password generation', () => {
         ...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()+_=}{[]|:;"?.><,`~0123456789',
       ];
       const actualCharset = pw.buildCharset(options);
-      for (const char of expectedCharset) {
-        (actualCharset.indexOf(char) >= 0).should.equal(true);
-      }
+      expect(actualCharset.sort()).to.deep.equal(expectedCharset.sort());
     });
 
     it('Should skip similar characters if allowSimilarChars option is set to false', () => {
@@ -211,9 +203,7 @@ describe('Password generation', () => {
         ...'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ!@#$%^&*()+_=}{:;"?.><,~123456789',
       ];
       const actualCharset = pw.buildCharset(options);
-      for (const char of expectedCharset) {
-        (actualCharset.indexOf(char) >= 0).should.equal(true);
-      }
+      expect(actualCharset.sort()).to.deep.equal(expectedCharset.sort());
     });
 
     it('Should generate a password with the proper length', () => {
@@ -228,6 +218,29 @@ describe('Password generation', () => {
       };
       const password = pw.getRandomPassword(options);
       password.length.should.equal(10);
+    });
+
+    it('Should generate a pronounceable password', () => {
+      const options = {
+        readable: true,
+        contentRules: {
+          numbers: true,
+          mixedCase: true,
+          symbols: false,
+        },
+      };
+      const password = pw.getRandomPassword(options);
+      password.length.should.equal(20);
+      // We consider it's pronounceable if there is an alternance of consonants and vowels
+      const vowels = 'aeiouy';
+      const getCharType = (char) =>
+        vowels.includes(char) ? 'vowel' : 'consonant';
+      let lastCharType;
+      [...password].forEach((char) => {
+        const charType = getCharType(char);
+        expect(charType).not.toBe(lastCharType);
+        lastCharType = charType;
+      });
     });
   });
 });
