@@ -200,7 +200,7 @@ describe('Password generation', () => {
       };
       // eslint-disable-next-line
       const expectedCharset = [
-        ...'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ!@#$%^&*()+_=}{:;"?.><,~123456789',
+        ...'abcdefhjkmnpqrstuvwxyzACDEFGHJKMNPQRSTUVWXYZ!@#$%^&*()+_=}{:?.><,~1234567',
       ];
       const actualCharset = pw.buildCharset(options);
       expect(actualCharset.sort()).to.deep.equal(expectedCharset.sort());

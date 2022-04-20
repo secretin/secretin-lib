@@ -3,7 +3,7 @@ const vowels = 'aeiouy';
 const consonants = 'bcdfghjklmnpqrstvwxz';
 const numbers = '0123456789';
 
-const similarChars = '[ilLI|`oO0';
+const similarChars = '[]i;lLI|`\'"oO09g8B';
 
 export function generateRandomNumber(max) {
   const randomValues = new Uint8Array(1);
@@ -30,7 +30,7 @@ export const checkStrictRules = (str, rules) =>
   rules.symbols === hasSymbol(str);
 
 export const buildCharset = (options) => {
-  const charset = [];
+  let charset = [];
 
   const letters = vowels + consonants;
 
@@ -46,8 +46,8 @@ export const buildCharset = (options) => {
     charset.push(...[...symbols]);
   }
 
-  if (options.contentRules.similarChars === false) {
-    charset.filter((character) => similarChars.indexOf(character) >= 0);
+  if (options.allowSimilarChars === false) {
+    charset = charset.filter((char) => !similarChars.includes(char));
   }
 
   return charset;
