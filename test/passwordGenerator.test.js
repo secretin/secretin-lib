@@ -225,22 +225,50 @@ describe('Password generation', () => {
       password.length.should.equal(10);
     });
 
+    const getCharType = (char) =>
+      'aeiouy'.includes(char) ? 'vowel' : 'consonant';
+
+    const expectValidChunks = (password) => {
+      password.split('-').forEach((chunk) => {
+        let lastCharType;
+        expect(chunk).to.have.lengthOf.at.most(5);
+        // We consider it's pronounceable if there is an alternance of consonants and vowels
+        [...chunk].forEach((char) => {
+          const charType = getCharType(char);
+          expect(charType).not.to.equal(lastCharType);
+          lastCharType = charType;
+        });
+      });
+    };
+
     it('Should generate a pronounceable password', () => {
       const options = {
         readable: true,
       };
       const password = pw.generatePassword(options);
       password.length.should.equal(20);
-      // We consider it's pronounceable if there is an alternance of consonants and vowels
-      const vowels = 'aeiouy';
-      const getCharType = (char) =>
-        vowels.includes(char) ? 'vowel' : 'consonant';
-      let lastCharType;
-      [...password].forEach((char) => {
-        const charType = getCharType(char);
-        expect(charType).not.to.equal(lastCharType);
-        lastCharType = charType;
+      expectValidChunks(password);
+    });
+
+    it('Should generate a pronounceable password of specific length', () => {
+      const pwLength5 = pw.generatePassword({
+        readable: true,
+        length: 5,
       });
+      pwLength5.length.should.equal(5);
+      expectValidChunks(pwLength5);
+      const pwLength6 = pw.generatePassword({
+        readable: true,
+        length: 6,
+      });
+      pwLength6.length.should.equal(6);
+      expectValidChunks(pwLength6);
+      const pwLength7 = pw.generatePassword({
+        readable: true,
+        length: 7,
+      });
+      pwLength7.length.should.equal(7);
+      expectValidChunks(pwLength7);
     });
   });
 });
