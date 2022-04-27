@@ -4,6 +4,7 @@ describe('Password generation', () => {
   let mockedGetRandomValues;
   before(() => {
     mockedGetRandomValues = crypto.getRandomValues;
+    // eslint-disable-next-line no-underscore-dangle
     crypto.getRandomValues = crypto.__getRandomValues;
   });
   after(() => {
@@ -231,6 +232,7 @@ describe('Password generation', () => {
     const expectValidChunks = (password) => {
       password.split('-').forEach((chunk) => {
         let lastCharType;
+        expect(chunk).to.have.lengthOf.above(0);
         expect(chunk).to.have.lengthOf.at.most(5);
         // We consider it's pronounceable if there is an alternance of consonants and vowels
         [...chunk].forEach((char) => {

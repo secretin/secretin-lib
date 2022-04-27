@@ -20,6 +20,7 @@ module.exports = {
     Secretin: true,
     __karma__: true,
     SecretinBrowserAdapter: true,
+    expect: true,
   },
   plugins: ['import', 'prettier', 'mocha', 'security'],
 };

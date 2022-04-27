@@ -20,6 +20,8 @@ export const hasMixedCase = (str) =>
   str.toUpperCase() !== str && str.toLowerCase() !== str;
 export const hasSymbol = (str) => {
   const regexString = `[${escapeRegExp(symbols)}]`;
+  // The regexp variable is not controllable from the outside
+  // eslint-disable-next-line security/detect-non-literal-regexp
   const symbolRegex = new RegExp(regexString);
   return str.match(symbolRegex) != null;
 };
