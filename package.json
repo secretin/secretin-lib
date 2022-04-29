@@ -18,7 +18,7 @@
     "adapter-node-output": "node adapters_test/node/output.js",
     "adapter-browser-test": "./node_modules/karma/bin/karma start adapters_test/browser/karma.conf.js",
     "adapter-browser-output": "google-chrome adapters_test/browser/output.html",
-    "deploy": "echo 'Bump version in package.json first then build then commit then yarn publish'"
+    "deploy": "echo 'Bump version in package.json first then build then add then yarn publish then commit'"
   },
   "repository": {
     "type": "git",
