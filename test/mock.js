@@ -41,9 +41,8 @@ crypto.subtle.generateKey = function generateKey(
     .then((test) => test);
 };
 
-// eslint-disable-next-line
-let expectedRandom = 1337;
+// eslint-disable-next-line no-underscore-dangle
 crypto.__getRandomValues = crypto.getRandomValues;
 crypto.getRandomValues = function getRandomValues(typedArray) {
-  typedArray.fill(expectedRandom);
+  typedArray.fill(1337);
 };

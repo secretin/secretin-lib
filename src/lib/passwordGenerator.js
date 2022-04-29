@@ -20,6 +20,8 @@ export const hasMixedCase = (str) =>
   str.toUpperCase() !== str && str.toLowerCase() !== str;
 export const hasSymbol = (str) => {
   const regexString = `[${escapeRegExp(symbols)}]`;
+  // The regexp variable is not controllable from the outside
+  // eslint-disable-next-line security/detect-non-literal-regexp
   const symbolRegex = new RegExp(regexString);
   return str.match(symbolRegex) != null;
 };
@@ -53,17 +55,32 @@ export const buildCharset = (options) => {
   return charset;
 };
 
+const filterCharset = (charset, excludedChars) =>
+  [...charset].filter((char) => !excludedChars.includes(char)).join('');
+
 export const getRandomPassword = (options) => {
   let password = '';
 
   if (options.readable) {
+    const pronounceableConsonants = filterCharset(consonants, 'qhc');
+    const pronounceableVowels = filterCharset(vowels, 'y');
+
     let lastCharWasVocal = Boolean(generateRandomNumber(1));
     for (let i = 0; i < options.length; i += 1) {
-      const charset = lastCharWasVocal ? consonants : vowels;
+      const charset = lastCharWasVocal
+        ? pronounceableConsonants
+        : pronounceableVowels;
       lastCharWasVocal = !lastCharWasVocal;
       const randomIndex = generateRandomNumber(charset.length);
       password += charset[randomIndex];
     }
+    // Perform splitting
+    const passwordChars = [...password];
+    const step = 5;
+    for (let i = step; i < password.length; i += step + 1) {
+      passwordChars[i === password.length - 1 ? i - 1 : i] = '-';
+    }
+    password = passwordChars.join('');
   } else {
     const charset = buildCharset(options);
 

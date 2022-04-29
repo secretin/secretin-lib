@@ -1,9 +1,4 @@
 describe('Utils', () => {
-  beforeEach(() => {
-    // eslint-disable-next-line
-    expectedRandom = 1337;
-  });
-
   describe('Randomness', () => {
     it('Utils.PasswordGenerator.generateRandomNumber is working', () => {
       Secretin.Utils.PasswordGenerator.generateRandomNumber(10).should.equal(7);
