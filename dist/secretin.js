@@ -1651,28 +1651,25 @@ var Secretin = (function () {
     }
 
     testOnline() {
-      setTimeout(() => {
-        this.oldApi
-          .isOnline()
-          .then(() => {
-            this.api = this.oldApi;
-            this.editableDB = true;
-            this.dispatchEvent('connectionChange', { connection: 'online' });
-            if (
-              typeof this.currentUser.username !== 'undefined' &&
-              typeof window.process !== 'undefined'
-            ) {
-              this.getDb().then(() => this.doCacheActions());
-            }
-            return Promise.resolve();
-          })
-          .catch((err) => {
-            if (err instanceof OfflineError) {
-              this.testOnline();
-            } else {
-              throw err;
-            }
-          });
+      setTimeout(async () => {
+        try {
+          await this.oldApi.isOnline();
+          this.api = this.oldApi;
+          this.editableDB = true;
+          this.dispatchEvent('connectionChange', { connection: 'online' });
+          if (
+            typeof this.currentUser.username !== 'undefined' &&
+            typeof window.process !== 'undefined'
+          ) {
+            this.getDb().then(() => this.doCacheActions());
+          }
+        } catch (err) {
+          if (err instanceof OfflineError) {
+            this.testOnline();
+          } else {
+            throw err;
+          }
+        }
       }, 10000);
     }
 
@@ -1724,346 +1721,294 @@ var Secretin = (function () {
       localStorage.setItem(cacheActionsKey, JSON.stringify(cacheActions));
     }
 
-    doCacheActions() {
+    async doCacheActions() {
       const cacheActionsKey = `${SecretinPrefix}cacheActions_${this.currentUser.username}`;
       const cacheActionsStr = localStorage.getItem(cacheActionsKey);
       const cacheActions = cacheActionsStr ? JSON.parse(cacheActionsStr) : [];
-      return cacheActions.reduce((promise, cacheAction) => {
-        if (cacheAction.action === 'addSecret') {
-          return promise.then(() =>
-            this.api
-              .addSecret(this.currentUser, cacheAction.args[0])
-              .then(() => {
-                this.currentUser.keys[cacheAction.args[0].hashedTitle] = {
-                  key: cacheAction.args[0].wrappedKey,
-                  rights: 2,
-                };
-                return this.cryptoAdapter.decryptRSAOAEP(
-                  cacheAction.args[1],
-                  this.currentUser.privateKey
-                );
-              })
-              .then((metadatas) => {
-                this.currentUser.metadatas[cacheAction.args[0].hashedTitle] =
-                  metadatas;
-                return this.popCacheAction();
-              })
-          );
-        }
-        if (cacheAction.action === 'editSecret') {
-          return promise.then(() => {
+      for (const cacheAction of cacheActions) {
+        switch (cacheAction.action) {
+          case 'addSecret': {
+            await this.api.addSecret(this.currentUser, cacheAction.args[0]);
+            this.currentUser.keys[cacheAction.args[0].hashedTitle] = {
+              key: cacheAction.args[0].wrappedKey,
+              rights: 2,
+            };
+            const metadatas = await this.cryptoAdapter.decryptRSAOAEP(
+              cacheAction.args[1],
+              this.currentUser.privateKey
+            );
+            this.currentUser.metadatas[cacheAction.args[0].hashedTitle] =
+              metadatas;
+            this.popCacheAction();
+            break;
+          }
+          case 'editSecret': {
             const secretId = this.getConflict(cacheAction.args[0]);
             const encryptedContent = cacheAction.args[1];
-            return this.cryptoAdapter
-              .decryptRSAOAEP(encryptedContent, this.currentUser.privateKey)
-              .then((content) => {
-                if (typeof this.currentUser.keys[secretId] === 'undefined') {
-                  return this.addSecret(
-                    `${content.title} (Conflict)`,
-                    content.secret
-                  ).then((conflictSecretId) =>
-                    this.setConflict(cacheAction.args[0], conflictSecretId)
-                  );
-                }
-                return this.editSecret(secretId, content.secret);
-              })
-              .then(() => this.popCacheAction());
-          });
-        }
-        if (cacheAction.action === 'renameSecret') {
-          return promise.then(() => {
-            const secretId = this.getConflict(cacheAction.args[0]);
-            const encryptedContent = cacheAction.args[1];
-            return this.cryptoAdapter
-              .decryptRSAOAEP(encryptedContent, this.currentUser.privateKey)
-              .then((content) => {
-                if (typeof this.currentUser.keys[secretId] === 'undefined') {
-                  return this.addSecret(
-                    `${content.title} (Conflict)`,
-                    content.secret
-                  ).then((conflictSecretId) =>
-                    this.setConflict(cacheAction.args[0], conflictSecretId)
-                  );
-                }
-                return this.renameSecret(secretId, content.title);
-              })
-              .then(() => this.popCacheAction());
-          });
-        }
-        return promise;
-      }, Promise.resolve());
-    }
+            const content = await this.cryptoAdapter.decryptRSAOAEP(
+              encryptedContent,
+              this.currentUser.privateKey
+            );
 
-    newUser(username, password) {
-      if (!this.editableDB) {
-        return Promise.reject(new OfflineError());
+            if (typeof this.currentUser.keys[secretId] === 'undefined') {
+              const conflictSecretId = await this.addSecret(
+                `${content.title} (Conflict)`,
+                content.secret
+              );
+              this.setConflict(cacheAction.args[0], conflictSecretId);
+            }
+            await this.editSecret(secretId, content.secret);
+
+            this.popCacheAction();
+            break;
+          }
+          case 'renameSecret': {
+            const secretId = this.getConflict(cacheAction.args[0]);
+            const encryptedContent = cacheAction.args[1];
+            const content = await this.cryptoAdapter.decryptRSAOAEP(
+              encryptedContent,
+              this.currentUser.privateKey
+            );
+
+            if (typeof this.currentUser.keys[secretId] === 'undefined') {
+              const conflictSecretId = await this.addSecret(
+                `${content.title} (Conflict)`,
+                content.secret
+              );
+              this.setConflict(cacheAction.args[0], conflictSecretId);
+            }
+            await this.renameSecret(secretId, content.title);
+            this.popCacheAction();
+            break;
+          }
+        }
       }
-      let privateKey;
-      let pass;
-      let options;
-      this.currentUser = new User(username, this.cryptoAdapter);
-      return this.api
-        .userExists(username)
-        .then(
-          (exists) =>
-            new Promise((resolve, reject) => {
-              if (!exists) {
-                resolve(this.currentUser.generateMasterKey());
-              } else {
-                reject(new UsernameAlreadyExistsError());
-              }
-            })
-        )
-        .then(() => this.currentUser.exportPrivateKey(password))
-        .then((objectPrivateKey) => {
-          privateKey = objectPrivateKey.privateKey;
-          pass = objectPrivateKey.pass;
-          pass.totp = false;
-          pass.shortpass = false;
-
-          return this.currentUser.exportOptions();
-        })
-        .then((rOptions) => {
-          options = rOptions;
-          return this.currentUser.exportPublicKey();
-        })
-        .then((publicKey) =>
-          this.api.addUser(
-            this.currentUser.username,
-            privateKey,
-            publicKey,
-            pass,
-            options
-          )
-        )
-        .then(() => {
-          if (typeof window.process !== 'undefined') {
-            // Electron
-            return this.getDb();
-          }
-          return Promise.resolve();
-        })
-        .then(() => this.currentUser)
-        .catch((err) => {
-          if (err instanceof OfflineError) {
-            this.offlineDB();
-          }
-          const wrapper = new WrappingError(err);
-          throw wrapper.error;
-        });
     }
 
-    loginUser(
+    async newUser(username, password) {
+      try {
+        if (!this.editableDB) {
+          throw new OfflineError();
+        }
+        this.currentUser = new User(username, this.cryptoAdapter);
+        const exists = await this.api.userExists(username);
+        if (exists) {
+          throw new UsernameAlreadyExistsError();
+        }
+        await this.currentUser.generateMasterKey();
+        const objectPrivateKey = await this.currentUser.exportPrivateKey(
+          password
+        );
+
+        const privateKey = objectPrivateKey.privateKey;
+        const pass = objectPrivateKey.pass;
+        pass.totp = false;
+        pass.shortpass = false;
+
+        const options = await this.currentUser.exportOptions();
+
+        const publicKey = await this.currentUser.exportPublicKey();
+
+        await this.api.addUser(
+          this.currentUser.username,
+          privateKey,
+          publicKey,
+          pass,
+          options
+        );
+
+        if (typeof window.process !== 'undefined') {
+          // Electron
+          await this.getDb();
+        }
+        return this.currentUser;
+      } catch (err) {
+        if (err instanceof OfflineError) {
+          this.offlineDB();
+        }
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      }
+    }
+
+    async loginUser(
       username,
       password,
       otp,
       progress = defaultProgress,
       forceSync = true
     ) {
-      let key;
-      let hash;
-      let remoteUser;
-      let parameters;
-      progress(new GetDerivationStatus());
-      return this.api
-        .getDerivationParameters(username)
-        .then((rParameters) => {
-          parameters = rParameters;
-          if (parameters.totp && (typeof otp === 'undefined' || otp === '')) {
-            throw new NeedTOTPTokenError();
-          }
-          progress(new PasswordDerivationStatus());
-          return this.cryptoAdapter.derivePassword(password, parameters);
-        })
-        .then((dKey) => {
-          hash = dKey.hash;
-          key = dKey.key;
-          progress(new GetUserStatus());
-          return this.api.getUser(username, hash, otp);
-        })
-        .then((user) => {
-          this.currentUser = new User(username, this.cryptoAdapter);
-          this.currentUser.totp = parameters.totp;
-          this.currentUser.hash = hash;
-          remoteUser = user;
-          progress(new DecryptPrivateKeyStatus());
-          return this.currentUser.importPrivateKey(key, remoteUser.privateKey);
-        })
-        .then(() => {
-          progress(new ImportPublicKeyStatus());
-          return this.currentUser.importPublicKey(remoteUser.publicKey);
-        })
-        .then(() => {
-          const shortpass = localStorage.getItem(`${SecretinPrefix}shortpass`);
-          const signature = localStorage.getItem(
-            `${SecretinPrefix}shortpassSignature`
-          );
-          if (shortpass && signature) {
-            return this.currentUser.importPrivateData(shortpass, signature);
-          }
-          return Promise.resolve(null);
-        })
-        .then((shortpass) => {
-          if (shortpass && this.editableDB) {
-            const deviceName = localStorage.getItem(
-              `${SecretinPrefix}deviceName`
-            );
-            return this.activateShortLogin(shortpass, deviceName);
-          }
-          return Promise.resolve();
-        })
-        .then(() => this.refreshUser(forceSync, progress))
-        .then(() => {
-          if (typeof window.process !== 'undefined') {
-            // Electron
-            return this.getDb().then(() => {
-              if (this.editableDB) {
-                return this.doCacheActions();
-              }
-              return Promise.resolve();
-            });
-          }
-          return Promise.resolve();
-        })
-        .then(() => this.currentUser)
-        .catch((err) => {
-          if (err instanceof OfflineError) {
-            this.offlineDB(username);
-            return this.loginUser(username, password, otp, progress);
-          }
-          const wrapper = new WrappingError(err);
-          throw wrapper.error;
-        });
-    }
-
-    updateMetadataCache(newMetadata, progress = defaultProgress) {
-      return this.currentUser
-        .decryptAllMetadatas(newMetadata, progress)
-        .then((metadata) => {
-          this.currentUser.metadatas = metadata;
-          progress(new EndDecryptMetadataStatus());
-          return this.currentUser.exportBigPrivateData(metadata);
-        })
-        .then((objectMetadataCache) =>
-          this.api.editUser(this.currentUser, objectMetadataCache)
+      try {
+        progress(new GetDerivationStatus());
+        const parameters = await this.api.getDerivationParameters(username);
+        if (parameters.totp && (typeof otp === 'undefined' || otp === '')) {
+          throw new NeedTOTPTokenError();
+        }
+        progress(new PasswordDerivationStatus());
+        const { hash, key } = await this.cryptoAdapter.derivePassword(
+          password,
+          parameters
         );
-    }
+        progress(new GetUserStatus());
+        const remoteUser = await this.api.getUser(username, hash, otp);
 
-    refreshUser(rForceUpdate = false, progress = defaultProgress) {
-      let forceUpdate = rForceUpdate;
-      let remoteUser;
-      return this.api
-        .getUserWithSignature(this.currentUser)
-        .then((user) => {
-          remoteUser = user;
-          this.currentUser.keys = remoteUser.keys;
-          if (typeof window.process !== 'undefined') {
-            // Electron
-            return this.getDb();
-          }
-          return Promise.resolve();
-        })
-        .then(() => {
-          progress(new DecryptUserOptionsStatus());
-          return this.currentUser.importOptions(remoteUser.options);
-        })
-        .then(() => {
-          if (typeof remoteUser.metadataCache !== 'undefined') {
-            progress(new DecryptMetadataCacheStatus());
-            return this.currentUser.importBigPrivateData(
-              remoteUser.metadataCache
-            );
-          }
-          forceUpdate = true;
-          return Promise.resolve({});
-        })
-        .then((metadataCache) => {
-          this.currentUser.metadatas = metadataCache;
-          if (forceUpdate) {
-            return this.updateMetadataCache(remoteUser.metadatas, progress);
-          }
-          this.updateMetadataCache(remoteUser.metadatas, progress);
-          return Promise.resolve();
-        })
-        .catch((err) => {
-          if (err instanceof OfflineError) {
-            this.offlineDB();
-            return this.refreshUser(rForceUpdate, progress);
-          }
-          const wrapper = new WrappingError(err);
-          throw wrapper.error;
-        });
-    }
+        this.currentUser = new User(username, this.cryptoAdapter);
+        this.currentUser.totp = parameters.totp;
+        this.currentUser.hash = hash;
+        progress(new DecryptPrivateKeyStatus());
+        await this.currentUser.importPrivateKey(key, remoteUser.privateKey);
 
-    addFolder(title, inFolderId) {
-      return this.addSecret(title, {}, inFolderId, 'folder');
-    }
+        progress(new ImportPublicKeyStatus());
+        await this.currentUser.importPublicKey(remoteUser.publicKey);
 
-    addSecret(clearTitle, content, inFolderId, type = 'secret') {
-      let hashedTitle;
-      const now = new Date();
-      const metadatas = {
-        lastModifiedAt: now.toISOString(),
-        lastModifiedBy: this.currentUser.username,
-        users: {},
-        title: clearTitle,
-        type,
-      };
+        const shortpass = localStorage.getItem(`${SecretinPrefix}shortpass`);
+        const signature = localStorage.getItem(
+          `${SecretinPrefix}shortpassSignature`
+        );
+        if (shortpass && signature) {
+          await this.currentUser.importPrivateData(shortpass, signature);
+        }
 
-      metadatas.users[this.currentUser.username] = {
-        username: this.currentUser.username,
-        rights: 2,
-        folders: {},
-      };
-      if (typeof inFolderId === 'undefined') {
-        metadatas.users[this.currentUser.username].folders.ROOT = true;
+        if (shortpass && this.editableDB) {
+          const deviceName = localStorage.getItem(`${SecretinPrefix}deviceName`);
+          await this.activateShortLogin(shortpass, deviceName);
+        }
+        await this.refreshUser(forceSync, progress);
+
+        if (typeof window.process !== 'undefined') {
+          // Electron
+          await this.getDb();
+          if (this.editableDB) {
+            await this.doCacheActions();
+          }
+        }
+        return this.currentUser;
+      } catch (err) {
+        if (err instanceof OfflineError) {
+          this.offlineDB(username);
+          return this.loginUser(username, password, otp, progress);
+        }
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
       }
-      let secretObject;
-      return this.currentUser
-        .createSecret(metadatas, content)
-        .then((rSecretObject) => {
-          secretObject = rSecretObject;
-          hashedTitle = secretObject.hashedTitle;
-          this.currentUser.keys[secretObject.hashedTitle] = {
-            key: secretObject.wrappedKey,
-            rights: metadatas.users[this.currentUser.username].rights,
-          };
-          if (!this.editableDB) {
-            return this.cryptoAdapter
-              .encryptRSAOAEP(metadatas, this.currentUser.publicKey)
-              .then((encryptedMetadatas) => {
-                this.pushCacheAction('addSecret', [
-                  secretObject,
-                  encryptedMetadatas,
-                ]);
-              });
-          }
-          return Promise.resolve();
-        })
-        .then(() => this.api.addSecret(this.currentUser, secretObject))
-        .then(() => {
-          this.currentUser.metadatas[hashedTitle] = metadatas;
-          if (typeof inFolderId !== 'undefined') {
-            return this.addSecretToFolder(hashedTitle, inFolderId);
-          }
-          return Promise.resolve();
-        })
-        .then(() => {
-          if (typeof window.process !== 'undefined') {
-            // Electron
-            return this.getDb();
-          }
-          return Promise.resolve();
-        })
-        .then(() => hashedTitle)
-        .catch((err) => {
-          if (err instanceof OfflineError) {
-            this.offlineDB();
-            return this.addSecret(clearTitle, content, inFolderId, type);
-          }
-          const wrapper = new WrappingError(err);
-          throw wrapper.error;
-        });
+    }
+
+    async updateMetadataCache(newMetadata, progress = defaultProgress) {
+      const metadata = await this.currentUser.decryptAllMetadatas(
+        newMetadata,
+        progress
+      );
+
+      this.currentUser.metadatas = metadata;
+      progress(new EndDecryptMetadataStatus());
+      const objectMetadataCache = await this.currentUser.exportBigPrivateData(
+        metadata
+      );
+
+      return await this.api.editUser(this.currentUser, objectMetadataCache);
+    }
+
+    async refreshUser(rForceUpdate = false, progress = defaultProgress) {
+      let forceUpdate = rForceUpdate;
+      try {
+        const remoteUser = await this.api.getUserWithSignature(this.currentUser);
+
+        this.currentUser.keys = remoteUser.keys;
+        if (typeof window.process !== 'undefined') {
+          // Electron
+          await this.getDb();
+        }
+
+        progress(new DecryptUserOptionsStatus());
+        await this.currentUser.importOptions(remoteUser.options);
+        if (typeof remoteUser.metadataCache !== 'undefined') {
+          progress(new DecryptMetadataCacheStatus());
+          this.currentUser.metadatas =
+            await this.currentUser.importBigPrivateData(remoteUser.metadataCache);
+        } else {
+          forceUpdate = true;
+        }
+
+        if (forceUpdate) {
+          await this.updateMetadataCache(remoteUser.metadatas, progress);
+        } else {
+          this.updateMetadataCache(remoteUser.metadatas, progress);
+        }
+        return true;
+      } catch (err) {
+        if (err instanceof OfflineError) {
+          this.offlineDB();
+          return await this.refreshUser(rForceUpdate, progress);
+        }
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      }
+    }
+
+    async addFolder(title, inFolderId) {
+      return await this.addSecret(title, {}, inFolderId, 'folder');
+    }
+
+    async addSecret(clearTitle, content, inFolderId, type = 'secret') {
+      try {
+        const now = new Date();
+        const metadatas = {
+          lastModifiedAt: now.toISOString(),
+          lastModifiedBy: this.currentUser.username,
+          users: {},
+          title: clearTitle,
+          type,
+        };
+
+        metadatas.users[this.currentUser.username] = {
+          username: this.currentUser.username,
+          rights: 2,
+          folders: {},
+        };
+        if (typeof inFolderId === 'undefined') {
+          metadatas.users[this.currentUser.username].folders.ROOT = true;
+        }
+
+        const secretObject = await this.currentUser.createSecret(
+          metadatas,
+          content
+        );
+
+        const hashedTitle = secretObject.hashedTitle;
+        this.currentUser.keys[secretObject.hashedTitle] = {
+          key: secretObject.wrappedKey,
+          rights: metadatas.users[this.currentUser.username].rights,
+        };
+        if (!this.editableDB) {
+          const encryptedMetadatas = await this.cryptoAdapter.encryptRSAOAEP(
+            metadatas,
+            this.currentUser.publicKey
+          );
+
+          this.pushCacheAction('addSecret', [secretObject, encryptedMetadatas]);
+        }
+
+        await this.api.addSecret(this.currentUser, secretObject);
+
+        this.currentUser.metadatas[hashedTitle] = metadatas;
+        if (typeof inFolderId !== 'undefined') {
+          await this.addSecretToFolder(hashedTitle, inFolderId);
+        }
+
+        if (typeof window.process !== 'undefined') {
+          // Electron
+          await this.getDb();
+        }
+
+        return hashedTitle;
+      } catch (err) {
+        if (err instanceof OfflineError) {
+          this.offlineDB();
+          return await this.addSecret(clearTitle, content, inFolderId, type);
+        }
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      }
     }
 
     changePassword(password) {

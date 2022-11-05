@@ -12,6 +12,7 @@ module.exports = {
   rules: {
     'security/detect-object-injection': 'off',
     'no-return-await': 'off',
+    'no-await-in-loop': 'off',
     'no-restricted-syntax': 'off',
     'prefer-destructuring': 'off',
     'prettier/prettier': 'error',
