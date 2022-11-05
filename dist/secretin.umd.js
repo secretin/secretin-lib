@@ -2014,282 +2014,257 @@
       }
     }
 
-    changePassword(password) {
-      if (!this.editableDB) {
-        return Promise.reject(new OfflineError());
+    async changePassword(password) {
+      try {
+        if (!this.editableDB) {
+          throw new OfflineError();
+        }
+        const objectPrivateKey = await this.currentUser.exportPrivateKey(
+          password
+        );
+
+        await this.api.editUser(this.currentUser, objectPrivateKey);
+
+        if (typeof window.process !== 'undefined') {
+          // Electron
+          await this.getDb();
+        }
+      } catch (err) {
+        if (err instanceof OfflineError) {
+          this.offlineDB();
+        }
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
       }
-      return this.currentUser
-        .exportPrivateKey(password)
-        .then((objectPrivateKey) =>
-          this.api.editUser(this.currentUser, objectPrivateKey)
-        )
-        .then(() => {
-          if (typeof window.process !== 'undefined') {
-            // Electron
-            return this.getDb();
-          }
-          return Promise.resolve();
-        })
-        .catch((err) => {
-          if (err instanceof OfflineError) {
-            this.offlineDB();
-          }
-          const wrapper = new WrappingError(err);
-          throw wrapper.error;
-        });
     }
 
-    editSecret(hashedTitle, content) {
-      let secretObject;
-      return this.api
-        .getHistory(this.currentUser, hashedTitle)
-        .then((history) =>
-          this.currentUser.editSecret(hashedTitle, content, history)
-        )
-        .then((rSecretObject) => {
-          secretObject = rSecretObject;
-          if (!this.editableDB) {
-            if (
-              Object.keys(this.currentUser.metadatas[hashedTitle].users).length >
-              1
-            ) {
-              return Promise.reject(new OfflineError());
-            }
-            const args = [hashedTitle];
-            const toEncrypt = {
-              secret: content,
-              title: this.currentUser.metadatas[hashedTitle].title,
-            };
-            return this.cryptoAdapter
-              .encryptRSAOAEP(toEncrypt, this.currentUser.publicKey)
-              .then((encryptedContent) => {
-                args.push(encryptedContent);
-                return this.pushCacheAction('editSecret', args);
-              });
+    async editSecret(hashedTitle, content) {
+      try {
+        const history = await this.api.getHistory(this.currentUser, hashedTitle);
+
+        const secretObject = await this.currentUser.editSecret(
+          hashedTitle,
+          content,
+          history
+        );
+
+        if (!this.editableDB) {
+          if (
+            Object.keys(this.currentUser.metadatas[hashedTitle].users).length > 1
+          ) {
+            throw new OfflineError();
           }
-          return Promise.resolve();
-        })
-        .then(() =>
-          this.api.editSecret(this.currentUser, secretObject, hashedTitle)
-        )
-        .then(() => {
-          if (typeof window.process !== 'undefined') {
-            // Electron
-            return this.getDb();
-          }
-          return Promise.resolve();
-        })
-        .catch((err) => {
-          if (err instanceof OfflineError) {
-            this.offlineDB();
-            return this.editSecret(hashedTitle, content);
-          }
-          const wrapper = new WrappingError(err);
-          throw wrapper.error;
-        });
+          const args = [hashedTitle];
+          const toEncrypt = {
+            secret: content,
+            title: this.currentUser.metadatas[hashedTitle].title,
+          };
+          const encryptedContent = await this.cryptoAdapter.encryptRSAOAEP(
+            toEncrypt,
+            this.currentUser.publicKey
+          );
+
+          args.push(encryptedContent);
+          return this.pushCacheAction('editSecret', args);
+        }
+
+        await this.api.editSecret(this.currentUser, secretObject, hashedTitle);
+
+        if (typeof window.process !== 'undefined') {
+          // Electron
+          await this.getDb();
+        }
+        return true;
+      } catch (err) {
+        if (err instanceof OfflineError) {
+          this.offlineDB();
+          return await this.editSecret(hashedTitle, content);
+        }
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      }
     }
 
-    editOption(name, value) {
+    async editOption(name, value) {
       if (!this.editableDB) {
-        return Promise.reject(new OfflineError());
+        throw new OfflineError();
       }
       this.currentUser.options[name] = value;
       return this.resetOptions();
     }
 
-    editOptions(options) {
+    async editOptions(options) {
       if (!this.editableDB) {
         return Promise.reject(new OfflineError());
       }
       this.currentUser.options = options;
-      return this.resetOptions();
+      return await this.resetOptions();
     }
 
-    resetOptions() {
-      if (!this.editableDB) {
-        return Promise.reject(new OfflineError());
+    async resetOptions() {
+      try {
+        if (!this.editableDB) {
+          throw new OfflineError();
+        }
+        const encryptedOptions = await this.currentUser.exportOptions();
+
+        await this.api.editUser(this.currentUser, encryptedOptions);
+
+        if (typeof window.process !== 'undefined') {
+          // Electron
+          await this.getDb();
+        }
+      } catch (err) {
+        if (err instanceof OfflineError) {
+          this.offlineDB();
+        }
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
       }
-      return this.currentUser
-        .exportOptions()
-        .then((encryptedOptions) =>
-          this.api.editUser(this.currentUser, encryptedOptions)
-        )
-        .then(() => {
-          if (typeof window.process !== 'undefined') {
-            // Electron
-            return this.getDb();
-          }
-          return Promise.resolve();
-        })
-        .catch((err) => {
-          if (err instanceof OfflineError) {
-            this.offlineDB();
-          }
-          const wrapper = new WrappingError(err);
-          return wrapper.error;
-        });
     }
 
-    addSecretToFolder(hashedSecretTitle, hashedFolder) {
-      let sharedSecretObjectsPromises = [];
-      const folderMetadatas = this.currentUser.metadatas[hashedFolder];
-      const secretMetadatas = this.currentUser.metadatas[hashedSecretTitle];
-      Object.keys(folderMetadatas.users).forEach((friendName) => {
-        sharedSecretObjectsPromises = sharedSecretObjectsPromises.concat(
-          (() => {
-            const friend = new User(friendName, this.cryptoAdapter);
-            return this.api
-              .getPublicKey(friend.username)
-              .then((publicKey) => friend.importPublicKey(publicKey))
-              .then(() =>
-                this.getSharedSecretObjects(
-                  hashedSecretTitle,
-                  friend,
-                  folderMetadatas.users[friend.username].rights,
-                  [],
-                  true
-                )
-              );
-          })()
+    async addSecretToFolder(hashedSecretTitle, hashedFolder) {
+      try {
+        const folderMetadatas = this.currentUser.metadatas[hashedFolder];
+        const secretMetadatas = this.currentUser.metadatas[hashedSecretTitle];
+        const sharedSecretObjectsArray = [];
+        for (const friendName of Object.keys(folderMetadatas.users)) {
+          const friend = new User(friendName, this.cryptoAdapter);
+          const publicKey = await this.api.getPublicKey(friend.username);
+          await friend.importPublicKey(publicKey);
+          const sharedSecretObjects = await this.getSharedSecretObjects(
+            hashedSecretTitle,
+            friend,
+            folderMetadatas.users[friend.username].rights,
+            [],
+            true
+          );
+          sharedSecretObjectsArray.push(sharedSecretObjects);
+        }
+
+        const metadatasUsers = {};
+        const commonParentToClean = [];
+        const encryptedFolder = await this.api.getSecret(
+          hashedFolder,
+          this.currentUser
         );
-      });
 
-      const metadatasUsers = {};
-      const commonParentToClean = [];
-      return this.api
-        .getSecret(hashedFolder, this.currentUser)
-        .then((encryptedSecret) =>
-          this.currentUser.decryptSecret(hashedFolder, encryptedSecret)
-        )
-        .then((secret) => {
-          const folders = secret;
-          folders[hashedSecretTitle] = 1;
-          return this.editSecret(hashedFolder, folders);
-        })
-        .then(() => Promise.all(sharedSecretObjectsPromises))
-        .then((sharedSecretObjectsArray) => {
-          const fullSharedSecretObjects = [];
-          sharedSecretObjectsArray.forEach((sharedSecretObjects) => {
-            sharedSecretObjects.forEach((sharedSecretObject) => {
-              const newSharedSecretObject = sharedSecretObject;
-              if (
-                typeof metadatasUsers[newSharedSecretObject.hashedTitle] ===
-                'undefined'
-              ) {
-                metadatasUsers[newSharedSecretObject.hashedTitle] = [];
-              }
-              metadatasUsers[newSharedSecretObject.hashedTitle].push({
-                friendName: newSharedSecretObject.username,
-                folder: newSharedSecretObject.inFolder,
-              });
-              delete newSharedSecretObject.inFolder;
-              if (this.currentUser.username !== newSharedSecretObject.username) {
-                delete newSharedSecretObject.username;
-                fullSharedSecretObjects.push(newSharedSecretObject);
-              }
-            });
-          });
-          if (fullSharedSecretObjects.length > 0) {
-            if (!this.editableDB) {
-              return Promise.reject(new OfflineError());
+        const folders = await this.currentUser.decryptSecret(
+          hashedFolder,
+          encryptedFolder
+        );
+
+        folders[hashedSecretTitle] = 1;
+        await this.editSecret(hashedFolder, folders);
+
+        const fullSharedSecretObjects = [];
+        sharedSecretObjectsArray.forEach((sharedSecretObjects) => {
+          sharedSecretObjects.forEach((sharedSecretObject) => {
+            const newSharedSecretObject = sharedSecretObject;
+            if (
+              typeof metadatasUsers[newSharedSecretObject.hashedTitle] ===
+              'undefined'
+            ) {
+              metadatasUsers[newSharedSecretObject.hashedTitle] = [];
             }
-            return this.api.shareSecret(
-              this.currentUser,
-              fullSharedSecretObjects
-            );
-          }
-          return Promise.resolve();
-        })
-        .then(() => {
-          const resetMetaPromises = [];
-          Object.keys(folderMetadatas.users).forEach((username) => {
-            Object.keys(folderMetadatas.users[username].folders).forEach(
-              (parentFolder) => {
-                if (
-                  typeof secretMetadatas.users[username] !== 'undefined' &&
-                  typeof secretMetadatas.users[username].folders[parentFolder] !==
-                    'undefined'
-                ) {
-                  commonParentToClean.push(parentFolder);
-                }
-              }
-            );
-          });
-
-          Object.keys(metadatasUsers).forEach((hashedTitle) => {
-            metadatasUsers[hashedTitle].forEach((infos) => {
-              const currentSecret = this.currentUser.metadatas[hashedTitle];
-              const metaUser = {
-                username: infos.friendName,
-                rights: folderMetadatas.users[infos.friendName].rights,
-              };
-
-              if (typeof currentSecret.users[infos.friendName] !== 'undefined') {
-                metaUser.folders = currentSecret.users[infos.friendName].folders;
-              } else {
-                metaUser.folders = {};
-              }
-
-              if (typeof infos.folder !== 'undefined') {
-                metaUser.folders[infos.folder] = true;
-              } else {
-                metaUser.folders[hashedFolder] = true;
-              }
-
-              commonParentToClean.forEach((parentFolder) => {
-                delete metaUser.folders[parentFolder];
-              });
-
-              if (infos.friendName === this.currentUser.username) {
-                metaUser.rights = 2;
-              }
-              this.currentUser.metadatas[hashedTitle].users[infos.friendName] =
-                metaUser;
+            metadatasUsers[newSharedSecretObject.hashedTitle].push({
+              friendName: newSharedSecretObject.username,
+              folder: newSharedSecretObject.inFolder,
             });
-
-            resetMetaPromises.push(this.resetMetadatas(hashedTitle));
-          });
-          return Promise.all(resetMetaPromises);
-        })
-        .then(() => {
-          const parentCleaningPromises = [];
-          commonParentToClean.forEach((parentFolder) => {
-            if (parentFolder !== 'ROOT') {
-              parentCleaningPromises.push(
-                this.api
-                  .getSecret(parentFolder, this.currentUser)
-                  .then((encryptedSecret) =>
-                    this.currentUser.decryptSecret(parentFolder, encryptedSecret)
-                  )
-                  .then((secret) => {
-                    const folders = secret;
-                    delete folders[hashedSecretTitle];
-                    return this.editSecret(parentFolder, folders);
-                  })
-              );
+            delete newSharedSecretObject.inFolder;
+            if (this.currentUser.username !== newSharedSecretObject.username) {
+              delete newSharedSecretObject.username;
+              fullSharedSecretObjects.push(newSharedSecretObject);
             }
           });
-          return Promise.all(parentCleaningPromises);
-        })
-        .then(() => {
-          if (typeof window.process !== 'undefined') {
-            // Electron
-            return this.getDb();
-          }
-          return Promise.resolve();
-        })
-        .then(() => hashedSecretTitle)
-        .catch((err) => {
-          if (err instanceof OfflineError) {
-            this.offlineDB();
-            return this.addSecretToFolder(hashedSecretTitle, hashedFolder);
-          }
-          const wrapper = new WrappingError(err);
-          throw wrapper.error;
         });
+        if (fullSharedSecretObjects.length > 0) {
+          if (!this.editableDB) {
+            throw new OfflineError();
+          }
+          await this.api.shareSecret(this.currentUser, fullSharedSecretObjects);
+        }
+
+        Object.keys(folderMetadatas.users).forEach((username) => {
+          Object.keys(folderMetadatas.users[username].folders).forEach(
+            (parentFolder) => {
+              if (
+                typeof secretMetadatas.users[username] !== 'undefined' &&
+                typeof secretMetadatas.users[username].folders[parentFolder] !==
+                  'undefined'
+              ) {
+                commonParentToClean.push(parentFolder);
+              }
+            }
+          );
+        });
+
+        for (const hashedTitle of Object.keys(metadatasUsers)) {
+          metadatasUsers[hashedTitle].forEach((infos) => {
+            const currentSecret = this.currentUser.metadatas[hashedTitle];
+            const metaUser = {
+              username: infos.friendName,
+              rights: folderMetadatas.users[infos.friendName].rights,
+            };
+
+            if (typeof currentSecret.users[infos.friendName] !== 'undefined') {
+              metaUser.folders = currentSecret.users[infos.friendName].folders;
+            } else {
+              metaUser.folders = {};
+            }
+
+            if (typeof infos.folder !== 'undefined') {
+              metaUser.folders[infos.folder] = true;
+            } else {
+              metaUser.folders[hashedFolder] = true;
+            }
+
+            commonParentToClean.forEach((parentFolder) => {
+              delete metaUser.folders[parentFolder];
+            });
+
+            if (infos.friendName === this.currentUser.username) {
+              metaUser.rights = 2;
+            }
+            this.currentUser.metadatas[hashedTitle].users[infos.friendName] =
+              metaUser;
+          });
+
+          await this.resetMetadatas(hashedTitle);
+        }
+
+        for (const parentFolder of commonParentToClean) {
+          if (parentFolder !== 'ROOT') {
+            const encryptedParentFolder = await this.api.getSecret(
+              parentFolder,
+              this.currentUser
+            );
+            const parentFolders = await this.currentUser.decryptSecret(
+              parentFolder,
+              encryptedParentFolder
+            );
+
+            delete parentFolders[hashedSecretTitle];
+            await this.editSecret(parentFolder, parentFolders);
+          }
+        }
+
+        if (typeof window.process !== 'undefined') {
+          // Electron
+          await this.getDb();
+        }
+        return hashedSecretTitle;
+      } catch (err) {
+        if (err instanceof OfflineError) {
+          this.offlineDB();
+          return await this.addSecretToFolder(hashedSecretTitle, hashedFolder);
+        }
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      }
     }
 
-    getSharedSecretObjects(
+    async getSharedSecretObjects(
       hashedTitle,
       friend,
       rights,
@@ -2297,280 +2272,270 @@
       addUsername = false,
       hashedFolder = undefined
     ) {
-      let isFolder = Promise.resolve();
-      const sharedSecretObjectPromises = [];
-      const secretMetadatas = this.currentUser.metadatas[hashedTitle];
-      if (typeof secretMetadatas === 'undefined') {
-        throw new DontHaveSecretError();
-      } else {
-        if (secretMetadatas.type === 'folder') {
-          isFolder = isFolder
-            .then(() => this.api.getSecret(hashedTitle, this.currentUser))
-            .then((encryptedSecret) =>
-              this.currentUser.decryptSecret(hashedTitle, encryptedSecret)
-            )
-            .then((secrets) => {
-              Object.keys(secrets).forEach((hash) => {
-                sharedSecretObjectPromises.push(
-                  this.getSharedSecretObjects(
-                    hash,
-                    friend,
-                    rights,
-                    fullSharedSecretObjects,
-                    addUsername,
-                    hashedTitle
-                  )
-                );
-              });
-              return Promise.all(sharedSecretObjectPromises);
-            });
+      try {
+        const secretMetadatas = this.currentUser.metadatas[hashedTitle];
+        if (typeof secretMetadatas === 'undefined') {
+          throw new DontHaveSecretError();
         }
 
-        return isFolder
-          .then(() =>
-            this.currentUser.shareSecret(
+        if (secretMetadatas.type === 'folder') {
+          const encryptedSecret = await this.api.getSecret(
+            hashedTitle,
+            this.currentUser
+          );
+
+          const secrets = await this.currentUser.decryptSecret(
+            hashedTitle,
+            encryptedSecret
+          );
+
+          for (const hash of Object.keys(secrets)) {
+            await this.getSharedSecretObjects(
+              hash,
               friend,
-              this.currentUser.keys[hashedTitle].key,
+              rights,
+              fullSharedSecretObjects,
+              addUsername,
               hashedTitle
-            )
-          )
-          .then((secretObject) => {
-            const newSecretObject = secretObject;
-            newSecretObject.rights = rights;
-            newSecretObject.inFolder = hashedFolder;
-            if (addUsername) {
-              newSecretObject.username = friend.username;
-            }
-            fullSharedSecretObjects.push(newSecretObject);
-            return fullSharedSecretObjects;
-          })
-          .catch((err) => {
-            if (err instanceof OfflineError) {
-              this.offlineDB();
-              throw err;
-            } else {
-              const wrapper = new WrappingError(err);
-              throw wrapper.error;
-            }
-          });
+            );
+          }
+        }
+
+        const secretObject = await this.currentUser.shareSecret(
+          friend,
+          this.currentUser.keys[hashedTitle].key,
+          hashedTitle
+        );
+
+        const newSecretObject = secretObject;
+        newSecretObject.rights = rights;
+        newSecretObject.inFolder = hashedFolder;
+        if (addUsername) {
+          newSecretObject.username = friend.username;
+        }
+        fullSharedSecretObjects.push(newSecretObject);
+        return fullSharedSecretObjects;
+      } catch (err) {
+        if (err instanceof OfflineError) {
+          this.offlineDB();
+          throw err;
+        } else {
+          const wrapper = new WrappingError(err);
+          throw wrapper.error;
+        }
       }
     }
 
-    renameSecret(hashedTitle, newTitle) {
-      this.currentUser.metadatas[hashedTitle].title = newTitle;
-      if (!this.editableDB) {
-        if (
-          Object.keys(this.currentUser.metadatas[hashedTitle].users).length > 1
-        ) {
-          return Promise.reject(new OfflineError());
-        }
-        const args = [hashedTitle];
+    async renameSecret(hashedTitle, newTitle) {
+      try {
+        this.currentUser.metadatas[hashedTitle].title = newTitle;
+        if (!this.editableDB) {
+          if (
+            Object.keys(this.currentUser.metadatas[hashedTitle].users).length > 1
+          ) {
+            throw new OfflineError();
+          }
+          const args = [hashedTitle];
 
-        return this.getSecret(hashedTitle)
-          .then((secret) => {
-            const toEncrypt = {
-              secret,
-              title: newTitle,
-            };
-            return this.cryptoAdapter.encryptRSAOAEP(
-              toEncrypt,
-              this.currentUser.publicKey
-            );
-          })
-          .then((encryptedContent) => {
-            args.push(encryptedContent);
-            return this.pushCacheAction('renameSecret', args);
-          });
-      }
-      return this.resetMetadatas(hashedTitle).catch((err) => {
+          const secret = await this.getSecret(hashedTitle);
+
+          const toEncrypt = {
+            secret,
+            title: newTitle,
+          };
+          const encryptedContent = await this.cryptoAdapter.encryptRSAOAEP(
+            toEncrypt,
+            this.currentUser.publicKey
+          );
+
+          args.push(encryptedContent);
+          return this.pushCacheAction('renameSecret', args);
+        }
+        await this.resetMetadatas(hashedTitle);
+        return true;
+      } catch (err) {
         if (err instanceof OfflineError) {
-          return this.renameSecret(hashedTitle, newTitle);
+          return await this.renameSecret(hashedTitle, newTitle);
         }
         throw err;
-      });
+      }
     }
 
-    resetMetadatas(hashedTitle) {
-      return this.getSecret(hashedTitle)
-        .then((secret) => this.editSecret(hashedTitle, secret))
-        .then(() => {
-          if (typeof window.process !== 'undefined') {
-            // Electron
-            return this.getDb();
-          }
-          return Promise.resolve();
-        })
-        .catch((err) => {
-          if (err instanceof OfflineError) {
-            this.offlineDB();
-          }
-          const wrapper = new WrappingError(err);
-          throw wrapper.error;
-        });
+    async resetMetadatas(hashedTitle) {
+      try {
+        const secret = await this.getSecret(hashedTitle);
+        await this.editSecret(hashedTitle, secret);
+
+        if (typeof window.process !== 'undefined') {
+          // Electron
+          await this.getDb();
+        }
+      } catch (err) {
+        if (err instanceof OfflineError) {
+          this.offlineDB();
+        }
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      }
     }
 
-    shareSecret(hashedTitle, friendName, sRights) {
-      if (!this.editableDB) {
-        return Promise.reject(new OfflineError());
-      }
-      let sharedSecretObjects;
-      const rights = parseInt(sRights, 10);
-      const friend = new User(friendName, this.cryptoAdapter);
-      return this.api
-        .getPublicKey(friend.username)
-        .then(
-          (publicKey) => friend.importPublicKey(publicKey),
-          () => Promise.reject(new FriendNotFoundError())
-        )
-        .then(() => this.getSharedSecretObjects(hashedTitle, friend, rights, []))
-        .then((rSharedSecretObjects) => {
-          sharedSecretObjects = rSharedSecretObjects;
-          return this.api.shareSecret(this.currentUser, sharedSecretObjects);
-        })
-        .then(() => {
-          const resetMetaPromises = [];
-          sharedSecretObjects.forEach((sharedSecretObject) => {
-            const secretMetadatas =
-              this.currentUser.metadatas[sharedSecretObject.hashedTitle];
-            secretMetadatas.users[friend.username] = {
-              username: friend.username,
-              rights,
-              folders: {},
-            };
-            if (typeof sharedSecretObject.inFolder !== 'undefined') {
-              secretMetadatas.users[friend.username].folders[
-                sharedSecretObject.inFolder
-              ] = true;
-            } else {
-              secretMetadatas.users[friend.username].folders.ROOT = true;
-            }
-            resetMetaPromises.push(
-              this.resetMetadatas(sharedSecretObject.hashedTitle)
-            );
-          });
-          return Promise.all(resetMetaPromises);
-        })
-        .then(() => {
-          if (typeof window.process !== 'undefined') {
-            // Electron
-            return this.getDb();
-          }
-          return Promise.resolve();
-        })
-        .then(() => this.currentUser.metadatas[hashedTitle])
-        .catch((err) => {
-          if (err instanceof OfflineError) {
-            this.offlineDB();
-          }
-          const wrapper = new WrappingError(err);
-          throw wrapper.error;
-        });
-    }
-
-    unshareSecret(hashedTitle, friendName) {
-      if (!this.editableDB) {
-        return Promise.reject(new OfflineError());
-      }
-      let isFolder = Promise.resolve();
-      const secretMetadatas = this.currentUser.metadatas[hashedTitle];
-      if (typeof secretMetadatas === 'undefined') {
-        return Promise.reject(new DontHaveSecretError());
-      }
-      if (secretMetadatas.type === 'folder') {
-        isFolder = isFolder.then(() =>
-          this.unshareFolderSecrets(hashedTitle, friendName)
+    async shareSecret(hashedTitle, friendName, sRights) {
+      try {
+        if (!this.editableDB) {
+          throw new OfflineError();
+        }
+        const rights = parseInt(sRights, 10);
+        const friend = new User(friendName, this.cryptoAdapter);
+        const publicKey = await this.api.getPublicKey(friend.username);
+        await friend.importPublicKey(publicKey);
+        const sharedSecretObjects = await this.getSharedSecretObjects(
+          hashedTitle,
+          friend,
+          rights,
+          []
         );
-      }
 
-      return isFolder
-        .then(() =>
-          this.api.unshareSecret(this.currentUser, [friendName], hashedTitle)
-        )
-        .then((result) => {
-          if (result !== 'Secret unshared') {
-            const wrapper = new WrappingError(result);
-            throw wrapper.error;
+        await this.api.shareSecret(this.currentUser, sharedSecretObjects);
+
+        for (const sharedSecretObject of sharedSecretObjects) {
+          const secretMetadatas =
+            this.currentUser.metadatas[sharedSecretObject.hashedTitle];
+          secretMetadatas.users[friend.username] = {
+            username: friend.username,
+            rights,
+            folders: {},
+          };
+          if (typeof sharedSecretObject.inFolder !== 'undefined') {
+            secretMetadatas.users[friend.username].folders[
+              sharedSecretObject.inFolder
+            ] = true;
+          } else {
+            secretMetadatas.users[friend.username].folders.ROOT = true;
           }
-          delete secretMetadatas.users[friendName];
-          return this.resetMetadatas(hashedTitle);
-        })
-        .then(() => this.renewKey(hashedTitle))
-        .then(() => {
-          if (typeof window.process !== 'undefined') {
-            // Electron
-            return this.getDb();
-          }
-          return Promise.resolve();
-        })
-        .then(() => this.currentUser.metadatas[hashedTitle])
-        .catch((err) => {
-          if (err instanceof OfflineError) {
-            this.offlineDB();
-          }
-          const wrapper = new WrappingError(err);
-          throw wrapper.error;
-        });
+
+          await this.resetMetadatas(sharedSecretObject.hashedTitle);
+        }
+
+        if (typeof window.process !== 'undefined') {
+          // Electron
+          await this.getDb();
+        }
+        return this.currentUser.metadatas[hashedTitle];
+      } catch (err) {
+        if (err instanceof UserNotFoundError) {
+          throw new FriendNotFoundError();
+        }
+        if (err instanceof OfflineError) {
+          this.offlineDB();
+        }
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      }
     }
 
-    unshareFolderSecrets(hashedFolder, friendName) {
-      if (!this.editableDB) {
-        return Promise.reject(new OfflineError());
-      }
-      return this.api
-        .getSecret(hashedFolder, this.currentUser)
-        .then((encryptedSecret) =>
-          this.currentUser.decryptSecret(hashedFolder, encryptedSecret)
-        )
-        .then((secrets) =>
-          Object.keys(secrets).reduce(
-            (promise, hashedTitle) =>
-              promise.then(() => this.unshareSecret(hashedTitle, friendName)),
-            Promise.resolve()
-          )
-        )
-        .then(() => {
-          if (typeof window.process !== 'undefined') {
-            // Electron
-            return this.getDb();
-          }
-          return Promise.resolve();
-        })
-        .catch((err) => {
-          if (err instanceof OfflineError) {
-            this.offlineDB();
-          }
-          const wrapper = new WrappingError(err);
+    async unshareSecret(hashedTitle, friendName) {
+      try {
+        if (!this.editableDB) {
+          throw new OfflineError();
+        }
+
+        const secretMetadatas = this.currentUser.metadatas[hashedTitle];
+        if (typeof secretMetadatas === 'undefined') {
+          throw new DontHaveSecretError();
+        }
+        if (secretMetadatas.type === 'folder') {
+          await this.unshareFolderSecrets(hashedTitle, friendName);
+        }
+
+        const result = await this.api.unshareSecret(
+          this.currentUser,
+          [friendName],
+          hashedTitle
+        );
+        if (result !== 'Secret unshared') {
+          const wrapper = new WrappingError(result);
           throw wrapper.error;
-        });
+        }
+        delete secretMetadatas.users[friendName];
+        await this.resetMetadatas(hashedTitle);
+        await this.renewKey(hashedTitle);
+
+        if (typeof window.process !== 'undefined') {
+          // Electron
+          await this.getDb();
+        }
+
+        return this.currentUser.metadatas[hashedTitle];
+      } catch (err) {
+        if (err instanceof OfflineError) {
+          this.offlineDB();
+        }
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      }
     }
 
-    wrapKeyForFriend(hashedUsername, key) {
-      if (!this.editableDB) {
-        return Promise.reject(new OfflineError());
+    async unshareFolderSecrets(hashedFolder, friendName) {
+      try {
+        if (!this.editableDB) {
+          throw new OfflineError();
+        }
+        const encryptedSecret = await this.api.getSecret(
+          hashedFolder,
+          this.currentUser
+        );
+
+        const secrets = await this.currentUser.decryptSecret(
+          hashedFolder,
+          encryptedSecret
+        );
+
+        for (const hashedTitle of Object.keys(secrets)) {
+          await this.unshareSecret(hashedTitle, friendName);
+        }
+
+        if (typeof window.process !== 'undefined') {
+          // Electron
+          await this.getDb();
+        }
+      } catch (err) {
+        if (err instanceof OfflineError) {
+          this.offlineDB();
+        }
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
       }
-      let friend;
-      return this.api
-        .getPublicKey(hashedUsername, true)
-        .then((publicKey) => {
-          friend = new User(hashedUsername, this.cryptoAdapter);
-          return friend.importPublicKey(publicKey);
-        })
-        .then(() => this.currentUser.wrapKey(key, friend.publicKey))
-        .then((friendWrappedKey) => ({
+    }
+
+    async wrapKeyForFriend(hashedUsername, key) {
+      try {
+        if (!this.editableDB) {
+          throw new OfflineError();
+        }
+
+        const publicKey = await this.api.getPublicKey(hashedUsername, true);
+
+        const friend = new User(hashedUsername, this.cryptoAdapter);
+        await friend.importPublicKey(publicKey);
+        const friendWrappedKey = await this.currentUser.wrapKey(
+          key,
+          friend.publicKey
+        );
+        return {
           user: hashedUsername,
           key: friendWrappedKey,
-        }))
-        .catch((err) => {
-          if (err instanceof OfflineError) {
-            this.offlineDB();
-            throw err;
-          }
-          const wrapper = new WrappingError(err);
-          throw wrapper.error;
-        });
+        };
+      } catch (err) {
+        if (err instanceof OfflineError) {
+          this.offlineDB();
+          throw err;
+        }
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      }
     }
 
-    renewKey(hashedTitle) {
+    async renewKey(hashedTitle) {
       if (!this.editableDB) {
         return Promise.reject(new OfflineError());
       }
