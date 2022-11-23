@@ -253,6 +253,7 @@ class Secretin {
     } catch (err) {
       if (err instanceof OfflineError) {
         this.offlineDB();
+        throw err;
       }
       const wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -314,7 +315,7 @@ class Secretin {
     } catch (err) {
       if (err instanceof OfflineError) {
         this.offlineDB(username);
-        return this.loginUser(username, password, otp, progress);
+        return await this.loginUser(username, password, otp, progress);
       }
       const wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -457,6 +458,7 @@ class Secretin {
     } catch (err) {
       if (err instanceof OfflineError) {
         this.offlineDB();
+        throw err;
       }
       const wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -515,7 +517,7 @@ class Secretin {
       throw new OfflineError();
     }
     this.currentUser.options[name] = value;
-    return this.resetOptions();
+    return await this.resetOptions();
   }
 
   async editOptions(options) {
@@ -542,6 +544,7 @@ class Secretin {
     } catch (err) {
       if (err instanceof OfflineError) {
         this.offlineDB();
+        throw err;
       }
       const wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -744,10 +747,9 @@ class Secretin {
       if (err instanceof OfflineError) {
         this.offlineDB();
         throw err;
-      } else {
-        const wrapper = new WrappingError(err);
-        throw wrapper.error;
       }
+      const wrapper = new WrappingError(err);
+      throw wrapper.error;
     }
   }
 
@@ -780,6 +782,7 @@ class Secretin {
       return true;
     } catch (err) {
       if (err instanceof OfflineError) {
+        this.offlineDB();
         return await this.renameSecret(hashedTitle, newTitle);
       }
       throw err;
@@ -798,6 +801,7 @@ class Secretin {
     } catch (err) {
       if (err instanceof OfflineError) {
         this.offlineDB();
+        throw err;
       }
       const wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -852,6 +856,7 @@ class Secretin {
       }
       if (err instanceof OfflineError) {
         this.offlineDB();
+        throw err;
       }
       const wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -894,6 +899,7 @@ class Secretin {
     } catch (err) {
       if (err instanceof OfflineError) {
         this.offlineDB();
+        throw err;
       }
       const wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -926,6 +932,7 @@ class Secretin {
     } catch (err) {
       if (err instanceof OfflineError) {
         this.offlineDB();
+        throw err;
       }
       const wrapper = new WrappingError(err);
       throw wrapper.error;
@@ -960,7 +967,7 @@ class Secretin {
     }
   }
 
-  async renewKey(hashedTitle) {
+  renewKey(hashedTitle) {
     if (!this.editableDB) {
       return Promise.reject(new OfflineError());
     }
