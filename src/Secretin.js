@@ -522,7 +522,7 @@ class Secretin {
 
   async editOptions(options) {
     if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
+      throw new OfflineError();
     }
     this.currentUser.options = options;
     return await this.resetOptions();
@@ -1285,38 +1285,41 @@ class Secretin {
     }
   }
 
-  activateShortLogin(shortpass, deviceName) {
+  async activateShortLogin(shortpass, deviceName) {
     if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
+      throw new OfflineError();
     }
     if (localStorageAvailable()) {
-      return this.currentUser
-        .activateShortLogin(shortpass, deviceName)
-        .then((toSend) => this.api.activateShortLogin(toSend, this.currentUser))
-        .then(() => {
-          if (typeof window.process !== 'undefined') {
-            // Electron
-            return this.getDb();
-          }
-          return Promise.resolve();
-        })
-        .then(() => this.currentUser.exportPrivateData(shortpass))
-        .then((result) => {
-          localStorage.setItem(`${SecretinPrefix}shortpass`, result.data);
-          localStorage.setItem(
-            `${SecretinPrefix}shortpassSignature`,
-            result.signature
-          );
-        })
-        .catch((err) => {
-          if (err instanceof OfflineError) {
-            this.offlineDB();
-          }
-          const wrapper = new WrappingError(err);
-          throw wrapper.error;
-        });
+      try {
+        const toSend = await this.currentUser.activateShortLogin(
+          shortpass,
+          deviceName
+        );
+
+        await this.api.activateShortLogin(toSend, this.currentUser);
+
+        if (typeof window.process !== 'undefined') {
+          // Electron
+          await this.getDb();
+        }
+
+        const result = await this.currentUser.exportPrivateData(shortpass);
+
+        localStorage.setItem(`${SecretinPrefix}shortpass`, result.data);
+        localStorage.setItem(
+          `${SecretinPrefix}shortpassSignature`,
+          result.signature
+        );
+      } catch (err) {
+        if (err instanceof OfflineError) {
+          this.offlineDB();
+          throw err;
+        }
+        const wrapper = new WrappingError(err);
+        throw wrapper.error;
+      }
     }
-    return Promise.reject(new LocalStorageUnavailableError());
+    throw new LocalStorageUnavailableError();
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -1339,57 +1342,54 @@ class Secretin {
       localStorage.removeItem(`${SecretinPrefix}shortpass`);
       localStorage.removeItem(`${SecretinPrefix}shortpassSignature`);
       localStorage.removeItem(`${SecretinPrefix}activatedAt`);
-      return Promise.resolve();
     }
-    return Promise.reject(new LocalStorageUnavailableError());
+    throw new LocalStorageUnavailableError();
   }
 
-  shortLogin(shortpass, progress = defaultProgress, forceSync = true) {
-    const username = localStorage.getItem(`${SecretinPrefix}username`);
-    const deviceName = localStorage.getItem(`${SecretinPrefix}deviceName`);
-    let shortpassKey;
-    let parameters;
-    this.currentUser = new User(username, this.cryptoAdapter);
-    progress(new GetDerivationStatus());
-    return this.api
-      .getProtectKeyParameters(username, deviceName)
-      .then((rParameters) => {
-        parameters = rParameters;
+  async shortLogin(shortpass, progress = defaultProgress, forceSync = true) {
+    if (localStorageAvailable()) {
+      try {
+        const username = localStorage.getItem(`${SecretinPrefix}username`);
+        const deviceName = localStorage.getItem(`${SecretinPrefix}deviceName`);
+        this.currentUser = new User(username, this.cryptoAdapter);
+        progress(new GetDerivationStatus());
+        const parameters = await this.api.getProtectKeyParameters(
+          username,
+          deviceName
+        );
+
         this.currentUser.totp = parameters.totp;
         progress(new PasswordDerivationStatus());
-        return this.cryptoAdapter.derivePassword(shortpass, parameters);
-      })
-      .then((dKey) => {
-        shortpassKey = dKey.key;
+        const { hash, key: shortpassKey } =
+          await this.cryptoAdapter.derivePassword(shortpass, parameters);
+
         progress(new GetProtectKeyStatus());
-        return this.api.getProtectKey(username, deviceName, dKey.hash);
-      })
-      .then((protectKey) => {
+        const protectKey = await this.api.getProtectKey(
+          username,
+          deviceName,
+          hash
+        );
+
         progress(new DecryptPrivateKeyStatus());
-        return this.currentUser.shortLogin(shortpassKey, protectKey);
-      })
-      .then(() => {
+        await this.currentUser.shortLogin(shortpassKey, protectKey);
+
         progress(new ImportPublicKeyStatus());
-        return this.currentUser.importPublicKey(parameters.publicKey);
-      })
-      .then(() => this.refreshUser(forceSync, progress))
-      .then(() => {
+        await this.currentUser.importPublicKey(parameters.publicKey);
+
+        await this.refreshUser(forceSync, progress);
+
         if (typeof window.process !== 'undefined') {
           // Electron
-          return this.getDb().then(() => {
-            if (this.editableDB) {
-              return this.doCacheActions();
-            }
-            return Promise.resolve();
-          });
+          await this.getDb();
+          if (this.editableDB) {
+            await this.doCacheActions();
+          }
         }
-        return Promise.resolve();
-      })
-      .then(() => this.currentUser)
-      .catch((err) => {
+        return this.currentUser;
+      } catch (err) {
         if (err instanceof OfflineError) {
           this.offlineDB();
-          return this.shortLogin(shortpass);
+          return await this.shortLogin(shortpass);
         }
         if (
           err !== 'Not available in standalone mode' &&
@@ -1402,7 +1402,9 @@ class Secretin {
         }
         const wrapper = new WrappingError(err);
         throw wrapper.error;
-      });
+      }
+    }
+    throw new LocalStorageUnavailableError();
   }
 
   canITryShortLogin() {
@@ -1420,30 +1422,34 @@ class Secretin {
     return null;
   }
 
-  getRescueCodes() {
-    return this.api.getRescueCodes(this.currentUser).catch((err) => {
+  async getRescueCodes() {
+    try {
+      const rescueCode = await this.api.getRescueCodes(this.currentUser);
+      return rescueCode;
+    } catch (err) {
       if (err instanceof OfflineError) {
         this.offlineDB();
-        return this.getRescueCodes();
+        return await this.getRescueCodes();
       }
       const wrapper = new WrappingError(err);
       throw wrapper.error;
-    });
+    }
   }
 
-  getDb() {
-    const cacheKey = `${SecretinPrefix}cache_${this.currentUser.username}`;
-    const DbCacheStr = localStorage.getItem(cacheKey);
-    const DbCache = DbCacheStr
-      ? JSON.parse(DbCacheStr)
-      : { users: {}, secrets: {} };
-    const revs = {};
-    Object.keys(DbCache.secrets).forEach((key) => {
-      revs[key] = DbCache.secrets[key].rev;
-    });
-    return this.api
-      .getDb(this.currentUser, revs)
-      .then((newDb) => {
+  async getDb() {
+    if (localStorageAvailable()) {
+      try {
+        const cacheKey = `${SecretinPrefix}cache_${this.currentUser.username}`;
+        const DbCacheStr = localStorage.getItem(cacheKey);
+        const DbCache = DbCacheStr
+          ? JSON.parse(DbCacheStr)
+          : { users: {}, secrets: {} };
+        const revs = {};
+        Object.keys(DbCache.secrets).forEach((key) => {
+          revs[key] = DbCache.secrets[key].rev;
+        });
+        const newDb = await this.api.getDb(this.currentUser, revs);
+
         Object.keys(newDb.secrets).forEach((key) => {
           if (
             typeof DbCache.secrets[key] !== 'undefined' &&
@@ -1462,188 +1468,157 @@ class Secretin {
         const newDbCacheStr = JSON.stringify(DbCache);
         localStorage.setItem(cacheKey, JSON.stringify(DbCache));
         return newDbCacheStr;
-      })
-      .catch((err) => {
+      } catch (err) {
         if (err instanceof OfflineError) {
           this.offlineDB();
-          return this.getDb();
+          return await this.getDb();
         }
         const wrapper = new WrappingError(err);
         throw wrapper.error;
-      });
+      }
+    }
+    throw new LocalStorageUnavailableError();
   }
 
-  exportDb(password) {
-    let oldSecretin;
-    return this.api
-      .getDb(this.currentUser, {})
-      .then((db) => {
-        if (typeof password === 'undefined') {
-          return Promise.resolve(db);
-        }
-        oldSecretin = new Secretin(
-          this.cryptoAdapter,
-          APIStandalone,
-          JSON.parse(JSON.stringify(db))
-        );
-        oldSecretin.currentUser = this.currentUser;
-        return oldSecretin
-          .changePassword(password)
-          .then(() => oldSecretin.api.getDb(oldSecretin.currentUser, {}));
-      })
-      .then((rDB) => {
-        const db = rDB;
+  async exportDb(password) {
+    try {
+      const db = await this.api.getDb(this.currentUser, {});
+      const oldSecretin = new Secretin(
+        this.cryptoAdapter,
+        APIStandalone,
+        JSON.parse(JSON.stringify(db))
+      );
+
+      if (typeof password === 'undefined') {
         db.username = this.currentUser.username;
         return JSON.stringify(db);
-      });
+      }
+
+      oldSecretin.currentUser = this.currentUser;
+      await oldSecretin.changePassword(password);
+      const newDb = await oldSecretin.api.getDb(oldSecretin.currentUser, {});
+      newDb.username = this.currentUser.username;
+      return JSON.stringify(newDb);
+    } catch (err) {
+      if (err instanceof OfflineError) {
+        this.offlineDB();
+        return await this.getDb();
+      }
+      const wrapper = new WrappingError(err);
+      throw wrapper.error;
+    }
   }
 
-  importDb(password, jsonDB, progress = defaultProgress) {
+  async importDb(password, jsonDB, progress = defaultProgress) {
     if (!this.editableDB) {
-      return Promise.reject(new OfflineError());
+      throw new OfflineError();
     }
+
     const oldDB = JSON.parse(jsonDB);
     const { username } = oldDB;
     const oldSecretin = new Secretin(this.cryptoAdapter, APIStandalone, oldDB);
-    let key;
-    let hash;
-    let remoteUser;
-    let parameters;
-    let encryptedMetadata;
     const newHashedTitles = {};
-    return oldSecretin.api
-      .getDerivationParameters(username)
-      .then((rParameters) => {
-        parameters = rParameters;
-        return this.cryptoAdapter.derivePassword(password, parameters);
-      })
-      .then((dKey) => {
-        hash = dKey.hash;
-        key = dKey.key;
-        return oldSecretin.api.getUser(username, hash);
-      })
-      .then((user) => {
-        oldSecretin.currentUser = new User(username, this.cryptoAdapter);
-        oldSecretin.currentUser.totp = parameters.totp;
-        oldSecretin.currentUser.hash = hash;
-        remoteUser = user;
-        return oldSecretin.currentUser.importPrivateKey(
-          key,
-          remoteUser.privateKey
+    const parameters = await oldSecretin.api.getDerivationParameters(username);
+    const { hash, key } = await this.cryptoAdapter.derivePassword(
+      password,
+      parameters
+    );
+
+    const remoteUser = await oldSecretin.api.getUser(username, hash);
+
+    oldSecretin.currentUser = new User(username, this.cryptoAdapter);
+    oldSecretin.currentUser.totp = parameters.totp;
+    oldSecretin.currentUser.hash = hash;
+    await oldSecretin.currentUser.importPrivateKey(key, remoteUser.privateKey);
+    await oldSecretin.currentUser.importPublicKey(remoteUser.publicKey);
+    const user = await oldSecretin.api.getUserWithSignature(
+      oldSecretin.currentUser
+    );
+    const encryptedMetadata = user.metadatas;
+    oldSecretin.currentUser.keys = user.keys;
+    for (const hashedTitle of Object.keys(oldSecretin.currentUser.keys)) {
+      const now = Date.now();
+      const saltedTitle = `${now}|${hashedTitle}`;
+      const newHashedTitle = await this.cryptoAdapter.getSHA256(saltedTitle);
+      newHashedTitles[hashedTitle] = newHashedTitle;
+    }
+
+    const hashedTitles = Object.keys(oldSecretin.currentUser.keys);
+    const progressStatus = new ImportSecretStatus(0, hashedTitles.length);
+    progress(progressStatus);
+
+    for (const hashedTitle of hashedTitles) {
+      const encryptedSecret = await oldSecretin.api.getSecret(
+        hashedTitle,
+        oldSecretin.currentUser
+      );
+
+      const encryptedHistory = await oldSecretin.api.getHistory(
+        oldSecretin.currentUser,
+        hashedTitle
+      );
+
+      const { secret, metadata, history } =
+        await oldSecretin.currentUser.exportSecret(
+          hashedTitle,
+          encryptedSecret,
+          encryptedMetadata[hashedTitle],
+          encryptedHistory
         );
-      })
-      .then(() => oldSecretin.currentUser.importPublicKey(remoteUser.publicKey))
-      .then(() => oldSecretin.api.getUserWithSignature(oldSecretin.currentUser))
-      .then((user) => {
-        encryptedMetadata = user.metadatas;
-        oldSecretin.currentUser.keys = user.keys;
-        const hashedTitles = Object.keys(oldSecretin.currentUser.keys);
-        const newHashedTitlePromises = [];
-        hashedTitles.forEach((hashedTitle) => {
-          const now = Date.now();
-          const saltedTitle = `${now}|${hashedTitle}`;
-          newHashedTitlePromises.push(
-            this.cryptoAdapter
-              .getSHA256(saltedTitle)
-              .then((newHashedTitle) => ({
-                old: hashedTitle,
-                new: newHashedTitle,
-              }))
-          );
-        });
 
-        return Promise.all(newHashedTitlePromises);
-      })
-      .then((rNewHashedTitles) => {
-        rNewHashedTitles.forEach((newHashedTitle) => {
-          newHashedTitles[newHashedTitle.old] = newHashedTitle.new;
-        });
-
-        const hashedTitles = Object.keys(oldSecretin.currentUser.keys);
-        const progressStatus = new ImportSecretStatus(0, hashedTitles.length);
-        progress(progressStatus);
-
-        return hashedTitles.reduce((promise, hashedTitle) => {
-          let encryptedSecret;
-          let newMetadata;
-          return promise.then(() =>
-            oldSecretin.api
-              .getSecret(hashedTitle, oldSecretin.currentUser)
-              .then((rEncryptedSecret) => {
-                encryptedSecret = rEncryptedSecret;
-                return oldSecretin.api.getHistory(
-                  oldSecretin.currentUser,
-                  hashedTitle
-                );
-              })
-              .then((encryptedHistory) =>
-                oldSecretin.currentUser.exportSecret(
-                  hashedTitle,
-                  encryptedSecret,
-                  encryptedMetadata[hashedTitle],
-                  encryptedHistory
-                )
-              )
-              .then(({ secret, metadata, history }) => {
-                newMetadata = metadata;
-                const newSecret = secret;
-                const oldFolders = Object.keys(
-                  newMetadata.users[oldSecretin.currentUser.username].folders
-                );
-                const newFolders = {};
-                oldFolders.forEach((oldFolder) => {
-                  if (oldFolder !== 'ROOT') {
-                    newFolders[newHashedTitles[oldFolder]] = true;
-                  } else {
-                    newFolders.ROOT = true;
-                  }
-                });
-
-                newMetadata.id = newHashedTitles[metadata.id];
-                newMetadata.users = {
-                  [this.currentUser.username]: {
-                    username: this.currentUser.username,
-                    rights: 2,
-                    folders: newFolders,
-                  },
-                };
-
-                const now = new Date();
-                newMetadata.lastModifiedAt = now.toISOString();
-                newMetadata.lastModifiedBy = this.currentUser.username;
-
-                if (metadata.type === 'folder') {
-                  const oldSecrets = Object.keys(secret);
-                  oldSecrets.forEach((oldSecret) => {
-                    const newSecretTitle = newHashedTitles[oldSecret];
-                    newSecret[newSecretTitle] = 1;
-                    delete newSecret[oldSecret];
-                  });
-                }
-
-                return this.currentUser.importSecret(
-                  newHashedTitles[hashedTitle],
-                  newSecret,
-                  newMetadata,
-                  history
-                );
-              })
-              .then((secretObject) => {
-                this.currentUser.keys[secretObject.hashedTitle] = {
-                  key: secretObject.wrappedKey,
-                  rights: newMetadata.users[this.currentUser.username].rights,
-                };
-                this.currentUser.metadatas[secretObject.hashedTitle] =
-                  newMetadata;
-                return this.api.addSecret(this.currentUser, secretObject);
-              })
-              .then(() => {
-                progressStatus.step();
-                progress(progressStatus);
-              })
-          );
-        }, Promise.resolve());
+      const newMetadata = metadata;
+      const newSecret = secret;
+      const oldFolders = Object.keys(
+        newMetadata.users[oldSecretin.currentUser.username].folders
+      );
+      const newFolders = {};
+      oldFolders.forEach((oldFolder) => {
+        if (oldFolder !== 'ROOT') {
+          newFolders[newHashedTitles[oldFolder]] = true;
+        } else {
+          newFolders.ROOT = true;
+        }
       });
+
+      newMetadata.id = newHashedTitles[metadata.id];
+      newMetadata.users = {
+        [this.currentUser.username]: {
+          username: this.currentUser.username,
+          rights: 2,
+          folders: newFolders,
+        },
+      };
+
+      const now = new Date();
+      newMetadata.lastModifiedAt = now.toISOString();
+      newMetadata.lastModifiedBy = this.currentUser.username;
+
+      if (metadata.type === 'folder') {
+        const oldSecrets = Object.keys(secret);
+        oldSecrets.forEach((oldSecret) => {
+          const newSecretTitle = newHashedTitles[oldSecret];
+          newSecret[newSecretTitle] = 1;
+          delete newSecret[oldSecret];
+        });
+      }
+
+      const secretObject = await this.currentUser.importSecret(
+        newHashedTitles[hashedTitle],
+        newSecret,
+        newMetadata,
+        history
+      );
+
+      this.currentUser.keys[secretObject.hashedTitle] = {
+        key: secretObject.wrappedKey,
+        rights: newMetadata.users[this.currentUser.username].rights,
+      };
+      this.currentUser.metadatas[secretObject.hashedTitle] = newMetadata;
+      await this.api.addSecret(this.currentUser, secretObject);
+
+      progressStatus.step();
+      progress(progressStatus);
+    }
   }
 }
 
