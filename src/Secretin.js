@@ -181,8 +181,9 @@ class Secretin {
               content.secret
             );
             this.setConflict(cacheAction.args[0], conflictSecretId);
+          } else {
+            await this.editSecret(secretId, content.secret);
           }
-          await this.editSecret(secretId, content.secret);
 
           this.popCacheAction();
           break;
@@ -201,8 +202,9 @@ class Secretin {
               content.secret
             );
             this.setConflict(cacheAction.args[0], conflictSecretId);
+          } else {
+            await this.renameSecret(secretId, content.title);
           }
-          await this.renameSecret(secretId, content.title);
           this.popCacheAction();
           break;
         }
@@ -214,10 +216,10 @@ class Secretin {
   }
 
   async newUser(username, password) {
+    if (!this.editableDB) {
+      throw new OfflineError();
+    }
     try {
-      if (!this.editableDB) {
-        throw new OfflineError();
-      }
       this.currentUser = new User(username, this.cryptoAdapter);
       const exists = await this.api.userExists(username);
       if (exists) {
@@ -237,13 +239,18 @@ class Secretin {
 
       const publicKey = await this.currentUser.exportPublicKey();
 
-      await this.api.addUser(
-        this.currentUser.username,
+      const { privateKeySign, publicKeySign } =
+        await this.currentUser.exportKeyPairSign();
+
+      await this.api.addUser({
+        username: this.currentUser.username,
         privateKey,
         publicKey,
+        privateKeySign,
+        publicKeySign,
         pass,
-        options
-      );
+        options,
+      });
 
       if (typeof window.process !== 'undefined') {
         // Electron
@@ -289,6 +296,15 @@ class Secretin {
 
       progress(new ImportPublicKeyStatus());
       await this.currentUser.importPublicKey(remoteUser.publicKey);
+      if (!remoteUser.publicKeySign || !remoteUser.privateKeySign) {
+        // Legacy bad practice
+        await this.currentUser.deprecatedConvertOAEPToPSS();
+      } else {
+        await this.currentUser.importKeyPairSign({
+          privateKeySign: remoteUser.privateKeySign,
+          publicKeySign: remoteUser.publicKeySign,
+        });
+      }
 
       const shortpass = localStorage.getItem(`${SecretinPrefix}shortpass`);
       const signature = localStorage.getItem(
@@ -303,7 +319,6 @@ class Secretin {
         await this.activateShortLogin(shortpass, deviceName);
       }
       await this.refreshUser(forceSync, progress);
-
       if (typeof window.process !== 'undefined') {
         // Electron
         await this.getDb();
@@ -441,10 +456,10 @@ class Secretin {
   }
 
   async changePassword(password) {
+    if (!this.editableDB) {
+      throw new OfflineError();
+    }
     try {
-      if (!this.editableDB) {
-        throw new OfflineError();
-      }
       const objectPrivateKey = await this.currentUser.exportPrivateKey(
         password
       );
@@ -492,7 +507,7 @@ class Secretin {
         );
 
         args.push(encryptedContent);
-        return this.pushCacheAction('editSecret', args);
+        this.pushCacheAction('editSecret', args);
       }
 
       await this.api.editSecret(this.currentUser, secretObject, hashedTitle);
@@ -529,10 +544,10 @@ class Secretin {
   }
 
   async resetOptions() {
+    if (!this.editableDB) {
+      throw new OfflineError();
+    }
     try {
-      if (!this.editableDB) {
-        throw new OfflineError();
-      }
       const encryptedOptions = await this.currentUser.exportOptions();
 
       await this.api.editUser(this.currentUser, encryptedOptions);
@@ -823,7 +838,6 @@ class Secretin {
         rights,
         []
       );
-
       await this.api.shareSecret(this.currentUser, sharedSecretObjects);
 
       for (const sharedSecretObject of sharedSecretObjects) {
@@ -851,14 +865,14 @@ class Secretin {
       }
       return this.currentUser.metadatas[hashedTitle];
     } catch (err) {
-      if (err instanceof UserNotFoundError) {
-        throw new FriendNotFoundError();
-      }
       if (err instanceof OfflineError) {
         this.offlineDB();
         throw err;
       }
       const wrapper = new WrappingError(err);
+      if (wrapper.error instanceof UserNotFoundError) {
+        throw new FriendNotFoundError();
+      }
       throw wrapper.error;
     }
   }
@@ -1156,11 +1170,10 @@ class Secretin {
   }
 
   async deleteSecret(hashedTitle, list = []) {
+    if (!this.editableDB) {
+      throw new OfflineError();
+    }
     try {
-      if (!this.editableDB) {
-        throw new OfflineError();
-      }
-
       const secretMetadatas = this.currentUser.metadatas[hashedTitle];
       if (typeof secretMetadatas === 'undefined') {
         throw new DontHaveSecretError();
@@ -1210,10 +1223,11 @@ class Secretin {
   }
 
   async deleteFolderSecrets(hashedFolder, list) {
+    if (!this.editableDB) {
+      throw new OfflineError();
+    }
+
     try {
-      if (!this.editableDB) {
-        throw new OfflineError();
-      }
       list.push(hashedFolder);
       const encryptedSecret = await this.api.getSecret(
         hashedFolder,
@@ -1243,10 +1257,11 @@ class Secretin {
   }
 
   async deactivateTotp() {
+    if (!this.editableDB) {
+      throw new OfflineError();
+    }
+
     try {
-      if (!this.editableDB) {
-        throw new OfflineError();
-      }
       await this.api.deactivateTotp(this.currentUser);
       if (typeof window.process !== 'undefined') {
         // Electron
@@ -1263,10 +1278,10 @@ class Secretin {
   }
 
   async activateTotp(seed) {
+    if (!this.editableDB) {
+      throw new OfflineError();
+    }
     try {
-      if (!this.editableDB) {
-        throw new OfflineError();
-      }
       const protectedSeed = xorSeed(
         hexStringToUint8Array(this.currentUser.hash),
         seed.raw
@@ -1289,122 +1304,122 @@ class Secretin {
     if (!this.editableDB) {
       throw new OfflineError();
     }
-    if (localStorageAvailable()) {
-      try {
-        const toSend = await this.currentUser.activateShortLogin(
-          shortpass,
-          deviceName
-        );
-
-        await this.api.activateShortLogin(toSend, this.currentUser);
-
-        if (typeof window.process !== 'undefined') {
-          // Electron
-          await this.getDb();
-        }
-
-        const result = await this.currentUser.exportPrivateData(shortpass);
-
-        localStorage.setItem(`${SecretinPrefix}shortpass`, result.data);
-        localStorage.setItem(
-          `${SecretinPrefix}shortpassSignature`,
-          result.signature
-        );
-      } catch (err) {
-        if (err instanceof OfflineError) {
-          this.offlineDB();
-          throw err;
-        }
-        const wrapper = new WrappingError(err);
-        throw wrapper.error;
-      }
+    if (!localStorageAvailable()) {
+      throw new LocalStorageUnavailableError();
     }
-    throw new LocalStorageUnavailableError();
+    try {
+      const toSend = await this.currentUser.activateShortLogin(
+        shortpass,
+        deviceName
+      );
+
+      await this.api.activateShortLogin(toSend, this.currentUser);
+
+      if (typeof window.process !== 'undefined') {
+        // Electron
+        await this.getDb();
+      }
+
+      const result = await this.currentUser.exportPrivateData(shortpass);
+
+      localStorage.setItem(`${SecretinPrefix}shortpass`, result.data);
+      localStorage.setItem(
+        `${SecretinPrefix}shortpassSignature`,
+        result.signature
+      );
+    } catch (err) {
+      if (err instanceof OfflineError) {
+        this.offlineDB();
+        throw err;
+      }
+      const wrapper = new WrappingError(err);
+      throw wrapper.error;
+    }
   }
 
   // eslint-disable-next-line class-methods-use-this
   getShortLoginActivationDate() {
-    if (localStorageAvailable()) {
-      const dateStr = localStorage.getItem(`${SecretinPrefix}activatedAt`);
-      return dateStr ? new Date(dateStr) : null;
+    if (!localStorageAvailable()) {
+      throw new LocalStorageUnavailableError();
     }
-    throw new LocalStorageUnavailableError();
+    const dateStr = localStorage.getItem(`${SecretinPrefix}activatedAt`);
+    return dateStr ? new Date(dateStr) : null;
   }
 
   // eslint-disable-next-line class-methods-use-this
   deactivateShortLogin() {
-    if (localStorageAvailable()) {
-      localStorage.removeItem(`${SecretinPrefix}username`);
-      localStorage.removeItem(`${SecretinPrefix}deviceName`);
-      localStorage.removeItem(`${SecretinPrefix}privateKey`);
-      localStorage.removeItem(`${SecretinPrefix}privateKeyIv`);
-      localStorage.removeItem(`${SecretinPrefix}iv`);
-      localStorage.removeItem(`${SecretinPrefix}shortpass`);
-      localStorage.removeItem(`${SecretinPrefix}shortpassSignature`);
-      localStorage.removeItem(`${SecretinPrefix}activatedAt`);
+    if (!localStorageAvailable()) {
+      throw new LocalStorageUnavailableError();
     }
-    throw new LocalStorageUnavailableError();
+    localStorage.removeItem(`${SecretinPrefix}username`);
+    localStorage.removeItem(`${SecretinPrefix}deviceName`);
+    localStorage.removeItem(`${SecretinPrefix}privateKey`);
+    localStorage.removeItem(`${SecretinPrefix}privateKeyIv`);
+    localStorage.removeItem(`${SecretinPrefix}iv`);
+    localStorage.removeItem(`${SecretinPrefix}shortpass`);
+    localStorage.removeItem(`${SecretinPrefix}shortpassSignature`);
+    localStorage.removeItem(`${SecretinPrefix}activatedAt`);
   }
 
   async shortLogin(shortpass, progress = defaultProgress, forceSync = true) {
-    if (localStorageAvailable()) {
-      try {
-        const username = localStorage.getItem(`${SecretinPrefix}username`);
-        const deviceName = localStorage.getItem(`${SecretinPrefix}deviceName`);
-        this.currentUser = new User(username, this.cryptoAdapter);
-        progress(new GetDerivationStatus());
-        const parameters = await this.api.getProtectKeyParameters(
-          username,
-          deviceName
-        );
-
-        this.currentUser.totp = parameters.totp;
-        progress(new PasswordDerivationStatus());
-        const { hash, key: shortpassKey } =
-          await this.cryptoAdapter.derivePassword(shortpass, parameters);
-
-        progress(new GetProtectKeyStatus());
-        const protectKey = await this.api.getProtectKey(
-          username,
-          deviceName,
-          hash
-        );
-
-        progress(new DecryptPrivateKeyStatus());
-        await this.currentUser.shortLogin(shortpassKey, protectKey);
-
-        progress(new ImportPublicKeyStatus());
-        await this.currentUser.importPublicKey(parameters.publicKey);
-
-        await this.refreshUser(forceSync, progress);
-
-        if (typeof window.process !== 'undefined') {
-          // Electron
-          await this.getDb();
-          if (this.editableDB) {
-            await this.doCacheActions();
-          }
-        }
-        return this.currentUser;
-      } catch (err) {
-        if (err instanceof OfflineError) {
-          this.offlineDB();
-          return await this.shortLogin(shortpass);
-        }
-        if (
-          err !== 'Not available in standalone mode' &&
-          !(err instanceof NotAvailableError)
-        ) {
-          localStorage.removeItem(`${SecretinPrefix}username`);
-          localStorage.removeItem(`${SecretinPrefix}privateKey`);
-          localStorage.removeItem(`${SecretinPrefix}privateKeyIv`);
-          localStorage.removeItem(`${SecretinPrefix}iv`);
-        }
-        const wrapper = new WrappingError(err);
-        throw wrapper.error;
-      }
+    if (!localStorageAvailable()) {
+      throw new LocalStorageUnavailableError();
     }
-    throw new LocalStorageUnavailableError();
+    try {
+      const username = localStorage.getItem(`${SecretinPrefix}username`);
+      const deviceName = localStorage.getItem(`${SecretinPrefix}deviceName`);
+      this.currentUser = new User(username, this.cryptoAdapter);
+      progress(new GetDerivationStatus());
+      const parameters = await this.api.getProtectKeyParameters(
+        username,
+        deviceName
+      );
+
+      this.currentUser.totp = parameters.totp;
+      progress(new PasswordDerivationStatus());
+      const { hash, key: shortpassKey } =
+        await this.cryptoAdapter.derivePassword(shortpass, parameters);
+
+      progress(new GetProtectKeyStatus());
+      const protectKey = await this.api.getProtectKey(
+        username,
+        deviceName,
+        hash
+      );
+
+      progress(new DecryptPrivateKeyStatus());
+      await this.currentUser.shortLogin(shortpassKey, protectKey);
+
+      progress(new ImportPublicKeyStatus());
+      await this.currentUser.importPublicKey(parameters.publicKey);
+
+      await this.refreshUser(forceSync, progress);
+
+      if (typeof window.process !== 'undefined') {
+        // Electron
+        await this.getDb();
+        if (this.editableDB) {
+          await this.doCacheActions();
+        }
+      }
+      return this.currentUser;
+    } catch (err) {
+      if (err instanceof OfflineError) {
+        this.offlineDB();
+        return await this.shortLogin(shortpass);
+      }
+      if (
+        err !== 'Not available in standalone mode' &&
+        !(err instanceof NotAvailableError)
+      ) {
+        localStorage.removeItem(`${SecretinPrefix}username`);
+        localStorage.removeItem(`${SecretinPrefix}privateKey`);
+        localStorage.removeItem(`${SecretinPrefix}privateKeyIv`);
+        localStorage.removeItem(`${SecretinPrefix}iv`);
+      }
+      const wrapper = new WrappingError(err);
+      throw wrapper.error;
+    }
   }
 
   canITryShortLogin() {
@@ -1437,47 +1452,47 @@ class Secretin {
   }
 
   async getDb() {
-    if (localStorageAvailable()) {
-      try {
-        const cacheKey = `${SecretinPrefix}cache_${this.currentUser.username}`;
-        const DbCacheStr = localStorage.getItem(cacheKey);
-        const DbCache = DbCacheStr
-          ? JSON.parse(DbCacheStr)
-          : { users: {}, secrets: {} };
-        const revs = {};
-        Object.keys(DbCache.secrets).forEach((key) => {
-          revs[key] = DbCache.secrets[key].rev;
-        });
-        const newDb = await this.api.getDb(this.currentUser, revs);
-
-        Object.keys(newDb.secrets).forEach((key) => {
-          if (
-            typeof DbCache.secrets[key] !== 'undefined' &&
-            DbCache.secrets[key].editOffline
-          ) {
-            this.setConflict(key, 'conflict');
-          }
-        });
-        Object.assign(DbCache.users, newDb.users);
-        Object.assign(DbCache.secrets, newDb.secrets);
-        Object.keys(DbCache.secrets).forEach((key) => {
-          if (!DbCache.secrets[key]) {
-            delete DbCache.secrets[key];
-          }
-        });
-        const newDbCacheStr = JSON.stringify(DbCache);
-        localStorage.setItem(cacheKey, JSON.stringify(DbCache));
-        return newDbCacheStr;
-      } catch (err) {
-        if (err instanceof OfflineError) {
-          this.offlineDB();
-          return await this.getDb();
-        }
-        const wrapper = new WrappingError(err);
-        throw wrapper.error;
-      }
+    if (!localStorageAvailable()) {
+      throw new LocalStorageUnavailableError();
     }
-    throw new LocalStorageUnavailableError();
+    try {
+      const cacheKey = `${SecretinPrefix}cache_${this.currentUser.username}`;
+      const DbCacheStr = localStorage.getItem(cacheKey);
+      const DbCache = DbCacheStr
+        ? JSON.parse(DbCacheStr)
+        : { users: {}, secrets: {} };
+      const revs = {};
+      Object.keys(DbCache.secrets).forEach((key) => {
+        revs[key] = DbCache.secrets[key].rev;
+      });
+      const newDb = await this.api.getDb(this.currentUser, revs);
+
+      Object.keys(newDb.secrets).forEach((key) => {
+        if (
+          typeof DbCache.secrets[key] !== 'undefined' &&
+          DbCache.secrets[key].editOffline
+        ) {
+          this.setConflict(key, 'conflict');
+        }
+      });
+      Object.assign(DbCache.users, newDb.users);
+      Object.assign(DbCache.secrets, newDb.secrets);
+      Object.keys(DbCache.secrets).forEach((key) => {
+        if (!DbCache.secrets[key]) {
+          delete DbCache.secrets[key];
+        }
+      });
+      const newDbCacheStr = JSON.stringify(DbCache);
+      localStorage.setItem(cacheKey, JSON.stringify(DbCache));
+      return newDbCacheStr;
+    } catch (err) {
+      if (err instanceof OfflineError) {
+        this.offlineDB();
+        return await this.getDb();
+      }
+      const wrapper = new WrappingError(err);
+      throw wrapper.error;
+    }
   }
 
   async exportDb(password) {

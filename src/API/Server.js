@@ -17,12 +17,22 @@ class API {
     );
   }
 
-  addUser(username, privateKey, publicKey, pass, options) {
+  addUser({
+    username,
+    privateKey,
+    publicKey,
+    privateKeySign,
+    publicKeySign,
+    pass,
+    options,
+  }) {
     return this.getSHA256(username).then((hashedUsername) =>
       doPOST(`${this.db}/user/${hashedUsername}`, {
         pass,
         privateKey,
         publicKey,
+        privateKeySign,
+        publicKeySign,
         keys: {},
         options,
       })

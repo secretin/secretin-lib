@@ -120,6 +120,10 @@ var SecretinNodeAdapter = (function (exports, crypto, forge) {
     });
   }
 
+  function genRSAPSS() {
+    return genRSAOAEP();
+  }
+
   function generateWrappingKey() {
     const key = forge__default["default"].random.getBytesSync(32);
     return Promise.resolve(key);
@@ -277,6 +281,10 @@ var SecretinNodeAdapter = (function (exports, crypto, forge) {
     return Promise.resolve(publicKey);
   }
 
+  function importPublicKeySign(jwkPublicKey) {
+    return importPublicKey(jwkPublicKey);
+  }
+
   function derivePassword(password, parameters) {
     const result = {};
 
@@ -406,6 +414,10 @@ var SecretinNodeAdapter = (function (exports, crypto, forge) {
     return Promise.resolve(privateKey);
   }
 
+  function importPrivateKeySign(key, privateKeyObject) {
+    return importPrivateKey(key, privateKeyObject);
+  }
+
   function importKey(key, keyObject) {
     const wrappedKey = hexStringToUint8Array(keyObject.key);
     const iv = hexStringToAscii(keyObject.iv);
@@ -455,11 +467,14 @@ var SecretinNodeAdapter = (function (exports, crypto, forge) {
   exports.exportClearKey = exportClearKey;
   exports.exportKey = exportKey;
   exports.genRSAOAEP = genRSAOAEP;
+  exports.genRSAPSS = genRSAPSS;
   exports.generateWrappingKey = generateWrappingKey;
   exports.getSHA256 = getSHA256;
   exports.importKey = importKey;
   exports.importPrivateKey = importPrivateKey;
+  exports.importPrivateKeySign = importPrivateKeySign;
   exports.importPublicKey = importPublicKey;
+  exports.importPublicKeySign = importPublicKeySign;
   exports.sign = sign;
   exports.unwrapRSAOAEP = unwrapRSAOAEP;
   exports.verify = verify;

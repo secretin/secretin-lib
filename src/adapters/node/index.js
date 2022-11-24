@@ -36,6 +36,10 @@ export function genRSAOAEP() {
   });
 }
 
+export function genRSAPSS() {
+  return genRSAOAEP();
+}
+
 export function generateWrappingKey() {
   const key = forge.random.getBytesSync(32);
   return Promise.resolve(key);
@@ -193,6 +197,10 @@ export function importPublicKey(jwkPublicKey) {
   return Promise.resolve(publicKey);
 }
 
+export function importPublicKeySign(jwkPublicKey) {
+  return importPublicKey(jwkPublicKey);
+}
+
 export function derivePassword(password, parameters) {
   const result = {};
 
@@ -320,6 +328,10 @@ export function importPrivateKey(key, privateKeyObject) {
     new forge.jsbn.BigInteger(qInv.toString('hex'), 16)
   );
   return Promise.resolve(privateKey);
+}
+
+export function importPrivateKeySign(key, privateKeyObject) {
+  return importPrivateKey(key, privateKeyObject);
 }
 
 export function importKey(key, keyObject) {

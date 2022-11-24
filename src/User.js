@@ -44,31 +44,31 @@ class User {
       .then((keyPair) => {
         this.publicKey = keyPair.publicKey;
         this.privateKey = keyPair.privateKey;
-        return this.cryptoAdapter.convertOAEPToPSS(this.privateKey, 'sign');
+        return this.cryptoAdapter.genRSAPSS();
       })
-      .then((privateKeySign) => {
-        this.privateKeySign = privateKeySign;
-        return this.cryptoAdapter.convertOAEPToPSS(this.publicKey, 'verify');
-      })
-      .then((publicKeySign) => {
-        this.publicKeySign = publicKeySign;
+      .then((keyPairSign) => {
+        this.publicKeySign = keyPairSign.publicKey;
+        this.privateKeySign = keyPairSign.privateKey;
       });
+  }
+
+  async deprecatedConvertOAEPToPSS() {
+    this.publicKeySign = await this.cryptoAdapter.convertOAEPToPSS(
+      this.publicKey,
+      'verify'
+    );
+    this.privateKeySign = await this.cryptoAdapter.convertOAEPToPSS(
+      this.privateKey,
+      'sign'
+    );
   }
 
   exportPublicKey() {
     return this.cryptoAdapter.exportClearKey(this.publicKey);
   }
 
-  importPublicKey(jwkPublicKey) {
-    return this.cryptoAdapter
-      .importPublicKey(jwkPublicKey)
-      .then((publicKey) => {
-        this.publicKey = publicKey;
-        return this.cryptoAdapter.convertOAEPToPSS(this.publicKey, 'verify');
-      })
-      .then((publicKeySign) => {
-        this.publicKeySign = publicKeySign;
-      });
+  async importPublicKey(jwkPublicKey) {
+    this.publicKey = await this.cryptoAdapter.importPublicKey(jwkPublicKey);
   }
 
   exportPrivateKey(password) {
@@ -96,12 +96,42 @@ class User {
       .importPrivateKey(dKey, privateKeyObject)
       .then((privateKey) => {
         this.privateKey = privateKey;
-        return this.cryptoAdapter.convertOAEPToPSS(this.privateKey, 'sign');
-      })
-      .then((privateKeySign) => {
-        this.privateKeySign = privateKeySign;
       })
       .catch(() => Promise.reject(new InvalidPasswordError()));
+  }
+
+  async exportKeyPairSign() {
+    const publicKeySign = await this.cryptoAdapter.exportClearKey(
+      this.publicKeySign
+    );
+    const protectKey = await this.cryptoAdapter.generateWrappingKey();
+    const { iv, key: wrapped } = await this.cryptoAdapter.exportKey(
+      protectKey,
+      this.privateKeySign
+    );
+
+    const key = await this.wrapKey(protectKey, this.publicKey);
+    return { publicKeySign, privateKeySign: { iv, wrapped, key } };
+  }
+
+  async importKeyPairSign({ publicKeySign, privateKeySign }) {
+    this.publicKeySign = await this.cryptoAdapter.importPublicKeySign(
+      publicKeySign
+    );
+
+    const { iv, wrapped, key } = privateKeySign;
+    const protectKey = await this.unwrapKey(key, {
+      name: 'AES-CBC',
+      length: 256,
+    });
+
+    this.privateKeySign = await this.cryptoAdapter.importPrivateKeySign(
+      protectKey,
+      {
+        privateKey: wrapped,
+        iv,
+      }
+    );
   }
 
   exportBigPrivateData(data) {
@@ -357,8 +387,12 @@ class User {
     );
   }
 
-  unwrapKey(wrappedKey) {
-    return this.cryptoAdapter.unwrapRSAOAEP(wrappedKey, this.privateKey);
+  unwrapKey(wrappedKey, unwrappedKeyAlgorithm) {
+    return this.cryptoAdapter.unwrapRSAOAEP(
+      wrappedKey,
+      this.privateKey,
+      unwrappedKeyAlgorithm
+    );
   }
 
   wrapKey(key, publicKey) {
@@ -403,6 +437,17 @@ class User {
       .then((object) => {
         localStorage.setItem(`${SecretinPrefix}privateKey`, object.key);
         localStorage.setItem(`${SecretinPrefix}privateKeyIv`, object.iv);
+        return this.exportKeyPairSign();
+      })
+      .then(({ privateKeySign, publicKeySign }) => {
+        localStorage.setItem(
+          `${SecretinPrefix}privateKeySign`,
+          JSON.stringify(privateKeySign)
+        );
+        localStorage.setItem(
+          `${SecretinPrefix}publicKeySign`,
+          JSON.stringify(publicKeySign)
+        );
         return this.cryptoAdapter.derivePassword(shortpass);
       })
       .then((derived) => {
@@ -441,6 +486,24 @@ class User {
           iv: localStorage.getItem(`${SecretinPrefix}privateKeyIv`),
         };
         return this.importPrivateKey(protectKey, privateKeyObject);
+      })
+      .then(() => {
+        const publicKeySignRaw = localStorage.getItem(
+          `${SecretinPrefix}publicKeySign`
+        );
+        const privateKeySignRaw = localStorage.getItem(
+          `${SecretinPrefix}privateKeySign`
+        );
+        if (publicKeySignRaw && privateKeySignRaw) {
+          const privateKeySign = JSON.parse(privateKeySignRaw);
+          const publicKeySign = JSON.parse(publicKeySignRaw);
+          return this.importKeyPairSign({
+            privateKeySign,
+            publicKeySign,
+          });
+        }
+        // Legacy bad practice
+        return this.currentUser.deprecatedConvertOAEPToPSS();
       })
       .catch(() => Promise.reject(new InvalidPasswordError()));
   }
