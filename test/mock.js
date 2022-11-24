@@ -5,20 +5,29 @@ crypto.subtle.generateKey = function generateKey(
   extractable,
   keyUsages
 ) {
-  if (algorithm.name === 'RSA-OAEP') {
+  if (['RSA-OAEP', 'RSA-PSS'].includes(algorithm.name)) {
     // eslint-disable-next-line
     const key = mockedKeys[availableKeyCounter];
+    if (algorithm.name === 'RSA-PSS') {
+      key.publicKey.alg = 'PS256';
+      key.privateKey.alg = 'PS256';
+      key.publicKey.key_ops = ['verify'];
+      key.privateKey.key_ops = ['sign'];
+    }
+
     const keyObject = {};
     availableKeyCounter += 1;
 
     const format = 'jwk';
     const nAlgorithm = {
-      name: 'RSA-OAEP',
+      name: algorithm.name,
       hash: { name: 'SHA-256' },
     };
     const nExtractable = true;
-    const pubKeyUsages = ['wrapKey', 'encrypt'];
-    const pKeyUsages = ['unwrapKey', 'decrypt'];
+    const pubKeyUsages =
+      algorithm.name === 'RSA-PSS' ? ['verify'] : ['wrapKey', 'encrypt'];
+    const pKeyUsages =
+      algorithm.name === 'RSA-PSS' ? ['sign'] : ['unwrapKey', 'decrypt'];
     return crypto.subtle
       .importKey(format, key.publicKey, nAlgorithm, nExtractable, pubKeyUsages)
       .then((publicKey) => {

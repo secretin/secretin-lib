@@ -25,6 +25,18 @@ export function genRSAOAEP() {
   return crypto.subtle.generateKey(algorithm, extractable, keyUsages);
 }
 
+export function genRSAPSS() {
+  const algorithm = {
+    name: 'RSA-PSS',
+    modulusLength: 4096,
+    publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+    hash: { name: 'SHA-256' },
+  };
+  const extractable = true;
+  const keyUsages = ['sign', 'verify'];
+  return crypto.subtle.generateKey(algorithm, extractable, keyUsages);
+}
+
 export function generateWrappingKey() {
   const algorithm = {
     name: 'AES-CBC',
@@ -155,19 +167,23 @@ export function verify(datas, signature, key) {
   );
 }
 
-export function unwrapRSAOAEP(wrappedKeyHex, unwrappingPrivateKey) {
+export function unwrapRSAOAEP(
+  wrappedKeyHex,
+  unwrappingPrivateKey,
+  unwrappedKeyAlgorithm = {
+    name: 'AES-GCM',
+    length: 256,
+  }
+) {
   const format = 'raw';
   const wrappedKey = hexStringToUint8Array(wrappedKeyHex);
   const unwrapAlgorithm = {
     name: 'RSA-OAEP',
     hash: { name: 'SHA-256' },
   };
-  const unwrappedKeyAlgorithm = {
-    name: 'AES-GCM',
-    length: 256,
-  };
+
   const extractable = true;
-  const usages = ['decrypt', 'encrypt'];
+  const usages = ['decrypt', 'encrypt', 'wrapKey', 'unwrapKey'];
 
   return crypto.subtle.unwrapKey(
     format,
@@ -217,6 +233,23 @@ export function importPublicKey(jwkPublicKey) {
   };
   const extractable = true;
   const keyUsages = ['wrapKey', 'encrypt'];
+  return crypto.subtle.importKey(
+    format,
+    jwkPublicKey,
+    algorithm,
+    extractable,
+    keyUsages
+  );
+}
+
+export function importPublicKeySign(jwkPublicKey) {
+  const format = 'jwk';
+  const algorithm = {
+    name: 'RSA-PSS',
+    hash: { name: 'SHA-256' },
+  };
+  const extractable = true;
+  const keyUsages = ['verify'];
   return crypto.subtle.importKey(
     format,
     jwkPublicKey,
@@ -321,6 +354,31 @@ export function importPrivateKey(key, privateKeyObject) {
   };
   const extractable = true;
   const keyUsages = ['unwrapKey', 'decrypt'];
+
+  return crypto.subtle.unwrapKey(
+    format,
+    wrappedPrivateKey,
+    key,
+    unwrapAlgorithm,
+    unwrappedKeyAlgorithm,
+    extractable,
+    keyUsages
+  );
+}
+
+export function importPrivateKeySign(key, privateKeyObject) {
+  const format = 'jwk';
+  const wrappedPrivateKey = hexStringToUint8Array(privateKeyObject.privateKey);
+  const unwrapAlgorithm = {
+    name: 'AES-CBC',
+    iv: hexStringToUint8Array(privateKeyObject.iv),
+  };
+  const unwrappedKeyAlgorithm = {
+    name: 'RSA-PSS',
+    hash: { name: 'sha-256' },
+  };
+  const extractable = true;
+  const keyUsages = ['sign'];
 
   return crypto.subtle.unwrapKey(
     format,

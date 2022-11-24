@@ -93,6 +93,18 @@ var SecretinBrowserAdapter = (function (exports) {
     return crypto.subtle.generateKey(algorithm, extractable, keyUsages);
   }
 
+  function genRSAPSS() {
+    const algorithm = {
+      name: 'RSA-PSS',
+      modulusLength: 4096,
+      publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+      hash: { name: 'SHA-256' },
+    };
+    const extractable = true;
+    const keyUsages = ['sign', 'verify'];
+    return crypto.subtle.generateKey(algorithm, extractable, keyUsages);
+  }
+
   function generateWrappingKey() {
     const algorithm = {
       name: 'AES-CBC',
@@ -223,19 +235,23 @@ var SecretinBrowserAdapter = (function (exports) {
     );
   }
 
-  function unwrapRSAOAEP(wrappedKeyHex, unwrappingPrivateKey) {
+  function unwrapRSAOAEP(
+    wrappedKeyHex,
+    unwrappingPrivateKey,
+    unwrappedKeyAlgorithm = {
+      name: 'AES-GCM',
+      length: 256,
+    }
+  ) {
     const format = 'raw';
     const wrappedKey = hexStringToUint8Array(wrappedKeyHex);
     const unwrapAlgorithm = {
       name: 'RSA-OAEP',
       hash: { name: 'SHA-256' },
     };
-    const unwrappedKeyAlgorithm = {
-      name: 'AES-GCM',
-      length: 256,
-    };
+
     const extractable = true;
-    const usages = ['decrypt', 'encrypt'];
+    const usages = ['decrypt', 'encrypt', 'wrapKey', 'unwrapKey'];
 
     return crypto.subtle.unwrapKey(
       format,
@@ -285,6 +301,23 @@ var SecretinBrowserAdapter = (function (exports) {
     };
     const extractable = true;
     const keyUsages = ['wrapKey', 'encrypt'];
+    return crypto.subtle.importKey(
+      format,
+      jwkPublicKey,
+      algorithm,
+      extractable,
+      keyUsages
+    );
+  }
+
+  function importPublicKeySign(jwkPublicKey) {
+    const format = 'jwk';
+    const algorithm = {
+      name: 'RSA-PSS',
+      hash: { name: 'SHA-256' },
+    };
+    const extractable = true;
+    const keyUsages = ['verify'];
     return crypto.subtle.importKey(
       format,
       jwkPublicKey,
@@ -401,6 +434,31 @@ var SecretinBrowserAdapter = (function (exports) {
     );
   }
 
+  function importPrivateKeySign(key, privateKeyObject) {
+    const format = 'jwk';
+    const wrappedPrivateKey = hexStringToUint8Array(privateKeyObject.privateKey);
+    const unwrapAlgorithm = {
+      name: 'AES-CBC',
+      iv: hexStringToUint8Array(privateKeyObject.iv),
+    };
+    const unwrappedKeyAlgorithm = {
+      name: 'RSA-PSS',
+      hash: { name: 'sha-256' },
+    };
+    const extractable = true;
+    const keyUsages = ['sign'];
+
+    return crypto.subtle.unwrapKey(
+      format,
+      wrappedPrivateKey,
+      key,
+      unwrapAlgorithm,
+      unwrappedKeyAlgorithm,
+      extractable,
+      keyUsages
+    );
+  }
+
   function importKey(key, keyObject) {
     const format = 'jwk';
     const wrappedKey = hexStringToUint8Array(keyObject.key);
@@ -454,11 +512,14 @@ var SecretinBrowserAdapter = (function (exports) {
   exports.exportClearKey = exportClearKey;
   exports.exportKey = exportKey;
   exports.genRSAOAEP = genRSAOAEP;
+  exports.genRSAPSS = genRSAPSS;
   exports.generateWrappingKey = generateWrappingKey;
   exports.getSHA256 = getSHA256;
   exports.importKey = importKey;
   exports.importPrivateKey = importPrivateKey;
+  exports.importPrivateKeySign = importPrivateKeySign;
   exports.importPublicKey = importPublicKey;
+  exports.importPublicKeySign = importPublicKeySign;
   exports.sign = sign;
   exports.unwrapRSAOAEP = unwrapRSAOAEP;
   exports.verify = verify;

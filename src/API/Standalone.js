@@ -33,7 +33,15 @@ class API {
     );
   }
 
-  addUser(username, privateKey, publicKey, pass, options) {
+  addUser({
+    username,
+    privateKey,
+    publicKey,
+    privateKeySign,
+    publicKeySign,
+    pass,
+    options,
+  }) {
     let hashedUsername;
     return this.getSHA256(username)
       .then((rHashedUsername) => {
@@ -53,6 +61,8 @@ class API {
             hash: hashedHash,
             iterations: pass.iterations,
           },
+          privateKeySign,
+          publicKeySign,
           privateKey,
           publicKey,
           keys: {},
