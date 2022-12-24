@@ -1,7 +1,7 @@
 var Secretin = (function () {
   'use strict';
 
-  var version = "2.5.1";
+  var version = "2.5.2";
 
   const owaspConfigs = {
     allowPassphrases: true,
@@ -1775,11 +1775,12 @@ var Secretin = (function () {
           if (publicKeySignRaw && privateKeySignRaw) {
             const privateKeySign = JSON.parse(privateKeySignRaw);
             const publicKeySign = JSON.parse(publicKeySignRaw);
-            this.importKeyPairSign({
+            return this.importKeyPairSign({
               privateKeySign,
               publicKeySign,
             });
           }
+          return Promise.resolve();
         })
         .catch(() => Promise.reject(new InvalidPasswordError()));
     }

@@ -4,7 +4,7 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Secretin = factory());
 })(this, (function () { 'use strict';
 
-  var version = "2.5.1";
+  var version = "2.5.2";
 
   const owaspConfigs = {
     allowPassphrases: true,
@@ -1778,11 +1778,12 @@
           if (publicKeySignRaw && privateKeySignRaw) {
             const privateKeySign = JSON.parse(privateKeySignRaw);
             const publicKeySign = JSON.parse(publicKeySignRaw);
-            this.importKeyPairSign({
+            return this.importKeyPairSign({
               privateKeySign,
               publicKeySign,
             });
           }
+          return Promise.resolve();
         })
         .catch(() => Promise.reject(new InvalidPasswordError()));
     }

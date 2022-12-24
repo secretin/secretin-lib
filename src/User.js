@@ -506,11 +506,12 @@ class User {
         if (publicKeySignRaw && privateKeySignRaw) {
           const privateKeySign = JSON.parse(privateKeySignRaw);
           const publicKeySign = JSON.parse(publicKeySignRaw);
-          this.importKeyPairSign({
+          return this.importKeyPairSign({
             privateKeySign,
             publicKeySign,
           });
         }
+        return Promise.resolve();
       })
       .catch(() => Promise.reject(new InvalidPasswordError()));
   }
