@@ -3,16 +3,16 @@ describe('Secret accesses', () => {
   // eslint-disable-next-line
   Date.prototype.toISOString = () => now;
   const userRead = 'user1';
-  const passwordRead = 'password1';
+  const passwordRead = 'passWord123!1';
 
   const userReadWrite = 'user2';
-  const passwordReadWrite = 'password2';
+  const passwordReadWrite = 'passWord123!2';
 
   const userReadWriteShare = 'user3';
-  const passwordReadWriteShare = 'password3';
+  const passwordReadWriteShare = 'passWord123!3';
 
   const userNoAccess = 'user4';
-  const passwordNoAccess = 'password4';
+  const passwordNoAccess = 'passWord123!4';
 
   const secretTitle = 'secret';
   let secretId = '';

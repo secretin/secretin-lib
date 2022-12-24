@@ -2,9 +2,9 @@ if (__karma__.config.args[0] === 'server') {
   window.process = 'karma';
   describe('Sync offline/online', () => {
     const username = 'user';
-    const password = 'password';
+    const password = 'passwOrd123!';
     const username2 = 'user2';
-    const password2 = 'password2';
+    const password2 = 'passwOrd123!2';
 
     const secretTitle = 'secret';
     let secretId = '';

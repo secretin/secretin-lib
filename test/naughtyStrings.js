@@ -524,7 +524,7 @@ describe('Naughty strings', () => {
   Date.prototype.toISOString = () => now;
 
   const username = 'user';
-  const password = 'password';
+  const password = 'passwOrd123!';
 
   const secretContent = {
     fields: [

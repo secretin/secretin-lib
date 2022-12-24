@@ -4,16 +4,16 @@ describe('Sharing hell', () => {
   Date.prototype.toISOString = () => now;
 
   const user1 = 'user1';
-  const password1 = 'password1';
+  const password1 = 'passWord123!1';
 
   const user2 = 'user2';
-  const password2 = 'password2';
+  const password2 = 'passWord123!2';
 
   const user3 = 'user3';
-  const password3 = 'password3';
+  const password3 = 'passWord123!3';
 
   const user4 = 'user4';
-  const password4 = 'password4';
+  const password4 = 'passWord123!4';
 
   const secretContent = {
     fields: [

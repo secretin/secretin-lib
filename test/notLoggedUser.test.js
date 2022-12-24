@@ -1,6 +1,6 @@
 describe('Not logged user', () => {
   const username = 'user';
-  const password = 'password';
+  const password = 'passwOrd123!';
   const wrongUsername = 'wrongUser';
   const wrongPassword = 'wrongPassword';
 

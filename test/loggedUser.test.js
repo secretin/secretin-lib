@@ -55,8 +55,8 @@ describe('Logged user', () => {
   const unknownUser = 'unknownUser';
 
   const username = 'user';
-  const password = 'password';
-  const newPassword = 'newPassword';
+  const password = 'passwOrd123!';
+  const newPassword = 'newPassword123!';
 
   const dataToExport = 'test';
   const exportedData = {
@@ -227,9 +227,9 @@ describe('Logged user', () => {
   });
 
   it('Can export database with password', async () => {
-    const passwordExport = 'password_export';
+    const passwordExport = 'password_Export123!';
     Object.keys(this.secretin.currentUser.metadatas).length.should.equal(6);
-    const jsonDB = await this.secretin.exportDb(passwordExport);
+    const jsonDB = await this.secretin.exportDb(passwordExport, password);
 
     this.secretin.currentUser.disconnect();
     await this.secretin.loginUser(username, password);
@@ -634,7 +634,7 @@ describe('Logged user', () => {
   });
 
   it('Can change its password', async () => {
-    await this.secretin.changePassword(newPassword);
+    await this.secretin.changePassword(newPassword, password);
 
     this.secretin.currentUser.disconnect();
     const user = await this.secretin.loginUser(username, newPassword);
@@ -1232,11 +1232,11 @@ describe('Logged user', () => {
       '39393939',
     ]);
     protectedRescueCodes.should.deep.equal([
-      '5a21fddd',
-      '5a21fddd',
-      '5a21fddd',
-      '5a21fddd',
-      '5a21fddd',
+      'ee3664d7',
+      'ee3664d7',
+      'ee3664d7',
+      'ee3664d7',
+      'ee3664d7',
     ]);
     this.secretin.api.postRescueCodes = originalPostRescueCodes;
   });

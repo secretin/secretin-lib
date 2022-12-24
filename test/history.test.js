@@ -47,10 +47,10 @@ describe('Test history', () => {
   let secretInFolderId = '';
 
   const username = 'user';
-  const password = 'password';
+  const password = 'passwOrd123!';
 
   const username2 = 'user2';
-  const password2 = 'password2';
+  const password2 = 'passwOrd123!2';
   /*
     Create following arborescence :
       secret

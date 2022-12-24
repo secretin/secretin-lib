@@ -2206,17 +2206,33 @@ var Secretin = (function () {
       }
     }
 
-    async changePassword(password) {
+    async changePassword(password, oldPassword) {
       assertPasswordComplexity(password);
       if (!this.editableDB) {
         throw new OfflineError();
       }
       try {
+        const parameters = await this.api.getDerivationParameters(
+          this.currentUser.username
+        );
+        const { hash } = await this.cryptoAdapter.derivePassword(
+          oldPassword,
+          parameters
+        );
+
+        // eslint-disable-next-line security/detect-possible-timing-attacks
+        if (hash !== this.currentUser.hash) {
+          throw new InvalidPasswordError();
+        }
+
         const objectPrivateKey = await this.currentUser.exportPrivateKey(
           password
         );
 
-        await this.api.editUser(this.currentUser, objectPrivateKey);
+        await this.api.editUser(this.currentUser, {
+          ...objectPrivateKey,
+          oldHash: hash,
+        });
 
         if (typeof window.process !== 'undefined') {
           // Electron
@@ -3254,7 +3270,7 @@ var Secretin = (function () {
       }
     }
 
-    async exportDb(password) {
+    async exportDb(password, oldPassword) {
       try {
         const db = await this.api.getDb(this.currentUser, {});
         const oldSecretin = new Secretin(
@@ -3269,7 +3285,7 @@ var Secretin = (function () {
         }
 
         oldSecretin.currentUser = this.currentUser;
-        await oldSecretin.changePassword(password);
+        await oldSecretin.changePassword(password, oldPassword);
         const newDb = await oldSecretin.api.getDb(oldSecretin.currentUser, {});
         newDb.username = this.currentUser.username;
         return JSON.stringify(newDb);
