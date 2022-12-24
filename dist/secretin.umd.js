@@ -6,8 +6,77 @@
 
   var version = "2.4.0";
 
+  const owaspConfigs = {
+    allowPassphrases: true,
+    maxLength: 128,
+    minLength: 10,
+    minPhraseLength: 20,
+    minOptionalTestsToPass: 4,
+  };
+  const tests = [
+    function enforceMinimumLength(password) {
+      if (password.length < owaspConfigs.minLength) {
+        throw new Error(
+          `The password must be at least ${owaspConfigs.minLength} characters long.`
+        );
+      }
+    },
+
+    function enforceMaximumLength(password) {
+      if (password.length > owaspConfigs.maxLength) {
+        throw new Error(
+          `The password must be fewer than ${owaspConfigs.maxLength} characters.`
+        );
+      }
+    },
+
+    function forbidRepeatingCharacters(password) {
+      if (/(.)\1{2,}/.test(password)) {
+        throw new Error(
+          'The password may not contain sequences of three or more repeated characters.'
+        );
+      }
+    },
+
+    function requireAtLeastOneLowercaseLetter(password) {
+      if (!/[a-z]/.test(password)) {
+        throw new Error(
+          'The password must contain at least one lowercase letter.'
+        );
+      }
+    },
+
+    function requireAtLeastOneUppercaseLetter(password) {
+      if (!/[A-Z]/.test(password)) {
+        throw new Error(
+          'The password must contain at least one uppercase letter.'
+        );
+      }
+    },
+
+    function requireAtLeastOneNumber(password) {
+      if (!/[0-9]/.test(password)) {
+        throw new Error('The password must contain at least one number.');
+      }
+    },
+
+    function requireAtLeastOneSpecialCharacter(password) {
+      if (!/[^A-Za-z0-9]/.test(password)) {
+        throw new Error(
+          'The password must contain at least one special character.'
+        );
+      }
+    },
+  ];
+
+  function assertPasswordComplexity(password) {
+    tests.forEach((testStrength) => {
+      testStrength(password);
+    });
+  }
+
   /* eslint-disable max-classes-per-file */
-  class Error {
+  class Error$1 {
     constructor(errorObject) {
       this.message = 'Unknown error';
       if (typeof errorObject !== 'undefined') {
@@ -18,181 +87,181 @@
     }
   }
 
-  class XorSeedError extends Error {
+  class XorSeedError extends Error$1 {
     constructor() {
       super();
       this.message = 'Utils.xorSeed expect 32 bytes Uint8Arrays';
     }
   }
-  class InvalidHexStringError extends Error {
+  class InvalidHexStringError extends Error$1 {
     constructor() {
       super();
       this.message = 'Invalid hexString';
     }
   }
 
-  class SomethingGoesWrong extends Error {
+  class SomethingGoesWrong extends Error$1 {
     constructor() {
       super();
       this.message = 'Something goes wrong.';
     }
   }
 
-  class ServerUnknownError extends Error {
+  class ServerUnknownError extends Error$1 {
     constructor() {
       super();
       this.message = 'Server error';
     }
   }
 
-  class UserNotFoundError extends Error {
+  class UserNotFoundError extends Error$1 {
     constructor() {
       super();
       this.message = 'User not found';
     }
   }
 
-  class UsernameAlreadyExistsError extends Error {
+  class UsernameAlreadyExistsError extends Error$1 {
     constructor() {
       super();
       this.message = 'Username already exists';
     }
   }
 
-  class NeedTOTPTokenError extends Error {
+  class NeedTOTPTokenError extends Error$1 {
     constructor() {
       super();
       this.message = 'Need TOTP token';
     }
   }
 
-  class DisconnectedError extends Error {
+  class DisconnectedError extends Error$1 {
     constructor() {
       super();
       this.message = 'You are disconnected';
     }
   }
 
-  class InvalidSignatureError extends Error {
+  class InvalidSignatureError extends Error$1 {
     constructor() {
       super();
       this.message = 'Invalid signature';
     }
   }
 
-  class DontHaveSecretError extends Error {
+  class DontHaveSecretError extends Error$1 {
     constructor() {
       super();
       this.message = "You don't have this secret";
     }
   }
 
-  class FolderNotFoundError extends Error {
+  class FolderNotFoundError extends Error$1 {
     constructor() {
       super();
       this.message = 'Folder not found';
     }
   }
 
-  class FolderInItselfError extends Error {
+  class FolderInItselfError extends Error$1 {
     constructor() {
       super();
       this.message = "You can't put this folder in itself.";
     }
   }
 
-  class LocalStorageUnavailableError extends Error {
+  class LocalStorageUnavailableError extends Error$1 {
     constructor() {
       super();
       this.message = 'LocalStorage unavailable';
     }
   }
 
-  class InvalidPasswordError extends Error {
+  class InvalidPasswordError extends Error$1 {
     constructor() {
       super();
       this.message = 'Invalid password';
     }
   }
 
-  class CantEditSecretError extends Error {
+  class CantEditSecretError extends Error$1 {
     constructor() {
       super();
       this.message = "You can't edit this secret";
     }
   }
 
-  class CantShareSecretError extends Error {
+  class CantShareSecretError extends Error$1 {
     constructor() {
       super();
       this.message = "You can't share this secret";
     }
   }
 
-  class CantUnshareSecretError extends Error {
+  class CantUnshareSecretError extends Error$1 {
     constructor() {
       super();
       this.message = "You can't unshare this secret";
     }
   }
 
-  class CantUnshareWithYourselfError extends Error {
+  class CantUnshareWithYourselfError extends Error$1 {
     constructor() {
       super();
       this.message = "You can't unshare with yourself";
     }
   }
 
-  class CantShareWithYourselfError extends Error {
+  class CantShareWithYourselfError extends Error$1 {
     constructor() {
       super();
       this.message = "You can't share with yourself";
     }
   }
 
-  class SecretAlreadyExistsError extends Error {
+  class SecretAlreadyExistsError extends Error$1 {
     constructor() {
       super();
       this.message = 'Wow you are unlucky ! SecretID already exists';
     }
   }
 
-  class SecretNotFoundError extends Error {
+  class SecretNotFoundError extends Error$1 {
     constructor() {
       super();
       this.message = 'Secret not found';
     }
   }
 
-  class CantGenerateNewKeyError extends Error {
+  class CantGenerateNewKeyError extends Error$1 {
     constructor() {
       super();
       this.message = "You can't generate new key for this secret";
     }
   }
 
-  class NotSharedWithUserError extends Error {
+  class NotSharedWithUserError extends Error$1 {
     constructor() {
       super();
       this.message = 'Secret not shared with this user';
     }
   }
 
-  class FriendNotFoundError extends Error {
+  class FriendNotFoundError extends Error$1 {
     constructor() {
       super();
       this.message = 'Friend not found';
     }
   }
 
-  class OfflineError extends Error {
+  class OfflineError extends Error$1 {
     constructor() {
       super();
       this.message = 'Offline';
     }
   }
 
-  class NotAvailableError extends Error {
+  class NotAvailableError extends Error$1 {
     constructor() {
       super();
       this.message = 'Not available in standalone mode';
@@ -252,13 +321,13 @@
       } else if (error === 'Something goes wrong.') {
         this.error = new SomethingGoesWrong();
       } else {
-        this.error = new Error(error);
+        this.error = new Error$1(error);
       }
     }
   }
 
   const Errors = {
-    Error,
+    Error: Error$1,
     ServerUnknownError,
     UserNotFoundError,
     UsernameAlreadyExistsError,
@@ -1900,6 +1969,7 @@
     }
 
     async newUser(username, password) {
+      assertPasswordComplexity(password);
       if (!this.editableDB) {
         throw new OfflineError();
       }
@@ -2140,6 +2210,7 @@
     }
 
     async changePassword(password) {
+      assertPasswordComplexity(password);
       if (!this.editableDB) {
         throw new OfflineError();
       }

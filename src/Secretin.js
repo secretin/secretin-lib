@@ -1,3 +1,4 @@
+import { assertPasswordComplexity } from './lib/owasp-password-strength-test';
 import {
   WrappingError,
   UsernameAlreadyExistsError,
@@ -218,6 +219,7 @@ class Secretin {
   }
 
   async newUser(username, password) {
+    assertPasswordComplexity(password);
     if (!this.editableDB) {
       throw new OfflineError();
     }
@@ -458,6 +460,7 @@ class Secretin {
   }
 
   async changePassword(password) {
+    assertPasswordComplexity(password);
     if (!this.editableDB) {
       throw new OfflineError();
     }
