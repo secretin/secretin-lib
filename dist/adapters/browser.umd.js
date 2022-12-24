@@ -484,6 +484,10 @@
     );
   }
 
+  function randomUUID() {
+    return crypto.randomUUID();
+  }
+
   const SecretinBrowserAdapter = {
     convertOAEPToPSS,
     decryptAESGCM256,
@@ -506,6 +510,7 @@
     unwrapRSAOAEP,
     verify,
     wrapRSAOAEP,
+    randomUUID,
   };
 
   exports.convertOAEPToPSS = convertOAEPToPSS;
@@ -526,6 +531,7 @@
   exports.importPrivateKeySign = importPrivateKeySign;
   exports.importPublicKey = importPublicKey;
   exports.importPublicKeySign = importPublicKeySign;
+  exports.randomUUID = randomUUID;
   exports.sign = sign;
   exports.unwrapRSAOAEP = unwrapRSAOAEP;
   exports.verify = verify;

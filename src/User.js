@@ -241,7 +241,7 @@ class User {
   }
 
   createSecret(metadatas, secret) {
-    const now = Date.now();
+    const now = this.cryptoAdapter.randomUUID();
     const saltedTitle = `${now}|${metadatas.title}`;
     const result = {};
     const newMetadas = metadatas;

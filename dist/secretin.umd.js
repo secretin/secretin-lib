@@ -1513,7 +1513,7 @@
     }
 
     createSecret(metadatas, secret) {
-      const now = Date.now();
+      const now = this.cryptoAdapter.randomUUID();
       const saltedTitle = `${now}|${metadatas.title}`;
       const result = {};
       const newMetadas = metadatas;
@@ -3330,7 +3330,7 @@
       const encryptedMetadata = user.metadatas;
       oldSecretin.currentUser.keys = user.keys;
       for (const hashedTitle of Object.keys(oldSecretin.currentUser.keys)) {
-        const now = Date.now();
+        const now = this.cryptoAdapter.randomUUID();
         const saltedTitle = `${now}|${hashedTitle}`;
         const newHashedTitle = await this.cryptoAdapter.getSHA256(saltedTitle);
         newHashedTitles[hashedTitle] = newHashedTitle;

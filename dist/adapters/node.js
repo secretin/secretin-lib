@@ -436,6 +436,10 @@ var SecretinNodeAdapter = (function (exports, crypto, forge) {
     return Promise.resolve(importedKey.toString('binary'));
   }
 
+  function randomUUID() {
+    return crypto__default["default"].randomUUID();
+  }
+
   const SecretinNodeAdapter = {
     convertOAEPToPSS,
     decryptAESGCM256,
@@ -478,6 +482,7 @@ var SecretinNodeAdapter = (function (exports, crypto, forge) {
   exports.importPrivateKeySign = importPrivateKeySign;
   exports.importPublicKey = importPublicKey;
   exports.importPublicKeySign = importPublicKeySign;
+  exports.randomUUID = randomUUID;
   exports.sign = sign;
   exports.unwrapRSAOAEP = unwrapRSAOAEP;
   exports.verify = verify;

@@ -413,6 +413,10 @@ export function importKey(key, keyObject) {
   );
 }
 
+export function randomUUID() {
+  return crypto.randomUUID();
+}
+
 const SecretinBrowserAdapter = {
   convertOAEPToPSS,
   decryptAESGCM256,
@@ -435,6 +439,7 @@ const SecretinBrowserAdapter = {
   unwrapRSAOAEP,
   verify,
   wrapRSAOAEP,
+  randomUUID,
 };
 
 export default SecretinBrowserAdapter;

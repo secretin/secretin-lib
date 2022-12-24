@@ -352,6 +352,10 @@ export function importKey(key, keyObject) {
   return Promise.resolve(importedKey.toString('binary'));
 }
 
+export function randomUUID() {
+  return crypto.randomUUID();
+}
+
 const SecretinNodeAdapter = {
   convertOAEPToPSS,
   decryptAESGCM256,
