@@ -29,6 +29,8 @@ import {
   xorSeed,
   defaultProgress,
   SecretinPrefix,
+  generateRescueCodes,
+  xorRescueCode,
 } from './lib/utils';
 
 import APIStandalone from './API/Standalone';
@@ -1439,8 +1441,15 @@ class Secretin {
 
   async getRescueCodes() {
     try {
-      const rescueCode = await this.api.getRescueCodes(this.currentUser);
-      return rescueCode;
+      const rescueCodes = generateRescueCodes();
+      const protectedRescueCodes = rescueCodes.map((rescueCode) =>
+        xorRescueCode(
+          hexStringToUint8Array(rescueCode),
+          hexStringToUint8Array(this.currentUser.hash)
+        )
+      );
+      await this.api.postRescueCodes(this.currentUser, protectedRescueCodes);
+      return rescueCodes;
     } catch (err) {
       if (err instanceof OfflineError) {
         this.offlineDB();

@@ -1215,6 +1215,32 @@ describe('Logged user', () => {
     ].should.deep.equal(expectedMetadatas);
   });
 
+  it('Can generate rescue codes', async () => {
+    let protectedRescueCodes;
+    const originalPostRescueCodes = this.secretin.api.postRescueCodes;
+    this.secretin.api.postRescueCodes = async (user, rescueCodes) => {
+      protectedRescueCodes = rescueCodes;
+    };
+
+    const rescueCodes = await this.secretin.getRescueCodes();
+
+    rescueCodes.should.deep.equal([
+      '39393939',
+      '39393939',
+      '39393939',
+      '39393939',
+      '39393939',
+    ]);
+    protectedRescueCodes.should.deep.equal([
+      '5a21fddd',
+      '5a21fddd',
+      '5a21fddd',
+      '5a21fddd',
+      '5a21fddd',
+    ]);
+    this.secretin.api.postRescueCodes = originalPostRescueCodes;
+  });
+
   if (__karma__.config.args[0] === 'server') {
     it('Can activate shortlogin and use it', async () => {
       await this.secretin.activateShortLogin(shortpass, deviceId);

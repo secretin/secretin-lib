@@ -311,6 +311,26 @@ class API {
       );
   }
 
+  postRescueCodes(user, rescueCodes) {
+    let hashedUsername;
+    const json = JSON.stringify({
+      rescueCodes,
+    });
+    const now = Date.now();
+    return this.getSHA256(user.username)
+      .then((rHashedUsername) => {
+        hashedUsername = rHashedUsername;
+        return user.sign(`${json}|${now}`);
+      })
+      .then((signature) =>
+        doPUT(`${this.db}/rescueCodes/${hashedUsername}`, {
+          json,
+          sig: signature,
+          sigTime: now,
+        })
+      );
+  }
+
   editUser(user, datas) {
     let hashedUsername;
     const json = JSON.stringify(datas);

@@ -70,6 +70,23 @@ export function bytesToASCIIString(bytes) {
   );
 }
 
+export function generateRescueCodes() {
+  const RESCUE_CODE_LENGTH = 8;
+  const RESCUE_CODE_COUNT = 5;
+  const rescueCodes = [];
+  const buf = new Uint8Array((RESCUE_CODE_LENGTH / 2) * RESCUE_CODE_COUNT);
+  crypto.getRandomValues(buf);
+  const rescueCodeSource = bytesToHexString(buf);
+  for (let i = 0; i < RESCUE_CODE_COUNT; i += 1) {
+    const rescueCode = rescueCodeSource.slice(
+      i * RESCUE_CODE_LENGTH,
+      (i + 1) * RESCUE_CODE_LENGTH
+    );
+    rescueCodes.push(rescueCode);
+  }
+  return rescueCodes;
+}
+
 export function generateSeed() {
   const buf = new Uint8Array(32);
   crypto.getRandomValues(buf);
@@ -137,6 +154,23 @@ export function xorSeed(byteArray1, byteArray2) {
   throw new XorSeedError();
 }
 
+export function xorRescueCode(rescueCode, hash) {
+  if (
+    rescueCode instanceof Uint8Array &&
+    hash instanceof Uint8Array &&
+    hash.length === 32 &&
+    rescueCode.length === 4
+  ) {
+    const buf = new Uint8Array(rescueCode.length);
+    let i;
+    for (i = 0; i < rescueCode.length; i += 1) {
+      buf[i] = rescueCode[i] ^ hash[i];
+    }
+    return bytesToHexString(buf);
+  }
+  throw new XorSeedError();
+}
+
 export function defaultProgress(status) {
   const seconds = Math.trunc(Date.now());
   if (status.total < 2) {
@@ -153,6 +187,8 @@ export function defaultProgress(status) {
 export const SecretinPrefix = 'Secret-in:';
 
 const Utils = {
+  xorRescueCode,
+  generateRescueCodes,
   generateSeed,
   hexStringToUint8Array,
   bytesToHexString,

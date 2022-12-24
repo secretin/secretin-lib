@@ -599,6 +599,23 @@ var Secretin = (function () {
     );
   }
 
+  function generateRescueCodes() {
+    const RESCUE_CODE_LENGTH = 8;
+    const RESCUE_CODE_COUNT = 5;
+    const rescueCodes = [];
+    const buf = new Uint8Array((RESCUE_CODE_LENGTH / 2) * RESCUE_CODE_COUNT);
+    crypto.getRandomValues(buf);
+    const rescueCodeSource = bytesToHexString(buf);
+    for (let i = 0; i < RESCUE_CODE_COUNT; i += 1) {
+      const rescueCode = rescueCodeSource.slice(
+        i * RESCUE_CODE_LENGTH,
+        (i + 1) * RESCUE_CODE_LENGTH
+      );
+      rescueCodes.push(rescueCode);
+    }
+    return rescueCodes;
+  }
+
   function generateSeed() {
     const buf = new Uint8Array(32);
     crypto.getRandomValues(buf);
@@ -666,6 +683,23 @@ var Secretin = (function () {
     throw new XorSeedError();
   }
 
+  function xorRescueCode(rescueCode, hash) {
+    if (
+      rescueCode instanceof Uint8Array &&
+      hash instanceof Uint8Array &&
+      hash.length === 32 &&
+      rescueCode.length === 4
+    ) {
+      const buf = new Uint8Array(rescueCode.length);
+      let i;
+      for (i = 0; i < rescueCode.length; i += 1) {
+        buf[i] = rescueCode[i] ^ hash[i];
+      }
+      return bytesToHexString(buf);
+    }
+    throw new XorSeedError();
+  }
+
   function defaultProgress(status) {
     const seconds = Math.trunc(Date.now());
     if (status.total < 2) {
@@ -682,6 +716,8 @@ var Secretin = (function () {
   const SecretinPrefix = 'Secret-in:';
 
   const Utils = {
+    xorRescueCode,
+    generateRescueCodes,
     generateSeed,
     hexStringToUint8Array,
     bytesToHexString,
@@ -3084,8 +3120,15 @@ var Secretin = (function () {
 
     async getRescueCodes() {
       try {
-        const rescueCode = await this.api.getRescueCodes(this.currentUser);
-        return rescueCode;
+        const rescueCodes = generateRescueCodes();
+        const protectedRescueCodes = rescueCodes.map((rescueCode) =>
+          xorRescueCode(
+            hexStringToUint8Array(rescueCode),
+            hexStringToUint8Array(this.currentUser.hash)
+          )
+        );
+        await this.api.postRescueCodes(this.currentUser, protectedRescueCodes);
+        return rescueCodes;
       } catch (err) {
         if (err instanceof OfflineError) {
           this.offlineDB();
@@ -3656,6 +3699,26 @@ var Secretin = (function () {
         })
         .then((signature) =>
           doGET(`${this.db}${url}?sig=${signature}&sigTime=${now}`)
+        );
+    }
+
+    postRescueCodes(user, rescueCodes) {
+      let hashedUsername;
+      const json = JSON.stringify({
+        rescueCodes,
+      });
+      const now = Date.now();
+      return this.getSHA256(user.username)
+        .then((rHashedUsername) => {
+          hashedUsername = rHashedUsername;
+          return user.sign(`${json}|${now}`);
+        })
+        .then((signature) =>
+          doPUT(`${this.db}/rescueCodes/${hashedUsername}`, {
+            json,
+            sig: signature,
+            sigTime: now,
+          })
         );
     }
 
