@@ -1343,13 +1343,16 @@ class Secretin {
       }
 
       const result = await this.currentUser.exportPrivateData(shortpass);
-
       localStorage.setItem(`${SecretinPrefix}shortpass`, result.data);
       localStorage.setItem(
         `${SecretinPrefix}shortpassSignature`,
         result.signature
       );
     } catch (err) {
+      if (err.name === 'OperationError') {
+        this.deactivateShortLogin();
+        return;
+      }
       if (err instanceof OfflineError) {
         this.offlineDB();
         throw err;
@@ -1377,10 +1380,13 @@ class Secretin {
     localStorage.removeItem(`${SecretinPrefix}deviceName`);
     localStorage.removeItem(`${SecretinPrefix}privateKey`);
     localStorage.removeItem(`${SecretinPrefix}privateKeyIv`);
+    localStorage.removeItem(`${SecretinPrefix}privateKeyIv`);
     localStorage.removeItem(`${SecretinPrefix}iv`);
     localStorage.removeItem(`${SecretinPrefix}shortpass`);
     localStorage.removeItem(`${SecretinPrefix}shortpassSignature`);
     localStorage.removeItem(`${SecretinPrefix}activatedAt`);
+    localStorage.removeItem(`${SecretinPrefix}privateKeySign`);
+    localStorage.removeItem(`${SecretinPrefix}publicKeySign`);
   }
 
   async shortLogin(shortpass, progress = defaultProgress, forceSync = true) {
@@ -1415,6 +1421,11 @@ class Secretin {
       progress(new ImportPublicKeyStatus());
       await this.currentUser.importPublicKey(parameters.publicKey);
 
+      if (!this.currentUser.publicKeySign || !this.currentUser.privateKeySign) {
+        // Legacy bad practice
+        await this.currentUser.deprecatedConvertOAEPToPSS();
+      }
+
       await this.refreshUser(forceSync, progress);
 
       if (typeof window.process !== 'undefined') {
@@ -1437,6 +1448,8 @@ class Secretin {
         localStorage.removeItem(`${SecretinPrefix}username`);
         localStorage.removeItem(`${SecretinPrefix}privateKey`);
         localStorage.removeItem(`${SecretinPrefix}privateKeyIv`);
+        localStorage.removeItem(`${SecretinPrefix}publicKeySign`);
+        localStorage.removeItem(`${SecretinPrefix}privateKeySign`);
         localStorage.removeItem(`${SecretinPrefix}iv`);
       }
       const wrapper = new WrappingError(err);

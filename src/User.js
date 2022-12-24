@@ -53,10 +53,13 @@ class User {
   }
 
   async deprecatedConvertOAEPToPSS() {
+    this.isUsingLegacyKey = true;
+
     this.publicKeySign = await this.cryptoAdapter.convertOAEPToPSS(
       this.publicKey,
       'verify'
     );
+
     this.privateKeySign = await this.cryptoAdapter.convertOAEPToPSS(
       this.privateKey,
       'sign'
@@ -101,6 +104,10 @@ class User {
   }
 
   async exportKeyPairSign() {
+    // Legacy retro compatibility
+    if (this.isUsingLegacyKey) {
+      return { publicKeySign: null, privateKeySign: null };
+    }
     const publicKeySign = await this.cryptoAdapter.exportClearKey(
       this.publicKeySign
     );
@@ -440,14 +447,16 @@ class User {
         return this.exportKeyPairSign();
       })
       .then(({ privateKeySign, publicKeySign }) => {
-        localStorage.setItem(
-          `${SecretinPrefix}privateKeySign`,
-          JSON.stringify(privateKeySign)
-        );
-        localStorage.setItem(
-          `${SecretinPrefix}publicKeySign`,
-          JSON.stringify(publicKeySign)
-        );
+        if (privateKeySign && publicKeySign) {
+          localStorage.setItem(
+            `${SecretinPrefix}privateKeySign`,
+            JSON.stringify(privateKeySign)
+          );
+          localStorage.setItem(
+            `${SecretinPrefix}publicKeySign`,
+            JSON.stringify(publicKeySign)
+          );
+        }
         return this.cryptoAdapter.derivePassword(shortpass);
       })
       .then((derived) => {
@@ -497,13 +506,11 @@ class User {
         if (publicKeySignRaw && privateKeySignRaw) {
           const privateKeySign = JSON.parse(privateKeySignRaw);
           const publicKeySign = JSON.parse(publicKeySignRaw);
-          return this.importKeyPairSign({
+          this.importKeyPairSign({
             privateKeySign,
             publicKeySign,
           });
         }
-        // Legacy bad practice
-        return this.currentUser.deprecatedConvertOAEPToPSS();
       })
       .catch(() => Promise.reject(new InvalidPasswordError()));
   }

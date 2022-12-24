@@ -1,7 +1,7 @@
 var Secretin = (function () {
   'use strict';
 
-  var version = "2.4.0";
+  var version = "2.5.1";
 
   const owaspConfigs = {
     allowPassphrases: true,
@@ -1322,10 +1322,13 @@ var Secretin = (function () {
     }
 
     async deprecatedConvertOAEPToPSS() {
+      this.isUsingLegacyKey = true;
+
       this.publicKeySign = await this.cryptoAdapter.convertOAEPToPSS(
         this.publicKey,
         'verify'
       );
+
       this.privateKeySign = await this.cryptoAdapter.convertOAEPToPSS(
         this.privateKey,
         'sign'
@@ -1370,6 +1373,10 @@ var Secretin = (function () {
     }
 
     async exportKeyPairSign() {
+      // Legacy retro compatibility
+      if (this.isUsingLegacyKey) {
+        return { publicKeySign: null, privateKeySign: null };
+      }
       const publicKeySign = await this.cryptoAdapter.exportClearKey(
         this.publicKeySign
       );
@@ -1709,14 +1716,16 @@ var Secretin = (function () {
           return this.exportKeyPairSign();
         })
         .then(({ privateKeySign, publicKeySign }) => {
-          localStorage.setItem(
-            `${SecretinPrefix}privateKeySign`,
-            JSON.stringify(privateKeySign)
-          );
-          localStorage.setItem(
-            `${SecretinPrefix}publicKeySign`,
-            JSON.stringify(publicKeySign)
-          );
+          if (privateKeySign && publicKeySign) {
+            localStorage.setItem(
+              `${SecretinPrefix}privateKeySign`,
+              JSON.stringify(privateKeySign)
+            );
+            localStorage.setItem(
+              `${SecretinPrefix}publicKeySign`,
+              JSON.stringify(publicKeySign)
+            );
+          }
           return this.cryptoAdapter.derivePassword(shortpass);
         })
         .then((derived) => {
@@ -1766,13 +1775,11 @@ var Secretin = (function () {
           if (publicKeySignRaw && privateKeySignRaw) {
             const privateKeySign = JSON.parse(privateKeySignRaw);
             const publicKeySign = JSON.parse(publicKeySignRaw);
-            return this.importKeyPairSign({
+            this.importKeyPairSign({
               privateKeySign,
               publicKeySign,
             });
           }
-          // Legacy bad practice
-          return this.currentUser.deprecatedConvertOAEPToPSS();
         })
         .catch(() => Promise.reject(new InvalidPasswordError()));
     }
@@ -3089,13 +3096,16 @@ var Secretin = (function () {
         }
 
         const result = await this.currentUser.exportPrivateData(shortpass);
-
         localStorage.setItem(`${SecretinPrefix}shortpass`, result.data);
         localStorage.setItem(
           `${SecretinPrefix}shortpassSignature`,
           result.signature
         );
       } catch (err) {
+        if (err.name === 'OperationError') {
+          this.deactivateShortLogin();
+          return;
+        }
         if (err instanceof OfflineError) {
           this.offlineDB();
           throw err;
@@ -3123,10 +3133,13 @@ var Secretin = (function () {
       localStorage.removeItem(`${SecretinPrefix}deviceName`);
       localStorage.removeItem(`${SecretinPrefix}privateKey`);
       localStorage.removeItem(`${SecretinPrefix}privateKeyIv`);
+      localStorage.removeItem(`${SecretinPrefix}privateKeyIv`);
       localStorage.removeItem(`${SecretinPrefix}iv`);
       localStorage.removeItem(`${SecretinPrefix}shortpass`);
       localStorage.removeItem(`${SecretinPrefix}shortpassSignature`);
       localStorage.removeItem(`${SecretinPrefix}activatedAt`);
+      localStorage.removeItem(`${SecretinPrefix}privateKeySign`);
+      localStorage.removeItem(`${SecretinPrefix}publicKeySign`);
     }
 
     async shortLogin(shortpass, progress = defaultProgress, forceSync = true) {
@@ -3161,6 +3174,11 @@ var Secretin = (function () {
         progress(new ImportPublicKeyStatus());
         await this.currentUser.importPublicKey(parameters.publicKey);
 
+        if (!this.currentUser.publicKeySign || !this.currentUser.privateKeySign) {
+          // Legacy bad practice
+          await this.currentUser.deprecatedConvertOAEPToPSS();
+        }
+
         await this.refreshUser(forceSync, progress);
 
         if (typeof window.process !== 'undefined') {
@@ -3183,6 +3201,8 @@ var Secretin = (function () {
           localStorage.removeItem(`${SecretinPrefix}username`);
           localStorage.removeItem(`${SecretinPrefix}privateKey`);
           localStorage.removeItem(`${SecretinPrefix}privateKeyIv`);
+          localStorage.removeItem(`${SecretinPrefix}publicKeySign`);
+          localStorage.removeItem(`${SecretinPrefix}privateKeySign`);
           localStorage.removeItem(`${SecretinPrefix}iv`);
         }
         const wrapper = new WrappingError(err);
