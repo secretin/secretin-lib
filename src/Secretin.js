@@ -315,13 +315,13 @@ class Secretin {
       const signature = localStorage.getItem(
         `${SecretinPrefix}shortpassSignature`
       );
-      if (shortpass && signature) {
-        await this.currentUser.importPrivateData(shortpass, signature);
-      }
-
-      if (shortpass && this.editableDB) {
+      if (shortpass && signature && this.editableDB) {
+        const clearShortpass = await this.currentUser.importPrivateData(
+          shortpass,
+          signature
+        );
         const deviceName = localStorage.getItem(`${SecretinPrefix}deviceName`);
-        await this.activateShortLogin(shortpass, deviceName);
+        await this.activateShortLogin(clearShortpass, deviceName);
       }
       await this.refreshUser(forceSync, progress);
       if (typeof window.process !== 'undefined') {
