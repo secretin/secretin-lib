@@ -1,4 +1,4 @@
-# Unreleased
+# 2.5.4
 
 * Secret content is now UTF-8 encoded before encryption. Characters above
   U+00FF (bullet •, ™, Cyrillic, emoji, ...) were silently truncated to a single
@@ -6,6 +6,9 @@
   decryption. Decryption tries UTF-8 first and falls back to the legacy
   one-byte-per-char decoding, so existing secrets stay readable. Secrets that
   were already corrupted on save cannot be repaired and must be re-entered.
+
+* Login no longer fails when the metadata cache cannot be decrypted or parsed:
+  the cache is rebuilt from the per-secret metadatas instead.
 
 # Changes with nginx 2.2.1
 
