@@ -1,7 +1,7 @@
 var Secretin = (function () {
   'use strict';
 
-  var version = "2.5.3";
+  var version = "2.5.5";
 
   const owaspConfigs = {
     allowPassphrases: true,
