@@ -48,6 +48,29 @@ describe('Utils', () => {
       );
     });
 
+    it('Utils.stringToUint8Array encodes UTF-8', () => {
+      const string = 'a•🐢é';
+      const expectedArray = new Uint8Array([
+        0x61, 0xe2, 0x80, 0xa2, 0xf0, 0x9f, 0x90, 0xa2, 0xc3, 0xa9,
+      ]);
+      Secretin.Utils.stringToUint8Array(string).should.deep.equal(
+        expectedArray
+      );
+    });
+
+    it('Utils.bytesToString decodes UTF-8', () => {
+      const array = new Uint8Array([
+        0x61, 0xe2, 0x80, 0xa2, 0xf0, 0x9f, 0x90, 0xa2, 0xc3, 0xa9,
+      ]);
+      Secretin.Utils.bytesToString(array).should.equal('a•🐢é');
+    });
+
+    it('Utils.bytesToString falls back to legacy one byte per char', () => {
+      // 'café' as encoded by asciiToUint8Array before UTF-8 support
+      const array = new Uint8Array([0x63, 0x61, 0x66, 0xe9]);
+      Secretin.Utils.bytesToString(array).should.equal('café');
+    });
+
     it('Utils.xorSeed expect Uint8Arrays', () => {
       const array1 = new Uint16Array(32).fill(0x61);
       const array2 = new Uint16Array(32).fill(0x71);

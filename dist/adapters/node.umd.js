@@ -97,6 +97,40 @@
     );
   }
 
+  function stringToUint8Array(str) {
+    // UTF-8 encoding. asciiToUint8Array silently truncates every code point
+    // above 0xFF (Uint8Array keeps the low byte only), which turned characters
+    // such as • (U+2022) into '"' and broke JSON.parse after decryption.
+    return new TextEncoder().encode(str);
+  }
+
+  function bytesToString(bytes) {
+    // Decode UTF-8, falling back to the legacy one-byte-per-char decoding for
+    // secrets encrypted before stringToUint8Array was introduced.
+    try {
+      return new TextDecoder('utf-8', { fatal: true }).decode(
+        new Uint8Array(bytes)
+      );
+    } catch (e) {
+      return bytesToASCIIString(bytes);
+    }
+  }
+
+  function parseDecryptedJSON(binaryString) {
+    const jsonStr = bytesToString(forge__default["default"].util.binary.raw.decode(binaryString));
+    // Legacy secrets were encoded one byte per char, which truncated code points
+    // above 0xFF and could leave raw control characters in the JSON.
+    // eslint-disable-next-line no-control-regex
+    const breakingPattern = /[\x01-\x09\x0B-\x0C\x0E-\x1F]+/gi;
+    return JSON.parse(jsonStr.replace(breakingPattern, ''));
+  }
+
+  function toBinaryString(secret) {
+    return forge__default["default"].util.binary.raw.encode(
+      stringToUint8Array(JSON.stringify(secret))
+    );
+  }
+
   class AESGCMDecryptionError extends Error {
     constructor() {
       super();
@@ -149,7 +183,7 @@
       iv,
       tagLength: 128,
     });
-    cipher.update(forge__default["default"].util.createBuffer(JSON.stringify(secret)));
+    cipher.update(forge__default["default"].util.createBuffer(toBinaryString(secret)));
     cipher.finish();
 
     const data = asciiToHexString(cipher.output.getBytes());
@@ -171,16 +205,13 @@
     decipher.update(forge__default["default"].util.createBuffer(data));
     const pass = decipher.finish();
     if (pass) {
-      const jsonStr = decipher.output.getBytes();
-      // eslint-disable-next-line no-control-regex
-      const breakingPattern = /[\x01-\x09\x0B-\x0C\x0E-\x1F]+/gi;
-      return Promise.resolve(JSON.parse(jsonStr.replace(breakingPattern, '')));
+      return Promise.resolve(parseDecryptedJSON(decipher.output.getBytes()));
     }
     return Promise.reject(new AESGCMDecryptionError());
   }
 
   function encryptRSAOAEP(secret, publicKey) {
-    const encrypted = publicKey.encrypt(JSON.stringify(secret), 'RSA-OAEP', {
+    const encrypted = publicKey.encrypt(toBinaryString(secret), 'RSA-OAEP', {
       md: forge__default["default"].md.sha256.create(),
     });
     return Promise.resolve(asciiToHexString(encrypted));
@@ -190,7 +221,7 @@
     const decrypted = privateKey.decrypt(hexStringToAscii(secret), 'RSA-OAEP', {
       md: forge__default["default"].md.sha256.create(),
     });
-    return Promise.resolve(JSON.parse(decrypted));
+    return Promise.resolve(parseDecryptedJSON(decrypted));
   }
 
   function wrapRSAOAEP(key, publicKey) {

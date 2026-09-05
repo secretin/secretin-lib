@@ -2,8 +2,18 @@ import {
   asciiToUint8Array,
   hexStringToUint8Array,
   bytesToHexString,
-  bytesToASCIIString,
+  stringToUint8Array,
+  bytesToString,
 } from '../../lib/utils';
+
+function parseDecryptedJSON(bytes) {
+  const jsonStr = bytesToString(bytes);
+  // Legacy secrets were encoded one byte per char, which truncated code points
+  // above 0xFF and could leave raw control characters in the JSON.
+  // eslint-disable-next-line no-control-regex
+  const breakingPattern = /[\x01-\x09\x0B-\x0C\x0E-\x1F]+/gi;
+  return JSON.parse(jsonStr.replace(breakingPattern, ''));
+}
 
 export function getSHA256(str) {
   const algorithm = 'SHA-256';
@@ -52,7 +62,7 @@ export function generateWrappingKey() {
 export function encryptAESGCM256(secret, key) {
   const result = {};
   let algorithm = {};
-  const data = asciiToUint8Array(JSON.stringify(secret));
+  const data = stringToUint8Array(JSON.stringify(secret));
   if (typeof key === 'undefined') {
     algorithm = {
       name: 'AES-GCM',
@@ -103,12 +113,9 @@ export function decryptAESGCM256(secretObject, key) {
     tagLength: 128,
   };
   const data = hexStringToUint8Array(secretObject.secret);
-  return crypto.subtle.decrypt(algorithm, key, data).then((decryptedSecret) => {
-    const jsonStr = bytesToASCIIString(decryptedSecret);
-    // eslint-disable-next-line no-control-regex
-    const breakingPattern = /[\x01-\x09\x0B-\x0C\x0E-\x1F]+/gi;
-    return JSON.parse(jsonStr.replace(breakingPattern, ''));
-  });
+  return crypto.subtle
+    .decrypt(algorithm, key, data)
+    .then((decryptedSecret) => parseDecryptedJSON(decryptedSecret));
 }
 
 export function encryptRSAOAEP(secret, publicKey) {
@@ -116,7 +123,7 @@ export function encryptRSAOAEP(secret, publicKey) {
     name: 'RSA-OAEP',
     hash: { name: 'SHA-256' },
   };
-  const data = asciiToUint8Array(JSON.stringify(secret));
+  const data = stringToUint8Array(JSON.stringify(secret));
   return crypto.subtle
     .encrypt(algorithm, publicKey, data)
     .then((encryptedSecret) => bytesToHexString(encryptedSecret));
@@ -130,7 +137,7 @@ export function decryptRSAOAEP(secret, privateKey) {
   const data = hexStringToUint8Array(secret);
   return crypto.subtle
     .decrypt(algorithm, privateKey, data)
-    .then((decryptedSecret) => JSON.parse(bytesToASCIIString(decryptedSecret)));
+    .then((decryptedSecret) => parseDecryptedJSON(decryptedSecret));
 }
 
 export function wrapRSAOAEP(key, wrappingPublicKey) {

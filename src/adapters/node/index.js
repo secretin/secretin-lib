@@ -8,7 +8,24 @@ import {
   asciiToUint8Array,
   hexStringToUint8Array,
   bytesToHexString,
+  stringToUint8Array,
+  bytesToString,
 } from '../../lib/utils';
+
+function parseDecryptedJSON(binaryString) {
+  const jsonStr = bytesToString(forge.util.binary.raw.decode(binaryString));
+  // Legacy secrets were encoded one byte per char, which truncated code points
+  // above 0xFF and could leave raw control characters in the JSON.
+  // eslint-disable-next-line no-control-regex
+  const breakingPattern = /[\x01-\x09\x0B-\x0C\x0E-\x1F]+/gi;
+  return JSON.parse(jsonStr.replace(breakingPattern, ''));
+}
+
+function toBinaryString(secret) {
+  return forge.util.binary.raw.encode(
+    stringToUint8Array(JSON.stringify(secret))
+  );
+}
 
 class AESGCMDecryptionError extends Error {
   constructor() {
@@ -62,7 +79,7 @@ export function encryptAESGCM256(secret, key) {
     iv,
     tagLength: 128,
   });
-  cipher.update(forge.util.createBuffer(JSON.stringify(secret)));
+  cipher.update(forge.util.createBuffer(toBinaryString(secret)));
   cipher.finish();
 
   const data = asciiToHexString(cipher.output.getBytes());
@@ -84,16 +101,13 @@ export function decryptAESGCM256(secretObject, key) {
   decipher.update(forge.util.createBuffer(data));
   const pass = decipher.finish();
   if (pass) {
-    const jsonStr = decipher.output.getBytes();
-    // eslint-disable-next-line no-control-regex
-    const breakingPattern = /[\x01-\x09\x0B-\x0C\x0E-\x1F]+/gi;
-    return Promise.resolve(JSON.parse(jsonStr.replace(breakingPattern, '')));
+    return Promise.resolve(parseDecryptedJSON(decipher.output.getBytes()));
   }
   return Promise.reject(new AESGCMDecryptionError());
 }
 
 export function encryptRSAOAEP(secret, publicKey) {
-  const encrypted = publicKey.encrypt(JSON.stringify(secret), 'RSA-OAEP', {
+  const encrypted = publicKey.encrypt(toBinaryString(secret), 'RSA-OAEP', {
     md: forge.md.sha256.create(),
   });
   return Promise.resolve(asciiToHexString(encrypted));
@@ -103,7 +117,7 @@ export function decryptRSAOAEP(secret, privateKey) {
   const decrypted = privateKey.decrypt(hexStringToAscii(secret), 'RSA-OAEP', {
     md: forge.md.sha256.create(),
   });
-  return Promise.resolve(JSON.parse(decrypted));
+  return Promise.resolve(parseDecryptedJSON(decrypted));
 }
 
 export function wrapRSAOAEP(key, publicKey) {
