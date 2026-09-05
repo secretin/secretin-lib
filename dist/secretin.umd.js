@@ -2150,8 +2150,16 @@
         await this.currentUser.importOptions(remoteUser.options);
         if (typeof remoteUser.metadataCache !== 'undefined') {
           progress(new DecryptMetadataCacheStatus());
-          this.currentUser.metadatas =
-            await this.currentUser.importBigPrivateData(remoteUser.metadataCache);
+          try {
+            this.currentUser.metadatas =
+              await this.currentUser.importBigPrivateData(
+                remoteUser.metadataCache
+              );
+          } catch (cacheError) {
+            // A cache that cannot be decrypted or parsed must not block login:
+            // rebuild it from the per-secret metadatas instead.
+            forceUpdate = true;
+          }
         } else {
           forceUpdate = true;
         }
