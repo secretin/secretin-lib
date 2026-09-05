@@ -668,6 +668,25 @@ var Secretin = (function () {
     );
   }
 
+  function stringToUint8Array(str) {
+    // UTF-8 encoding. asciiToUint8Array silently truncates every code point
+    // above 0xFF (Uint8Array keeps the low byte only), which turned characters
+    // such as • (U+2022) into '"' and broke JSON.parse after decryption.
+    return new TextEncoder().encode(str);
+  }
+
+  function bytesToString(bytes) {
+    // Decode UTF-8, falling back to the legacy one-byte-per-char decoding for
+    // secrets encrypted before stringToUint8Array was introduced.
+    try {
+      return new TextDecoder('utf-8', { fatal: true }).decode(
+        new Uint8Array(bytes)
+      );
+    } catch (e) {
+      return bytesToASCIIString(bytes);
+    }
+  }
+
   function generateRescueCodes() {
     const RESCUE_CODE_LENGTH = 8;
     const RESCUE_CODE_COUNT = 5;
@@ -792,6 +811,8 @@ var Secretin = (function () {
     bytesToHexString,
     asciiToUint8Array,
     bytesToASCIIString,
+    stringToUint8Array,
+    bytesToString,
     xorSeed,
     defaultProgress,
     asciiToHexString,
