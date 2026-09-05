@@ -61,8 +61,8 @@ module.exports = function exports(config) {
     browsers: ['Chrome'],
 
     customLaunchers: {
-      ChromeOnTravis: {
-        base: 'Chrome',
+      ChromeOnCI: {
+        base: 'ChromeHeadless',
         flags: ['--no-sandbox'],
       },
     },
@@ -77,7 +77,7 @@ module.exports = function exports(config) {
   };
 
   if (process.env.CI === 'true') {
-    karmaConfig.browsers = ['ChromeOnTravis'];
+    karmaConfig.browsers = ['ChromeOnCI'];
   }
 
   config.set(karmaConfig);
